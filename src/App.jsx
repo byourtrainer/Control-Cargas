@@ -5,10 +5,12 @@ import PlayerForm from './pages/PlayerForm'
 import CoachDashboard from './pages/CoachDashboard'
 import SesionDia from './pages/SesionDia'
 import Lesiones from './pages/Lesiones'
+import Equipos from './pages/Equipos'
 import './App.css'
 
 const pestanasEntrenador = [
   { clave: 'resumen', etiqueta: 'Resumen' },
+  { clave: 'equipos', etiqueta: 'Equipos' },
   { clave: 'sesion', etiqueta: 'Sesión del día' },
   { clave: 'lesiones', etiqueta: 'Lesiones' },
 ]
@@ -18,6 +20,8 @@ export default function App() {
   const [perfil, setPerfil] = useState(null)
   const [cargando, setCargando] = useState(true)
   const [pestana, setPestana] = useState('resumen')
+  const [equipos, setEquipos] = useState([])
+  const [equipoActivo, setEquipoActivo] = useState('todos')
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -54,6 +58,15 @@ export default function App() {
     return () => { activo = false }
   }, [session])
 
+  useEffect(() => {
+    if (perfil?.rol === 'entrenador') cargarEquipos()
+  }, [perfil])
+
+  async function cargarEquipos() {
+    const { data } = await supabase.from('equipos').select('*').order('nombre')
+    setEquipos(data || [])
+  }
+
   async function cerrarSesion() {
     await supabase.auth.signOut()
   }
@@ -86,6 +99,13 @@ export default function App() {
           <h1>CONTROL DE CARGAS</h1>
         </div>
         <div className="usuario-actual">
+          {perfil.rol === 'entrenador' && (
+            <span className="equipo-activo-badge mono">
+              {equipoActivo === 'todos' ? 'Todos los equipos'
+                : equipoActivo === 'sin_asignar' ? 'Sin asignar'
+                : equipos.find((e) => e.id === equipoActivo)?.nombre || '…'}
+            </span>
+          )}
           <span className="usuario-nombre">{perfil.nombre}</span>
           <span className={`rol-badge rol-${perfil.rol}`}>{perfil.rol}</span>
           <button className="btn-salir" onClick={cerrarSesion}>Salir</button>
@@ -109,8 +129,16 @@ export default function App() {
       <main className="contenido">
         {perfil.rol === 'entrenador' ? (
           pestana === 'sesion' ? <SesionDia />
-          : pestana === 'lesiones' ? <Lesiones />
-          : <CoachDashboard />
+          : pestana === 'lesiones' ? <Lesiones equipos={equipos} equipoActivo={equipoActivo} />
+          : pestana === 'equipos' ? (
+            <Equipos
+              equipos={equipos}
+              equipoActivo={equipoActivo}
+              onCambiarEquipoActivo={setEquipoActivo}
+              onEquiposActualizados={cargarEquipos}
+            />
+          )
+          : <CoachDashboard equipoActivo={equipoActivo} />
         ) : (
           <PlayerForm perfil={perfil} />
         )}

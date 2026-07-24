@@ -122,6 +122,36 @@ Excel (0 = Ningún esfuerzo … 10 = Máximo).
   texto + botón "+ Añadir equipo"), y **filtrar** toda la vista (tarjetas,
   gráfico y tabla) por equipo con el desplegable correspondiente.
 
+## Escala de colores progresiva y pestaña de Equipos
+
+- Los sliders de RPE y bienestar ahora usan **4 tonos** (verde → amarillo →
+  naranja → rojo) en vez de 3, para una lectura más matizada.
+- Nueva pestaña **"Equipos"** para el entrenador: ahí se elige qué equipo
+  ver (o "Todos" / "Sin asignar") y se crean equipos nuevos. Esa selección
+  se aplica automáticamente al Resumen y al desplegable de jugadores de
+  Lesiones, y se muestra como una etiqueta junto a tu nombre en la cabecera.
+- La tabla de "Estado por jugador" ahora incluye también **Carga Crónica**
+  (media diaria de 28 días) y la clasificación de **Monotonía** en texto
+  (Muy variable / Correcta / Elevada / Riesgo elevado), no solo un punto de
+  color.
+
+## Equipo único, orden del cuestionario e Índice de Hooper
+
+- El jugador ahora elige su **equipo una sola vez**: la primera vez que
+  entra ve el selector obligatorio; después solo ve una línea compacta
+  ("Tu equipo: X") con un enlace "Cambiar" por si algún día hace falta
+  corregirlo, en vez de tener que decidirlo en cada sesión.
+- El formulario del jugador ahora empieza por **Bienestar** (pensado para
+  rellenar nada más despertar) y el **RPE de la sesión** aparece después
+  (para rellenar tras entrenar) — orden invertido respecto a la versión
+  anterior, con una etiqueta junto a cada título indicando el momento del
+  día recomendado.
+- El panel del entrenador clasifica el bienestar de cada jugador en
+  **Óptimo / Bueno / Malo**, al estilo del Índice de Hooper: cada escala se
+  convierte primero a "malestar" (sueño y ánimo se invierten, ya que ahí un
+  valor alto es bueno), se promedian, y el resultado se traduce a una de las
+  tres categorías.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

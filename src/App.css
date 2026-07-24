@@ -65,6 +65,14 @@
   font-size: 14px;
 }
 
+.equipo-activo-badge {
+  font-size: 11px;
+  color: var(--text-faint);
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  padding: 3px 8px;
+}
+
 .rol-badge {
   font-family: var(--font-mono);
   font-size: 11px;

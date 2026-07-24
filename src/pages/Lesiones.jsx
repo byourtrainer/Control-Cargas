@@ -16,7 +16,7 @@ const vacio = {
   severidad: 'Leve', dias_baja: '', notas: '',
 }
 
-export default function Lesiones() {
+export default function Lesiones({ equipoActivo = 'todos' }) {
   const [jugadores, setJugadores] = useState([])
   const [lesiones, setLesiones] = useState([])
   const [form, setForm] = useState(vacio)
@@ -24,6 +24,12 @@ export default function Lesiones() {
   const [mensaje, setMensaje] = useState(null)
   const [cargando, setCargando] = useState(true)
   const [previsualizacion, setPrevisualizacion] = useState(null)
+
+  const jugadoresFiltrados = jugadores.filter((j) => {
+    if (equipoActivo === 'todos') return true
+    if (equipoActivo === 'sin_asignar') return !j.equipo_id
+    return j.equipo_id === equipoActivo
+  })
 
   useEffect(() => { cargarTodo() }, [])
 
@@ -96,7 +102,7 @@ export default function Lesiones() {
               required
             >
               <option value="" disabled>Selecciona un jugador</option>
-              {jugadores.map((j) => <option key={j.id} value={j.id}>{j.nombre}</option>)}
+              {jugadoresFiltrados.map((j) => <option key={j.id} value={j.id}>{j.nombre}</option>)}
             </select>
           </label>
 

@@ -123,6 +123,7 @@ export function cambioSemanal(registros, fechaReferencia = new Date()) {
 export function calcularMetricas(registros, metodo = 'clasico', fechaReferencia = new Date()) {
   const { monotonia, fatiga, cargaSemanal } = monotoniaYFatiga(registros, fechaReferencia)
   return {
+    cargaCronica: cargaCronicaPromedio(registros, fechaReferencia),
     acwrPre: acwrPreEntreno(registros, metodo, fechaReferencia),
     acwrPost: acwrPostEntreno(registros, metodo, fechaReferencia),
     monotonia,

@@ -138,20 +138,34 @@
 .riesgo-muy_baja { background: rgba(111,207,125,0.10); color: var(--risk-low); }
 .riesgo-baja { background: rgba(111,207,125,0.16); color: var(--risk-low); }
 .riesgo-optima { background: rgba(200,255,77,0.15); color: var(--accent); }
-.riesgo-moderada_alta { background: rgba(242,193,78,0.14); color: var(--risk-mid); }
-.riesgo-alta { background: rgba(234,92,74,0.14); color: var(--risk-high); }
-.riesgo-muy_alta { background: rgba(234,92,74,0.22); color: var(--risk-high); }
+.riesgo-moderada_alta { background: rgba(242,193,78,0.16); color: var(--risk-mid); }
+.riesgo-alta { background: rgba(242,145,78,0.16); color: var(--risk-high-mid); }
+.riesgo-muy_alta { background: rgba(234,92,74,0.20); color: var(--risk-high); }
 
-.monotonia-punto {
-  display: inline-block;
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  margin-left: 6px;
+.monotonia-badge {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  white-space: nowrap;
 }
-.monotonia-muy_variable { background: var(--text-faint); }
-.monotonia-correcta { background: var(--risk-low); }
-.monotonia-elevada { background: var(--risk-mid); }
-.monotonia-riesgo_elevado { background: var(--risk-high); }
+.monotonia-sin_datos { background: rgba(154,171,160,0.12); color: var(--text-faint); }
+.monotonia-muy_variable { background: rgba(154,171,160,0.14); color: var(--text-dim); }
+.monotonia-correcta { background: rgba(111,207,125,0.14); color: var(--risk-low); }
+.monotonia-elevada { background: rgba(242,145,78,0.16); color: var(--risk-high-mid); }
+.monotonia-riesgo_elevado { background: rgba(234,92,74,0.18); color: var(--risk-high); }
+
+.bienestar-badge {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+.bienestar-sin_datos { background: rgba(154,171,160,0.12); color: var(--text-faint); }
+.bienestar-optimo { background: rgba(111,207,125,0.15); color: var(--risk-low); }
+.bienestar-bueno { background: rgba(242,193,78,0.15); color: var(--risk-mid); }
+.bienestar-malo { background: rgba(234,92,74,0.18); color: var(--risk-high); }
 
 .leyenda-riesgo {
   font-size: 12px;

@@ -5,6 +5,7 @@ import {
 } from 'recharts'
 import { supabase } from '../lib/supabaseClient'
 import { calcularMetricas, clasificarRiesgoACWR, clasificarMonotonia } from '../lib/cargaMetrics'
+import { calcularMalestar, clasificarBienestar } from '../lib/bienestar'
 import './CoachDashboard.css'
 
 const diasAtras = (n) => {
@@ -18,13 +19,9 @@ const metodosACWR = [
   { valor: 'ewma', etiqueta: 'ACWR EWMA' },
 ]
 
-export default function CoachDashboard() {
+export default function CoachDashboard({ equipoActivo = 'todos' }) {
   const [jugadores, setJugadores] = useState([])
   const [registros, setRegistros] = useState([])
-  const [equipos, setEquipos] = useState([])
-  const [equipoFiltro, setEquipoFiltro] = useState('todos')
-  const [nuevoEquipo, setNuevoEquipo] = useState('')
-  const [guardandoEquipo, setGuardandoEquipo] = useState(false)
   const [jugadorSeleccionado, setJugadorSeleccionado] = useState('equipo')
   const [metodoACWR, setMetodoACWR] = useState('clasico')
   const [cargando, setCargando] = useState(true)
@@ -35,48 +32,34 @@ export default function CoachDashboard() {
     setCargando(true)
     // Se piden 70 días de histórico: suficiente para la carga crónica clásica
     // (28 días), el cambio semanal, y para que el EWMA tenga tiempo de estabilizarse.
-    const [{ data: perfiles }, { data: regs }, { data: equiposData }] = await Promise.all([
+    const [{ data: perfiles }, { data: regs }] = await Promise.all([
       supabase.from('perfiles').select('*, equipos(id, nombre)').eq('rol', 'jugador').order('nombre'),
       supabase.from('registros_diarios').select('*').gte('fecha', diasAtras(70)).order('fecha'),
-      supabase.from('equipos').select('*').order('nombre'),
     ])
     setJugadores(perfiles || [])
     setRegistros(regs || [])
-    setEquipos(equiposData || [])
     setCargando(false)
   }
 
-  async function anadirEquipo(e) {
-    e.preventDefault()
-    if (!nuevoEquipo.trim()) return
-    setGuardandoEquipo(true)
-    const { error } = await supabase.from('equipos').insert({ nombre: nuevoEquipo.trim() })
-    if (!error) {
-      setNuevoEquipo('')
-      cargarDatos()
-    }
-    setGuardandoEquipo(false)
-  }
-
   const jugadoresFiltrados = useMemo(() => {
-    if (equipoFiltro === 'todos') return jugadores
-    if (equipoFiltro === 'sin_asignar') return jugadores.filter((j) => !j.equipo_id)
-    return jugadores.filter((j) => j.equipo_id === equipoFiltro)
-  }, [jugadores, equipoFiltro])
+    if (equipoActivo === 'todos') return jugadores
+    if (equipoActivo === 'sin_asignar') return jugadores.filter((j) => !j.equipo_id)
+    return jugadores.filter((j) => j.equipo_id === equipoActivo)
+  }, [jugadores, equipoActivo])
 
   const resumenPorJugador = useMemo(() => {
     return jugadoresFiltrados.map((j) => {
       const suyos = registros.filter((r) => r.jugador_id === j.id)
       const metricas = calcularMetricas(suyos, metodoACWR)
       const ultimoRegistro = [...suyos].sort((a, b) => b.fecha.localeCompare(a.fecha))[0]
+      const malestar = ultimoRegistro ? calcularMalestar(ultimoRegistro) : null
       return {
         ...j,
         ...metricas,
         riesgo: clasificarRiesgoACWR(metricas.acwrPost),
         nivelMonotonia: clasificarMonotonia(metricas.monotonia),
-        ultimoBienestar: ultimoRegistro
-          ? promedio([ultimoRegistro.sueno, ultimoRegistro.fatiga, ultimoRegistro.dolor_muscular, ultimoRegistro.estres, ultimoRegistro.animo])
-          : null,
+        malestar,
+        nivelBienestar: clasificarBienestar(malestar),
         registroHoy: suyos.some((r) => r.fecha === diasAtras(0)),
       }
     })
@@ -108,17 +91,6 @@ export default function CoachDashboard() {
         <div className="coach-header-derecha">
           <span className="mono texto-dim">{jugadoresFiltrados.length} jugadores</span>
           <select
-            value={equipoFiltro}
-            onChange={(e) => setEquipoFiltro(e.target.value)}
-            className="selector-jugador"
-          >
-            <option value="todos">Todos los equipos</option>
-            {equipos.map((eq) => (
-              <option key={eq.id} value={eq.id}>{eq.nombre}</option>
-            ))}
-            <option value="sin_asignar">Sin asignar</option>
-          </select>
-          <select
             value={metodoACWR}
             onChange={(e) => setMetodoACWR(e.target.value)}
             className="selector-jugador"
@@ -129,17 +101,6 @@ export default function CoachDashboard() {
           </select>
         </div>
       </div>
-
-      <form className="anadir-equipo-form" onSubmit={anadirEquipo}>
-        <input
-          type="text" value={nuevoEquipo}
-          onChange={(e) => setNuevoEquipo(e.target.value)}
-          placeholder="Nombre de un equipo nuevo (ej. Juvenil A)"
-        />
-        <button type="submit" disabled={guardandoEquipo}>
-          {guardandoEquipo ? 'Añadiendo…' : '+ Añadir equipo'}
-        </button>
-      </form>
 
       <section className="tarjetas-resumen">
         <TarjetaResumen etiqueta="Jugadores activos" valor={jugadoresFiltrados.length} />
@@ -162,7 +123,7 @@ export default function CoachDashboard() {
             onChange={(e) => setJugadorSeleccionado(e.target.value)}
             className="selector-jugador"
           >
-            <option value="equipo">{equipoFiltro === 'todos' ? 'Todo el equipo' : 'Todo el grupo filtrado'}</option>
+            <option value="equipo">{equipoActivo === 'todos' ? 'Todo el equipo' : 'Todo el grupo seleccionado'}</option>
             {jugadoresFiltrados.map((j) => (
               <option key={j.id} value={j.id}>{j.nombre}</option>
             ))}
@@ -191,14 +152,15 @@ export default function CoachDashboard() {
                 <th>Jugador</th>
                 <th>Equipo</th>
                 <th>Hoy</th>
-                <th>Carga 7d</th>
+                <th title="Suma de carga de los últimos 7 días">Carga Aguda</th>
+                <th title="Media diaria de carga de los últimos 28 días">Carga Crónica</th>
                 <th title="ACWR sin contar el registro de hoy: cómo llega el jugador">ACWR Pre</th>
                 <th title="ACWR incluyendo el registro de hoy">ACWR Post</th>
                 <th>Riesgo</th>
                 <th>Cambio diario</th>
                 <th>Cambio semanal</th>
                 <th>Monotonía</th>
-                <th>Fatiga</th>
+                <th>Fatiga (Strain)</th>
                 <th>Bienestar</th>
               </tr>
             </thead>
@@ -209,19 +171,27 @@ export default function CoachDashboard() {
                   <td className="texto-dim">{j.equipos?.nombre || '—'}</td>
                   <td>{j.registroHoy ? <span className="punto-ok" /> : <span className="punto-pendiente" />}</td>
                   <td className="mono">{j.cargaSemanal}</td>
+                  <td className="mono">{j.cargaCronica ? Math.round(j.cargaCronica) : '—'}</td>
                   <td className="mono">{j.acwrPre !== null ? j.acwrPre.toFixed(2) : '—'}</td>
                   <td className="mono">{j.acwrPost !== null ? j.acwrPost.toFixed(2) : '—'}</td>
                   <td><span className={`riesgo-badge riesgo-${j.riesgo}`}>{traducirRiesgo(j.riesgo)}</span></td>
                   <td className="mono">{formatearPorcentaje(j.cambioDiario)}</td>
                   <td className="mono">{formatearPorcentaje(j.cambioSemanal)}</td>
                   <td className="mono">
-                    {j.monotonia !== null ? j.monotonia.toFixed(2) : '—'}
-                    {j.monotonia !== null && (
-                      <span className={`monotonia-punto monotonia-${j.nivelMonotonia}`} />
-                    )}
+                    {j.monotonia !== null ? (
+                      <span className={`monotonia-badge monotonia-${j.nivelMonotonia}`}>
+                        {j.monotonia.toFixed(2)} · {traducirMonotonia(j.nivelMonotonia)}
+                      </span>
+                    ) : '—'}
                   </td>
                   <td className="mono">{j.fatiga ? Math.round(j.fatiga) : '—'}</td>
-                  <td className="mono">{j.ultimoBienestar ? j.ultimoBienestar.toFixed(1) + ' / 5' : '—'}</td>
+                  <td>
+                    {j.malestar !== null ? (
+                      <span className={`bienestar-badge bienestar-${j.nivelBienestar}`}>
+                        {traducirBienestar(j.nivelBienestar)}
+                      </span>
+                    ) : '—'}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -239,6 +209,15 @@ export default function CoachDashboard() {
         <span className="riesgo-badge riesgo-moderada_alta">Mod. alta</span> 1.1–1.5 ·{' '}
         <span className="riesgo-badge riesgo-alta">Alta</span> 1.5–2.0 ·{' '}
         <span className="riesgo-badge riesgo-muy_alta">Muy alta</span> &gt;2.0
+        <br />
+        Monotonía — <span className="monotonia-badge monotonia-muy_variable">Muy variable</span> &lt;1 ·{' '}
+        <span className="monotonia-badge monotonia-correcta">Correcta</span> 1–2 ·{' '}
+        <span className="monotonia-badge monotonia-elevada">Elevada</span> 2–2.5 ·{' '}
+        <span className="monotonia-badge monotonia-riesgo_elevado">Riesgo elevado</span> &gt;2.5
+        <br />
+        Bienestar (estilo Índice de Hooper) — <span className="bienestar-badge bienestar-optimo">Óptimo</span> ·{' '}
+        <span className="bienestar-badge bienestar-bueno">Bueno</span> ·{' '}
+        <span className="bienestar-badge bienestar-malo">Malo</span>
       </p>
     </div>
   )
@@ -251,12 +230,6 @@ function TarjetaResumen({ etiqueta, valor, tono }) {
       <span className="tarjeta-etiqueta">{etiqueta}</span>
     </div>
   )
-}
-
-function promedio(valores) {
-  const validos = valores.filter((v) => v !== null && v !== undefined)
-  if (validos.length === 0) return null
-  return validos.reduce((a, b) => a + b, 0) / validos.length
 }
 
 function formatearPorcentaje(valor) {
@@ -275,4 +248,23 @@ function traducirRiesgo(r) {
     alta: 'Alta',
     muy_alta: 'Muy alta',
   }[r]
+}
+
+function traducirMonotonia(m) {
+  return {
+    sin_datos: 'Sin datos',
+    muy_variable: 'Muy variable',
+    correcta: 'Correcta',
+    elevada: 'Elevada',
+    riesgo_elevado: 'Riesgo elevado',
+  }[m]
+}
+
+function traducirBienestar(b) {
+  return {
+    sin_datos: 'Sin datos',
+    optimo: 'Óptimo',
+    bueno: 'Bueno',
+    malo: 'Malo',
+  }[b]
 }

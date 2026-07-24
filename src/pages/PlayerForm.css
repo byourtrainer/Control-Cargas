@@ -11,6 +11,21 @@
   color: var(--text-dim);
 }
 
+.equipo-selector-compacta {
+  border-style: dashed;
+  border-color: var(--line-strong);
+}
+
+.equipo-selector-compacta strong {
+  color: var(--text);
+}
+
+.equipo-selector-controles {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .equipo-selector-card select {
   background: var(--bg-elevated);
   border: 1px solid var(--line-strong);
@@ -18,6 +33,23 @@
   border-radius: 6px;
   padding: 6px 10px;
   font-size: 13px;
+}
+
+.equipo-cancelar, .equipo-cambiar-link {
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  font-size: 12px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.equipo-cancelar:hover, .equipo-cambiar-link:hover { color: var(--text); }
+
+.momento-dia {
+  color: var(--text-faint);
+  font-weight: 400;
+  font-size: 12px;
 }
 
 .player-layout {
@@ -123,6 +155,12 @@
   margin: 8px 0 16px;
   padding-top: 8px;
   border-top: 1px solid var(--line);
+}
+
+.bienestar-titulo-primero {
+  padding-top: 0;
+  border-top: none;
+  margin-top: 0;
 }
 
 .aviso-ok, .aviso-error {

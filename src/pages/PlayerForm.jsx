@@ -33,6 +33,7 @@ export default function PlayerForm({ perfil }) {
   const [cargandoDuracion, setCargandoDuracion] = useState(true)
   const [equipos, setEquipos] = useState([])
   const [equipoId, setEquipoId] = useState(perfil.equipo_id || '')
+  const [editandoEquipo, setEditandoEquipo] = useState(!perfil.equipo_id)
   const [guardandoEquipo, setGuardandoEquipo] = useState(false)
 
   useEffect(() => { cargarHistorial(); cargarDuracionHoy(); cargarEquipos() }, [])
@@ -48,6 +49,7 @@ export default function PlayerForm({ perfil }) {
     setGuardandoEquipo(true)
     await supabase.rpc('actualizar_mi_equipo', { nuevo_equipo_id: nuevoId || null })
     setGuardandoEquipo(false)
+    if (nuevoId) setEditandoEquipo(false)
   }
 
   async function cargarDuracionHoy() {
@@ -95,122 +97,145 @@ export default function PlayerForm({ perfil }) {
     setEnviando(false)
   }
 
+  const nombreEquipoActual = equipos.find((eq) => eq.id === equipoId)?.nombre
+
   return (
     <div>
-      <div className="equipo-selector-card">
-        <span>Tu equipo</span>
-        <select value={equipoId} onChange={manejarCambioEquipo} disabled={guardandoEquipo}>
-          <option value="">Sin asignar</option>
-          {equipos.map((eq) => (
-            <option key={eq.id} value={eq.id}>{eq.nombre}</option>
-          ))}
-        </select>
-      </div>
+      {editandoEquipo ? (
+        <div className="equipo-selector-card">
+          <span>{perfil.equipo_id ? 'Cambiar tu equipo' : 'Elige tu equipo (solo tienes que hacerlo una vez)'}</span>
+          <div className="equipo-selector-controles">
+            <select value={equipoId} onChange={manejarCambioEquipo} disabled={guardandoEquipo}>
+              <option value="">Sin asignar</option>
+              {equipos.map((eq) => (
+                <option key={eq.id} value={eq.id}>{eq.nombre}</option>
+              ))}
+            </select>
+            {perfil.equipo_id && (
+              <button type="button" className="equipo-cancelar" onClick={() => setEditandoEquipo(false)}>
+                Cancelar
+              </button>
+            )}
+          </div>
+        </div>
+      ) : (
+        <div className="equipo-selector-card equipo-selector-compacta">
+          <span>Tu equipo: <strong>{nombreEquipoActual}</strong></span>
+          <button type="button" className="equipo-cambiar-link" onClick={() => setEditandoEquipo(true)}>
+            Cambiar
+          </button>
+        </div>
+      )}
 
       <div className="player-layout">
-      <section className="player-form-card">
-        <div className="player-form-header">
-          <h2>Registro de hoy</h2>
-          <span className="mono fecha-hoy">{hoyISO()}</span>
-        </div>
-
-        <form onSubmit={manejarEnvio}>
-          <div className="rpe-bloque">
-            <div className="rpe-cabecera">
-              <span>RPE de la sesión</span>
-              <span className="rpe-valor mono" style={{ color: colorParaValor(rpe, 10) }}>
-                {rpe} · {descripcionesRPE[rpe]}
-              </span>
-            </div>
-            <input
-              type="range" min="0" max="10" value={rpe}
-              onChange={(e) => setRpe(Number(e.target.value))}
-              className="slider slider-rpe"
-              style={{ accentColor: colorParaValor(rpe, 10) }}
-            />
-            <div className="rpe-escala">
-              <span>Ningún esfuerzo</span><span>Máximo</span>
-            </div>
+        <section className="player-form-card">
+          <div className="player-form-header">
+            <h2>Registro de hoy</h2>
+            <span className="mono fecha-hoy">{hoyISO()}</span>
           </div>
 
-          {cargandoDuracion ? null : duracionHoy !== null ? (
-            <div className="carga-preview mono">
-              Duración de hoy (fijada por el entrenador): <strong>{duracionHoy} min</strong>
-              {' '}→ Carga estimada: <strong>{rpe * duracionHoy}</strong> u.a.
-            </div>
-          ) : (
-            <div className="aviso-pendiente mono">
-              El entrenador aún no ha indicado la duración de la sesión de hoy.
-              Puedes guardar tu RPE igualmente — la carga se calculará en cuanto la añada.
-            </div>
-          )}
+          <form onSubmit={manejarEnvio}>
+            <h3 className="bienestar-titulo bienestar-titulo-primero">
+              Bienestar <span className="momento-dia">— al despertar</span>
+            </h3>
+            {escalas.map((esc) => {
+              const color = colorParaValor(valores[esc.clave], 5, esc.invertido)
+              return (
+                <div className="rpe-bloque" key={esc.clave}>
+                  <div className="rpe-cabecera">
+                    <span>{esc.etiqueta}</span>
+                    <span className="rpe-valor mono" style={{ color }}>{valores[esc.clave]}</span>
+                  </div>
+                  <input
+                    type="range" min="1" max="5" value={valores[esc.clave]}
+                    onChange={(e) => setValores({ ...valores, [esc.clave]: Number(e.target.value) })}
+                    className="slider"
+                    style={{ accentColor: color }}
+                  />
+                  <div className="rpe-escala">
+                    <span>{esc.bajo}</span><span>{esc.alto}</span>
+                  </div>
+                </div>
+              )
+            })}
 
-          <h3 className="bienestar-titulo">Bienestar</h3>
-          {escalas.map((esc) => {
-            const color = colorParaValor(valores[esc.clave], 5, esc.invertido)
-            return (
-              <div className="rpe-bloque" key={esc.clave}>
-                <div className="rpe-cabecera">
-                  <span>{esc.etiqueta}</span>
-                  <span className="rpe-valor mono" style={{ color }}>{valores[esc.clave]}</span>
-                </div>
-                <input
-                  type="range" min="1" max="5" value={valores[esc.clave]}
-                  onChange={(e) => setValores({ ...valores, [esc.clave]: Number(e.target.value) })}
-                  className="slider"
-                  style={{ accentColor: color }}
-                />
-                <div className="rpe-escala">
-                  <span>{esc.bajo}</span><span>{esc.alto}</span>
-                </div>
+            <h3 className="bienestar-titulo">
+              RPE de la sesión <span className="momento-dia">— después de entrenar</span>
+            </h3>
+            <div className="rpe-bloque">
+              <div className="rpe-cabecera">
+                <span>Esfuerzo percibido</span>
+                <span className="rpe-valor mono" style={{ color: colorParaValor(rpe, 10) }}>
+                  {rpe} · {descripcionesRPE[rpe]}
+                </span>
               </div>
-            )
-          })}
+              <input
+                type="range" min="0" max="10" value={rpe}
+                onChange={(e) => setRpe(Number(e.target.value))}
+                className="slider slider-rpe"
+                style={{ accentColor: colorParaValor(rpe, 10) }}
+              />
+              <div className="rpe-escala">
+                <span>Ningún esfuerzo</span><span>Máximo</span>
+              </div>
+            </div>
 
-          <label className="campo-notas">
-            <span>Notas (opcional)</span>
-            <textarea
-              value={notas} onChange={(e) => setNotas(e.target.value)}
-              placeholder="Molestias, sensaciones, contexto…"
-              rows={2}
-            />
-          </label>
+            {cargandoDuracion ? null : duracionHoy !== null ? (
+              <div className="carga-preview mono">
+                Duración de hoy (fijada por el entrenador): <strong>{duracionHoy} min</strong>
+                {' '}→ Carga estimada: <strong>{rpe * duracionHoy}</strong> u.a.
+              </div>
+            ) : (
+              <div className="aviso-pendiente mono">
+                El entrenador aún no ha indicado la duración de la sesión de hoy.
+                Puedes guardar tu RPE igualmente — la carga se calculará en cuanto la añada.
+              </div>
+            )}
 
-          {mensaje && (
-            <div className={mensaje.tipo === 'ok' ? 'aviso-ok' : 'aviso-error'}>{mensaje.texto}</div>
+            <label className="campo-notas">
+              <span>Notas (opcional)</span>
+              <textarea
+                value={notas} onChange={(e) => setNotas(e.target.value)}
+                placeholder="Molestias, sensaciones, contexto…"
+                rows={2}
+              />
+            </label>
+
+            {mensaje && (
+              <div className={mensaje.tipo === 'ok' ? 'aviso-ok' : 'aviso-error'}>{mensaje.texto}</div>
+            )}
+
+            <button type="submit" className="btn-principal" disabled={enviando}>
+              {enviando ? 'Guardando…' : 'Guardar registro de hoy'}
+            </button>
+          </form>
+        </section>
+
+        <section className="historial-card">
+          <h3>Últimos 7 registros</h3>
+          {cargandoHistorial ? (
+            <p className="mono texto-dim">Cargando…</p>
+          ) : historial.length === 0 ? (
+            <p className="texto-dim">Aún no has registrado ninguna sesión.</p>
+          ) : (
+            <table className="historial-tabla">
+              <thead>
+                <tr><th>Fecha</th><th>RPE</th><th>Min</th><th>Carga</th></tr>
+              </thead>
+              <tbody>
+                {historial.map((r) => (
+                  <tr key={r.id}>
+                    <td className="mono">{r.fecha}</td>
+                    <td>{r.rpe}</td>
+                    <td>{r.duracion_min}</td>
+                    <td className="mono">{r.carga}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
-
-          <button type="submit" className="btn-principal" disabled={enviando}>
-            {enviando ? 'Guardando…' : 'Guardar registro de hoy'}
-          </button>
-        </form>
-      </section>
-
-      <section className="historial-card">
-        <h3>Últimos 7 registros</h3>
-        {cargandoHistorial ? (
-          <p className="mono texto-dim">Cargando…</p>
-        ) : historial.length === 0 ? (
-          <p className="texto-dim">Aún no has registrado ninguna sesión.</p>
-        ) : (
-          <table className="historial-tabla">
-            <thead>
-              <tr><th>Fecha</th><th>RPE</th><th>Min</th><th>Carga</th></tr>
-            </thead>
-            <tbody>
-              {historial.map((r) => (
-                <tr key={r.id}>
-                  <td className="mono">{r.fecha}</td>
-                  <td>{r.rpe}</td>
-                  <td>{r.duracion_min}</td>
-                  <td className="mono">{r.carga}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
-    </div>
+        </section>
+      </div>
     </div>
   )
 }
