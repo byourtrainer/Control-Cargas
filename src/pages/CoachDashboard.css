@@ -14,6 +14,36 @@
   gap: 12px;
 }
 
+.anadir-equipo-form {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.anadir-equipo-form input {
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 13px;
+  flex: 1;
+  max-width: 260px;
+}
+
+.anadir-equipo-form button {
+  background: none;
+  border: 1px solid var(--line-strong);
+  color: var(--text-dim);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.anadir-equipo-form button:hover { border-color: var(--accent); color: var(--accent); }
+.anadir-equipo-form button:disabled { opacity: 0.6; }
+
 .tarjetas-resumen {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { colorParaValor } from '../lib/colorEscalas'
 import './PlayerForm.css'
 
 const hoyISO = () => new Date().toISOString().slice(0, 10)
@@ -10,12 +11,14 @@ const descripcionesRPE = [
   'Duro', 'Algo duro', 'Muy duro', 'Muy muy duro', 'Casi máximo', 'Máximo',
 ]
 
+// invertido = true → un valor alto es BUENO (sueño, ánimo). En el resto,
+// un valor alto es MALO (fatiga, dolor, estrés) y se pinta en rojo.
 const escalas = [
-  { clave: 'sueno', etiqueta: 'Calidad del sueño', bajo: 'Muy mala', alto: 'Excelente' },
-  { clave: 'fatiga', etiqueta: 'Fatiga', bajo: 'Nada', alto: 'Extrema' },
-  { clave: 'dolor_muscular', etiqueta: 'Dolor muscular', bajo: 'Nada', alto: 'Extremo' },
-  { clave: 'estres', etiqueta: 'Estrés', bajo: 'Nada', alto: 'Extremo' },
-  { clave: 'animo', etiqueta: 'Estado de ánimo', bajo: 'Muy bajo', alto: 'Muy alto' },
+  { clave: 'sueno', etiqueta: 'Calidad del sueño', bajo: 'Muy mala', alto: 'Excelente', invertido: true },
+  { clave: 'fatiga', etiqueta: 'Fatiga', bajo: 'Nada', alto: 'Extrema', invertido: false },
+  { clave: 'dolor_muscular', etiqueta: 'Dolor muscular', bajo: 'Nada', alto: 'Extremo', invertido: false },
+  { clave: 'estres', etiqueta: 'Estrés', bajo: 'Nada', alto: 'Extremo', invertido: false },
+  { clave: 'animo', etiqueta: 'Estado de ánimo', bajo: 'Muy bajo', alto: 'Muy alto', invertido: true },
 ]
 
 export default function PlayerForm({ perfil }) {
@@ -28,8 +31,24 @@ export default function PlayerForm({ perfil }) {
   const [cargandoHistorial, setCargandoHistorial] = useState(true)
   const [duracionHoy, setDuracionHoy] = useState(null)
   const [cargandoDuracion, setCargandoDuracion] = useState(true)
+  const [equipos, setEquipos] = useState([])
+  const [equipoId, setEquipoId] = useState(perfil.equipo_id || '')
+  const [guardandoEquipo, setGuardandoEquipo] = useState(false)
 
-  useEffect(() => { cargarHistorial(); cargarDuracionHoy() }, [])
+  useEffect(() => { cargarHistorial(); cargarDuracionHoy(); cargarEquipos() }, [])
+
+  async function cargarEquipos() {
+    const { data } = await supabase.from('equipos').select('*').order('nombre')
+    setEquipos(data || [])
+  }
+
+  async function manejarCambioEquipo(e) {
+    const nuevoId = e.target.value
+    setEquipoId(nuevoId)
+    setGuardandoEquipo(true)
+    await supabase.rpc('actualizar_mi_equipo', { nuevo_equipo_id: nuevoId || null })
+    setGuardandoEquipo(false)
+  }
 
   async function cargarDuracionHoy() {
     setCargandoDuracion(true)
@@ -77,7 +96,18 @@ export default function PlayerForm({ perfil }) {
   }
 
   return (
-    <div className="player-layout">
+    <div>
+      <div className="equipo-selector-card">
+        <span>Tu equipo</span>
+        <select value={equipoId} onChange={manejarCambioEquipo} disabled={guardandoEquipo}>
+          <option value="">Sin asignar</option>
+          {equipos.map((eq) => (
+            <option key={eq.id} value={eq.id}>{eq.nombre}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="player-layout">
       <section className="player-form-card">
         <div className="player-form-header">
           <h2>Registro de hoy</h2>
@@ -88,12 +118,15 @@ export default function PlayerForm({ perfil }) {
           <div className="rpe-bloque">
             <div className="rpe-cabecera">
               <span>RPE de la sesión</span>
-              <span className="rpe-valor mono">{rpe} · {descripcionesRPE[rpe]}</span>
+              <span className="rpe-valor mono" style={{ color: colorParaValor(rpe, 10) }}>
+                {rpe} · {descripcionesRPE[rpe]}
+              </span>
             </div>
             <input
               type="range" min="0" max="10" value={rpe}
               onChange={(e) => setRpe(Number(e.target.value))}
               className="slider slider-rpe"
+              style={{ accentColor: colorParaValor(rpe, 10) }}
             />
             <div className="rpe-escala">
               <span>Ningún esfuerzo</span><span>Máximo</span>
@@ -113,22 +146,26 @@ export default function PlayerForm({ perfil }) {
           )}
 
           <h3 className="bienestar-titulo">Bienestar</h3>
-          {escalas.map((esc) => (
-            <div className="rpe-bloque" key={esc.clave}>
-              <div className="rpe-cabecera">
-                <span>{esc.etiqueta}</span>
-                <span className="rpe-valor mono">{valores[esc.clave]}</span>
+          {escalas.map((esc) => {
+            const color = colorParaValor(valores[esc.clave], 5, esc.invertido)
+            return (
+              <div className="rpe-bloque" key={esc.clave}>
+                <div className="rpe-cabecera">
+                  <span>{esc.etiqueta}</span>
+                  <span className="rpe-valor mono" style={{ color }}>{valores[esc.clave]}</span>
+                </div>
+                <input
+                  type="range" min="1" max="5" value={valores[esc.clave]}
+                  onChange={(e) => setValores({ ...valores, [esc.clave]: Number(e.target.value) })}
+                  className="slider"
+                  style={{ accentColor: color }}
+                />
+                <div className="rpe-escala">
+                  <span>{esc.bajo}</span><span>{esc.alto}</span>
+                </div>
               </div>
-              <input
-                type="range" min="1" max="5" value={valores[esc.clave]}
-                onChange={(e) => setValores({ ...valores, [esc.clave]: Number(e.target.value) })}
-                className="slider"
-              />
-              <div className="rpe-escala">
-                <span>{esc.bajo}</span><span>{esc.alto}</span>
-              </div>
-            </div>
-          ))}
+            )
+          })}
 
           <label className="campo-notas">
             <span>Notas (opcional)</span>
@@ -173,6 +210,7 @@ export default function PlayerForm({ perfil }) {
           </table>
         )}
       </section>
+    </div>
     </div>
   )
 }

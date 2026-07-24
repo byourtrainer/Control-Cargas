@@ -21,6 +21,10 @@ const metodosACWR = [
 export default function CoachDashboard() {
   const [jugadores, setJugadores] = useState([])
   const [registros, setRegistros] = useState([])
+  const [equipos, setEquipos] = useState([])
+  const [equipoFiltro, setEquipoFiltro] = useState('todos')
+  const [nuevoEquipo, setNuevoEquipo] = useState('')
+  const [guardandoEquipo, setGuardandoEquipo] = useState(false)
   const [jugadorSeleccionado, setJugadorSeleccionado] = useState('equipo')
   const [metodoACWR, setMetodoACWR] = useState('clasico')
   const [cargando, setCargando] = useState(true)
@@ -31,17 +35,37 @@ export default function CoachDashboard() {
     setCargando(true)
     // Se piden 70 días de histórico: suficiente para la carga crónica clásica
     // (28 días), el cambio semanal, y para que el EWMA tenga tiempo de estabilizarse.
-    const [{ data: perfiles }, { data: regs }] = await Promise.all([
-      supabase.from('perfiles').select('*').eq('rol', 'jugador').order('nombre'),
+    const [{ data: perfiles }, { data: regs }, { data: equiposData }] = await Promise.all([
+      supabase.from('perfiles').select('*, equipos(id, nombre)').eq('rol', 'jugador').order('nombre'),
       supabase.from('registros_diarios').select('*').gte('fecha', diasAtras(70)).order('fecha'),
+      supabase.from('equipos').select('*').order('nombre'),
     ])
     setJugadores(perfiles || [])
     setRegistros(regs || [])
+    setEquipos(equiposData || [])
     setCargando(false)
   }
 
+  async function anadirEquipo(e) {
+    e.preventDefault()
+    if (!nuevoEquipo.trim()) return
+    setGuardandoEquipo(true)
+    const { error } = await supabase.from('equipos').insert({ nombre: nuevoEquipo.trim() })
+    if (!error) {
+      setNuevoEquipo('')
+      cargarDatos()
+    }
+    setGuardandoEquipo(false)
+  }
+
+  const jugadoresFiltrados = useMemo(() => {
+    if (equipoFiltro === 'todos') return jugadores
+    if (equipoFiltro === 'sin_asignar') return jugadores.filter((j) => !j.equipo_id)
+    return jugadores.filter((j) => j.equipo_id === equipoFiltro)
+  }, [jugadores, equipoFiltro])
+
   const resumenPorJugador = useMemo(() => {
-    return jugadores.map((j) => {
+    return jugadoresFiltrados.map((j) => {
       const suyos = registros.filter((r) => r.jugador_id === j.id)
       const metricas = calcularMetricas(suyos, metodoACWR)
       const ultimoRegistro = [...suyos].sort((a, b) => b.fecha.localeCompare(a.fecha))[0]
@@ -56,12 +80,14 @@ export default function CoachDashboard() {
         registroHoy: suyos.some((r) => r.fecha === diasAtras(0)),
       }
     })
-  }, [jugadores, registros, metodoACWR])
+  }, [jugadoresFiltrados, registros, metodoACWR])
 
   const datosGrafico = useMemo(() => {
+    const idsFiltrados = new Set(jugadoresFiltrados.map((j) => j.id))
+    const registrosFiltrados = registros.filter((r) => idsFiltrados.has(r.jugador_id))
     const fuente = jugadorSeleccionado === 'equipo'
-      ? registros
-      : registros.filter((r) => r.jugador_id === jugadorSeleccionado)
+      ? registrosFiltrados
+      : registrosFiltrados.filter((r) => r.jugador_id === jugadorSeleccionado)
 
     const porFecha = {}
     fuente.forEach((r) => {
@@ -71,7 +97,7 @@ export default function CoachDashboard() {
       .sort(([a], [b]) => a.localeCompare(b))
       .slice(-21)
       .map(([fecha, carga]) => ({ fecha: fecha.slice(5), carga }))
-  }, [registros, jugadorSeleccionado])
+  }, [registros, jugadorSeleccionado, jugadoresFiltrados])
 
   if (cargando) return <p className="mono texto-dim">Cargando datos del equipo…</p>
 
@@ -80,7 +106,18 @@ export default function CoachDashboard() {
       <div className="coach-header">
         <h2>Panel del entrenador</h2>
         <div className="coach-header-derecha">
-          <span className="mono texto-dim">{jugadores.length} jugadores</span>
+          <span className="mono texto-dim">{jugadoresFiltrados.length} jugadores</span>
+          <select
+            value={equipoFiltro}
+            onChange={(e) => setEquipoFiltro(e.target.value)}
+            className="selector-jugador"
+          >
+            <option value="todos">Todos los equipos</option>
+            {equipos.map((eq) => (
+              <option key={eq.id} value={eq.id}>{eq.nombre}</option>
+            ))}
+            <option value="sin_asignar">Sin asignar</option>
+          </select>
           <select
             value={metodoACWR}
             onChange={(e) => setMetodoACWR(e.target.value)}
@@ -93,11 +130,22 @@ export default function CoachDashboard() {
         </div>
       </div>
 
+      <form className="anadir-equipo-form" onSubmit={anadirEquipo}>
+        <input
+          type="text" value={nuevoEquipo}
+          onChange={(e) => setNuevoEquipo(e.target.value)}
+          placeholder="Nombre de un equipo nuevo (ej. Juvenil A)"
+        />
+        <button type="submit" disabled={guardandoEquipo}>
+          {guardandoEquipo ? 'Añadiendo…' : '+ Añadir equipo'}
+        </button>
+      </form>
+
       <section className="tarjetas-resumen">
-        <TarjetaResumen etiqueta="Jugadores activos" valor={jugadores.length} />
+        <TarjetaResumen etiqueta="Jugadores activos" valor={jugadoresFiltrados.length} />
         <TarjetaResumen
           etiqueta="Registraron hoy"
-          valor={`${resumenPorJugador.filter((j) => j.registroHoy).length} / ${jugadores.length}`}
+          valor={`${resumenPorJugador.filter((j) => j.registroHoy).length} / ${jugadoresFiltrados.length}`}
         />
         <TarjetaResumen
           etiqueta="En riesgo (ACWR alto o muy alto)"
@@ -114,8 +162,8 @@ export default function CoachDashboard() {
             onChange={(e) => setJugadorSeleccionado(e.target.value)}
             className="selector-jugador"
           >
-            <option value="equipo">Todo el equipo</option>
-            {jugadores.map((j) => (
+            <option value="equipo">{equipoFiltro === 'todos' ? 'Todo el equipo' : 'Todo el grupo filtrado'}</option>
+            {jugadoresFiltrados.map((j) => (
               <option key={j.id} value={j.id}>{j.nombre}</option>
             ))}
           </select>
@@ -141,6 +189,7 @@ export default function CoachDashboard() {
             <thead>
               <tr>
                 <th>Jugador</th>
+                <th>Equipo</th>
                 <th>Hoy</th>
                 <th>Carga 7d</th>
                 <th title="ACWR sin contar el registro de hoy: cómo llega el jugador">ACWR Pre</th>
@@ -157,6 +206,7 @@ export default function CoachDashboard() {
               {resumenPorJugador.map((j) => (
                 <tr key={j.id}>
                   <td>{j.nombre}</td>
+                  <td className="texto-dim">{j.equipos?.nombre || '—'}</td>
                   <td>{j.registroHoy ? <span className="punto-ok" /> : <span className="punto-pendiente" />}</td>
                   <td className="mono">{j.cargaSemanal}</td>
                   <td className="mono">{j.acwrPre !== null ? j.acwrPre.toFixed(2) : '—'}</td>
@@ -177,8 +227,8 @@ export default function CoachDashboard() {
             </tbody>
           </table>
         </div>
-        {jugadores.length === 0 && (
-          <p className="texto-dim">Todavía no hay jugadores registrados en el equipo.</p>
+        {jugadoresFiltrados.length === 0 && (
+          <p className="texto-dim">No hay jugadores en este grupo todavía.</p>
         )}
       </section>
 

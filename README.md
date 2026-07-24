@@ -110,6 +110,18 @@ Excel (0 = Ningún esfuerzo … 10 = Máximo).
   **% de cambio semanal de carga** de ese jugador en la fecha exacta de la
   lesión — así queda registrado si la lesión coincidió con un pico de carga.
 
+## Colores por escala y equipos
+
+- Los sliders de **RPE** y **bienestar** ahora cambian de color según el
+  valor: verde (bajo/bueno), amarillo (medio), rojo (alto/extremo). Las
+  escalas donde un valor alto es bueno (sueño, ánimo) están invertidas, así
+  que el rojo aparece cuando esos valores son **bajos**, no altos.
+- Los jugadores pueden indicar su **equipo** desde un desplegable en la
+  parte superior de su formulario (lista gestionada por el entrenador).
+- El entrenador puede **añadir equipos nuevos** desde el panel (campo de
+  texto + botón "+ Añadir equipo"), y **filtrar** toda la vista (tarjetas,
+  gráfico y tabla) por equipo con el desplegable correspondiente.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.
