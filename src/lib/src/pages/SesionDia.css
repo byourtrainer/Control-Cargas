@@ -1,0 +1,72 @@
+.sesion-layout {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 800px) {
+  .sesion-layout { grid-template-columns: 1fr; }
+}
+
+.sesion-form-card, .sesion-historial-card {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 24px;
+}
+
+.sesion-sub {
+  color: var(--text-dim);
+  font-size: 13px;
+  margin: 6px 0 20px;
+  line-height: 1.5;
+}
+
+.campo-sesion {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--text-dim);
+  margin-bottom: 16px;
+}
+
+.campo-sesion input {
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 14px;
+}
+
+.campo-sesion input:focus { border-color: var(--accent); }
+
+.fila-doble {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.sesion-historial-card h3 { font-size: 15px; margin-bottom: 16px; color: var(--text-dim); }
+
+.sesion-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.sesion-tabla th {
+  text-align: left;
+  color: var(--text-faint);
+  font-weight: 500;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.sesion-tabla td {
+  padding: 8px 12px 8px 0;
+  border-bottom: 1px solid var(--line);
+}

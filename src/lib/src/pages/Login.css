@@ -1,0 +1,114 @@
+.login-pantalla {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background:
+    radial-gradient(circle at 20% -10%, rgba(200,255,77,0.08), transparent 40%),
+    var(--bg);
+}
+
+.login-tarjeta {
+  width: 100%;
+  max-width: 380px;
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 32px 28px;
+}
+
+.login-marca {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 28px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+}
+
+.login-tarjeta h2 {
+  font-size: 22px;
+  margin-bottom: 6px;
+}
+
+.login-sub {
+  color: var(--text-dim);
+  font-size: 14px;
+  margin: 0 0 24px;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.campo input {
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.campo input:focus {
+  border-color: var(--accent);
+}
+
+.btn-principal {
+  background: var(--accent);
+  color: #0d1210;
+  border: none;
+  border-radius: 8px;
+  padding: 12px;
+  font-weight: 600;
+  font-size: 14px;
+  margin-top: 6px;
+  transition: filter 0.15s;
+}
+
+.btn-principal:hover { filter: brightness(1.08); }
+.btn-principal:disabled { opacity: 0.6; cursor: default; }
+
+.login-error {
+  background: rgba(234, 92, 74, 0.12);
+  color: var(--risk-high);
+  border: 1px solid rgba(234, 92, 74, 0.3);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+.login-aviso {
+  background: rgba(111, 207, 125, 0.12);
+  color: var(--risk-low);
+  border: 1px solid rgba(111, 207, 125, 0.3);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+.login-cambiar-modo {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 13px;
+  margin-top: 18px;
+  width: 100%;
+  text-align: center;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.login-cambiar-modo:hover { color: var(--text); }

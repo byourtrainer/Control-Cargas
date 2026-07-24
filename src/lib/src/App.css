@@ -1,0 +1,149 @@
+.pantalla-carga {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dim);
+}
+
+.pulso {
+  animation: parpadeo 1.2s ease-in-out infinite;
+  letter-spacing: 0.15em;
+}
+
+@keyframes parpadeo {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-elevated);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.marca {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.marca-punto {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 12px var(--accent);
+  flex-shrink: 0;
+}
+
+.marca h1 {
+  font-size: 16px;
+  letter-spacing: 0.06em;
+}
+
+.usuario-actual {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.usuario-nombre {
+  color: var(--text-dim);
+  font-size: 14px;
+}
+
+.equipo-activo-badge {
+  font-size: 11px;
+  color: var(--text-faint);
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  padding: 3px 8px;
+}
+
+.rol-badge {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+}
+
+.rol-entrenador {
+  background: rgba(200, 255, 77, 0.15);
+  color: var(--accent);
+}
+
+.rol-jugador {
+  background: rgba(154, 171, 160, 0.15);
+  color: var(--text-dim);
+}
+
+.btn-salir {
+  background: none;
+  border: 1px solid var(--line-strong);
+  color: var(--text-dim);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.btn-salir:hover {
+  border-color: var(--text-dim);
+  color: var(--text);
+}
+
+.contenido {
+  flex: 1;
+  padding: 32px 24px;
+  max-width: 1100px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.pestanas-nav {
+  display: flex;
+  gap: 4px;
+  padding: 12px 24px 0;
+  max-width: 1100px;
+  width: 100%;
+  margin: 0 auto;
+  border-bottom: 1px solid var(--line);
+}
+
+.pestana-btn {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  padding: 10px 14px;
+  font-size: 13px;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.15s;
+}
+
+.pestana-btn:hover { color: var(--text); }
+
+.pestana-activa {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+@media (max-width: 640px) {
+  .contenido { padding: 20px 16px; }
+  .usuario-nombre { display: none; }
+}

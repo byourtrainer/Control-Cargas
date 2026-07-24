@@ -1,0 +1,161 @@
+.coach-layout { display: flex; flex-direction: column; gap: 24px; }
+
+.coach-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.coach-header-derecha {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.anadir-equipo-form {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.anadir-equipo-form input {
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 13px;
+  flex: 1;
+  max-width: 260px;
+}
+
+.anadir-equipo-form button {
+  background: none;
+  border: 1px solid var(--line-strong);
+  color: var(--text-dim);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.anadir-equipo-form button:hover { border-color: var(--accent); color: var(--accent); }
+.anadir-equipo-form button:disabled { opacity: 0.6; }
+
+.tarjetas-resumen {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 640px) {
+  .tarjetas-resumen { grid-template-columns: 1fr; }
+}
+
+.tarjeta-resumen {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tarjeta-valor { font-size: 28px; font-weight: 600; }
+.tarjeta-etiqueta { font-size: 13px; color: var(--text-dim); }
+.tarjeta-alto .tarjeta-valor { color: var(--risk-high); }
+
+.grafico-card, .tabla-card {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 22px;
+}
+
+.tabla-card-ancha { padding: 22px 0 22px 22px; }
+.tabla-scroll { overflow-x: auto; padding-right: 22px; }
+
+.grafico-cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.grafico-cabecera h3, .tabla-card h3 { font-size: 15px; color: var(--text-dim); font-weight: 500; }
+
+.selector-jugador {
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+.jugadores-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.jugadores-tabla th {
+  text-align: left;
+  color: var(--text-faint);
+  font-weight: 500;
+  padding-bottom: 10px;
+  padding-right: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.jugadores-tabla td {
+  padding: 10px 16px 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.punto-ok, .punto-pendiente {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+}
+.punto-ok { background: var(--risk-low); }
+.punto-pendiente { background: var(--text-faint); }
+
+.riesgo-badge {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+.riesgo-sin_datos { background: rgba(154,171,160,0.12); color: var(--text-faint); }
+.riesgo-muy_baja { background: rgba(111,207,125,0.10); color: var(--risk-low); }
+.riesgo-baja { background: rgba(111,207,125,0.16); color: var(--risk-low); }
+.riesgo-optima { background: rgba(200,255,77,0.15); color: var(--accent); }
+.riesgo-moderada_alta { background: rgba(242,193,78,0.16); color: var(--risk-mid); }
+.riesgo-alta { background: rgba(242,145,78,0.16); color: var(--risk-high-mid); }
+.riesgo-muy_alta { background: rgba(234,92,74,0.20); color: var(--risk-high); }
+
+.monotonia-badge {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+.monotonia-sin_datos { background: rgba(154,171,160,0.12); color: var(--text-faint); }
+.monotonia-muy_variable { background: rgba(154,171,160,0.14); color: var(--text-dim); }
+.monotonia-correcta { background: rgba(111,207,125,0.14); color: var(--risk-low); }
+.monotonia-elevada { background: rgba(242,145,78,0.16); color: var(--risk-high-mid); }
+.monotonia-riesgo_elevado { background: rgba(234,92,74,0.18); color: var(--risk-high); }
+
+.leyenda-riesgo {
+  font-size: 12px;
+  line-height: 2;
+}
