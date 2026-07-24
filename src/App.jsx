@@ -3,12 +3,21 @@ import { supabase } from './lib/supabaseClient'
 import Login from './pages/Login'
 import PlayerForm from './pages/PlayerForm'
 import CoachDashboard from './pages/CoachDashboard'
+import SesionDia from './pages/SesionDia'
+import Lesiones from './pages/Lesiones'
 import './App.css'
+
+const pestanasEntrenador = [
+  { clave: 'resumen', etiqueta: 'Resumen' },
+  { clave: 'sesion', etiqueta: 'Sesión del día' },
+  { clave: 'lesiones', etiqueta: 'Lesiones' },
+]
 
 export default function App() {
   const [session, setSession] = useState(null)
   const [perfil, setPerfil] = useState(null)
   const [cargando, setCargando] = useState(true)
+  const [pestana, setPestana] = useState('resumen')
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -83,10 +92,28 @@ export default function App() {
         </div>
       </header>
 
+      {perfil.rol === 'entrenador' && (
+        <nav className="pestanas-nav">
+          {pestanasEntrenador.map((p) => (
+            <button
+              key={p.clave}
+              className={`pestana-btn ${pestana === p.clave ? 'pestana-activa' : ''}`}
+              onClick={() => setPestana(p.clave)}
+            >
+              {p.etiqueta}
+            </button>
+          ))}
+        </nav>
+      )}
+
       <main className="contenido">
-        {perfil.rol === 'entrenador'
-          ? <CoachDashboard />
-          : <PlayerForm perfil={perfil} />}
+        {perfil.rol === 'entrenador' ? (
+          pestana === 'sesion' ? <SesionDia />
+          : pestana === 'lesiones' ? <Lesiones />
+          : <CoachDashboard />
+        ) : (
+          <PlayerForm perfil={perfil} />
+        )}
       </main>
     </div>
   )

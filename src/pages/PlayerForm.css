@@ -82,6 +82,17 @@
   margin-bottom: 24px;
 }
 
+.aviso-pendiente {
+  background: rgba(242,193,78,0.08);
+  border: 1px dashed rgba(242,193,78,0.4);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--risk-mid);
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
 .carga-preview strong { color: var(--accent); font-size: 15px; }
 
 .bienestar-titulo {

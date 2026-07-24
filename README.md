@@ -99,6 +99,17 @@ Clasificación de Monotonía: < 1 muy variable · 1–2 correcta · 2–2.5 elev
 La escala de RPE es de **0 a 10**, con la descripción exacta de vuestro
 Excel (0 = Ningún esfuerzo … 10 = Máximo).
 
+## Duración de sesión y lesiones (gestión exclusiva del entrenador)
+
+- La **duración de la sesión** ya no la introduce el jugador: el entrenador
+  la fija una vez por día desde la pestaña "Sesión del día", y se aplica
+  automáticamente a todos los registros de esa fecha (incluso si un jugador
+  ya había mandado su RPE antes de que se fijara la duración).
+- La pestaña **"Lesiones"** solo es visible para el entrenador. Al registrar
+  una lesión, la app calcula y guarda automáticamente el **ACWR** y el
+  **% de cambio semanal de carga** de ese jugador en la fecha exacta de la
+  lesión — así queda registrado si la lesión coincidió con un pico de carga.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

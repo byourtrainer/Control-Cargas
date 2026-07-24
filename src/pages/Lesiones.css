@@ -1,0 +1,112 @@
+.lesiones-layout {
+  display: grid;
+  grid-template-columns: 1fr 1.3fr;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .lesiones-layout { grid-template-columns: 1fr; }
+}
+
+.lesion-form-card, .lesiones-historial-card {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 24px;
+}
+
+.campo-lesion {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--text-dim);
+  margin-bottom: 16px;
+}
+
+.campo-lesion input, .campo-lesion select, .campo-lesion textarea {
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 14px;
+  resize: vertical;
+}
+
+.campo-lesion input:focus, .campo-lesion select:focus, .campo-lesion textarea:focus {
+  border-color: var(--accent);
+}
+
+.fila-doble {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.campo-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-dim);
+  margin-bottom: 16px;
+}
+
+.campo-checkbox input { accent-color: var(--accent); }
+
+.preview-carga {
+  background: rgba(200,255,77,0.06);
+  border: 1px dashed rgba(200,255,77,0.3);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 16px;
+  line-height: 1.6;
+}
+
+.preview-carga strong { color: var(--accent); }
+
+.preview-nota {
+  font-size: 11px;
+  color: var(--text-faint);
+  margin-top: 2px;
+}
+
+.lesiones-historial-card h3 { font-size: 15px; margin-bottom: 16px; color: var(--text-dim); }
+
+.tabla-scroll { overflow-x: auto; }
+
+.lesiones-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.lesiones-tabla th {
+  text-align: left;
+  color: var(--text-faint);
+  font-weight: 500;
+  padding-bottom: 8px;
+  padding-right: 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.lesiones-tabla td {
+  padding: 8px 14px 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.severidad-badge {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+}
+.severidad-leve { background: rgba(111,207,125,0.14); color: var(--risk-low); }
+.severidad-moderada { background: rgba(242,193,78,0.14); color: var(--risk-mid); }
+.severidad-grave { background: rgba(234,92,74,0.16); color: var(--risk-high); }

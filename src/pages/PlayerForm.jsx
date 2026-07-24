@@ -20,15 +20,27 @@ const escalas = [
 
 export default function PlayerForm({ perfil }) {
   const [rpe, setRpe] = useState(5)
-  const [duracion, setDuracion] = useState(60)
   const [valores, setValores] = useState({ sueno: 3, fatiga: 3, dolor_muscular: 3, estres: 3, animo: 3 })
   const [notas, setNotas] = useState('')
   const [enviando, setEnviando] = useState(false)
   const [mensaje, setMensaje] = useState(null)
   const [historial, setHistorial] = useState([])
   const [cargandoHistorial, setCargandoHistorial] = useState(true)
+  const [duracionHoy, setDuracionHoy] = useState(null)
+  const [cargandoDuracion, setCargandoDuracion] = useState(true)
 
-  useEffect(() => { cargarHistorial() }, [])
+  useEffect(() => { cargarHistorial(); cargarDuracionHoy() }, [])
+
+  async function cargarDuracionHoy() {
+    setCargandoDuracion(true)
+    const { data } = await supabase
+      .from('sesiones')
+      .select('duracion_min')
+      .eq('fecha', hoyISO())
+      .maybeSingle()
+    setDuracionHoy(data ? data.duracion_min : null)
+    setCargandoDuracion(false)
+  }
 
   async function cargarHistorial() {
     setCargandoHistorial(true)
@@ -51,7 +63,6 @@ export default function PlayerForm({ perfil }) {
       jugador_id: perfil.id,
       fecha: hoyISO(),
       rpe,
-      duracion_min: duracion,
       ...valores,
       notas: notas || null,
     }, { onConflict: 'jugador_id,fecha' })
@@ -89,17 +100,17 @@ export default function PlayerForm({ perfil }) {
             </div>
           </div>
 
-          <label className="campo-duracion">
-            <span>Duración de la sesión (minutos)</span>
-            <input
-              type="number" min="0" max="300" value={duracion}
-              onChange={(e) => setDuracion(Number(e.target.value))}
-            />
-          </label>
-
-          <div className="carga-preview mono">
-            Carga estimada: <strong>{rpe * duracion}</strong> u.a.
-          </div>
+          {cargandoDuracion ? null : duracionHoy !== null ? (
+            <div className="carga-preview mono">
+              Duración de hoy (fijada por el entrenador): <strong>{duracionHoy} min</strong>
+              {' '}→ Carga estimada: <strong>{rpe * duracionHoy}</strong> u.a.
+            </div>
+          ) : (
+            <div className="aviso-pendiente mono">
+              El entrenador aún no ha indicado la duración de la sesión de hoy.
+              Puedes guardar tu RPE igualmente — la carga se calculará en cuanto la añada.
+            </div>
+          )}
 
           <h3 className="bienestar-titulo">Bienestar</h3>
           {escalas.map((esc) => (
