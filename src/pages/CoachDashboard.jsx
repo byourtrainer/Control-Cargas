@@ -4,6 +4,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend,
 } from 'recharts'
 import { supabase } from '../lib/supabaseClient'
+import { calcularMetricas, clasificarRiesgoACWR } from '../lib/cargaMetrics'
 import './CoachDashboard.css'
 
 const diasAtras = (n) => {
@@ -12,10 +13,17 @@ const diasAtras = (n) => {
   return d.toISOString().slice(0, 10)
 }
 
+const metodosACWR = [
+  { valor: 'coupled', etiqueta: 'ACWR Coupled' },
+  { valor: 'uncoupled', etiqueta: 'ACWR Uncoupled' },
+  { valor: 'ewma', etiqueta: 'Ratio EWMA' },
+]
+
 export default function CoachDashboard() {
   const [jugadores, setJugadores] = useState([])
   const [registros, setRegistros] = useState([])
   const [jugadorSeleccionado, setJugadorSeleccionado] = useState('equipo')
+  const [metodoACWR, setMetodoACWR] = useState('coupled')
   const [cargando, setCargando] = useState(true)
 
   useEffect(() => { cargarDatos() }, [])
@@ -34,23 +42,22 @@ export default function CoachDashboard() {
   const resumenPorJugador = useMemo(() => {
     return jugadores.map((j) => {
       const suyos = registros.filter((r) => r.jugador_id === j.id)
-      const cargaSemana = sumaDesde(suyos, 7)
-      const cargaAguda = promedioDesde(suyos, 7)
-      const cargaCronica = promedioDesde(suyos, 28)
-      const acwr = cargaCronica > 0 ? cargaAguda / cargaCronica : null
+      const { acwr, monotonia, fatiga, cargaSemanal } = calcularMetricas(suyos, metodoACWR)
       const ultimoRegistro = [...suyos].sort((a, b) => b.fecha.localeCompare(a.fecha))[0]
       return {
         ...j,
-        cargaSemana,
+        cargaSemana: cargaSemanal,
         acwr,
-        riesgo: clasificarRiesgo(acwr),
+        monotonia,
+        fatiga,
+        riesgo: clasificarRiesgoACWR(acwr),
         ultimoBienestar: ultimoRegistro
           ? promedio([ultimoRegistro.sueno, ultimoRegistro.fatiga, ultimoRegistro.dolor_muscular, ultimoRegistro.estres, ultimoRegistro.animo])
           : null,
         registroHoy: suyos.some((r) => r.fecha === diasAtras(0)),
       }
     })
-  }, [jugadores, registros])
+  }, [jugadores, registros, metodoACWR])
 
   const datosGrafico = useMemo(() => {
     const fuente = jugadorSeleccionado === 'equipo'
@@ -72,7 +79,18 @@ export default function CoachDashboard() {
     <div className="coach-layout">
       <div className="coach-header">
         <h2>Panel del entrenador</h2>
-        <span className="mono texto-dim">{jugadores.length} jugadores · últimos 35 días</span>
+        <div className="coach-header-derecha">
+          <span className="mono texto-dim">{jugadores.length} jugadores</span>
+          <select
+            value={metodoACWR}
+            onChange={(e) => setMetodoACWR(e.target.value)}
+            className="selector-jugador"
+          >
+            {metodosACWR.map((m) => (
+              <option key={m.valor} value={m.valor}>{m.etiqueta}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <section className="tarjetas-resumen">
@@ -126,6 +144,8 @@ export default function CoachDashboard() {
               <th>Carga 7 días</th>
               <th>ACWR</th>
               <th>Riesgo</th>
+              <th>Monotonía</th>
+              <th>Fatiga</th>
               <th>Bienestar reciente</th>
             </tr>
           </thead>
@@ -137,6 +157,8 @@ export default function CoachDashboard() {
                 <td className="mono">{j.cargaSemana}</td>
                 <td className="mono">{j.acwr ? j.acwr.toFixed(2) : '—'}</td>
                 <td><span className={`riesgo-badge riesgo-${j.riesgo}`}>{traducirRiesgo(j.riesgo)}</span></td>
+                <td className="mono">{j.monotonia ? j.monotonia.toFixed(2) : '—'}</td>
+                <td className="mono">{j.fatiga ? Math.round(j.fatiga) : '—'}</td>
                 <td className="mono">{j.ultimoBienestar ? j.ultimoBienestar.toFixed(1) + ' / 5' : '—'}</td>
               </tr>
             ))}
@@ -159,30 +181,10 @@ function TarjetaResumen({ etiqueta, valor, tono }) {
   )
 }
 
-function sumaDesde(registros, dias) {
-  const limite = diasAtras(dias)
-  return registros.filter((r) => r.fecha >= limite).reduce((acc, r) => acc + (r.carga || 0), 0)
-}
-
-function promedioDesde(registros, dias) {
-  const limite = diasAtras(dias)
-  const relevantes = registros.filter((r) => r.fecha >= limite)
-  if (relevantes.length === 0) return 0
-  return relevantes.reduce((acc, r) => acc + (r.carga || 0), 0) / dias
-}
-
 function promedio(valores) {
   const validos = valores.filter((v) => v !== null && v !== undefined)
   if (validos.length === 0) return null
   return validos.reduce((a, b) => a + b, 0) / validos.length
-}
-
-function clasificarRiesgo(acwr) {
-  if (acwr === null) return 'sin_datos'
-  if (acwr < 0.8) return 'bajo'
-  if (acwr <= 1.3) return 'optimo'
-  if (acwr <= 1.5) return 'medio'
-  return 'alto'
 }
 
 function traducirRiesgo(r) {

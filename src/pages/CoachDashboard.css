@@ -3,9 +3,15 @@
 .coach-header {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.coach-header-derecha {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .tarjetas-resumen {

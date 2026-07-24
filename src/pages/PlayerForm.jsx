@@ -4,6 +4,12 @@ import './PlayerForm.css'
 
 const hoyISO = () => new Date().toISOString().slice(0, 10)
 
+// Escala RPE 0-10 tal y como se usa en el club (escala de Foster / CR-10 modificada)
+const descripcionesRPE = [
+  'Ningún esfuerzo', 'Muy muy suave', 'Muy suave', 'Suave', 'Moderado',
+  'Duro', 'Algo duro', 'Muy duro', 'Muy muy duro', 'Casi máximo', 'Máximo',
+]
+
 const escalas = [
   { clave: 'sueno', etiqueta: 'Calidad del sueño', bajo: 'Muy mala', alto: 'Excelente' },
   { clave: 'fatiga', etiqueta: 'Fatiga', bajo: 'Nada', alto: 'Extrema' },
@@ -71,15 +77,15 @@ export default function PlayerForm({ perfil }) {
           <div className="rpe-bloque">
             <div className="rpe-cabecera">
               <span>RPE de la sesión</span>
-              <span className="rpe-valor mono">{rpe}</span>
+              <span className="rpe-valor mono">{rpe} · {descripcionesRPE[rpe]}</span>
             </div>
             <input
-              type="range" min="1" max="10" value={rpe}
+              type="range" min="0" max="10" value={rpe}
               onChange={(e) => setRpe(Number(e.target.value))}
               className="slider slider-rpe"
             />
             <div className="rpe-escala">
-              <span>Muy suave</span><span>Máximo esfuerzo</span>
+              <span>Ningún esfuerzo</span><span>Máximo</span>
             </div>
           </div>
 

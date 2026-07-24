@@ -53,6 +53,28 @@ en el archivo `.env`.
    a `entrenador`.
 4. Recarga la app — verás el panel del entrenador.
 
+## Cálculo de carga avanzado (v2, basado en tu Excel)
+
+El panel del entrenador ahora permite elegir el método de cálculo, igual que
+en tu Excel de control de cargas:
+
+- **ACWR Coupled**: el ratio agudo:crónico clásico, donde la semana aguda
+  (últimos 7 días) está incluida dentro del período crónico (últimos 28 días).
+- **ACWR Uncoupled**: el crónico se calcula solo con las 3 semanas *previas*
+  a la semana aguda, sin solaparse con ella.
+- **Ratio EWMA**: usa medias móviles exponenciales en vez de medias simples,
+  dando más peso a los días más recientes — más sensible a cambios bruscos.
+
+También se calculan, sobre los últimos 7 días:
+- **Monotonía**: mide si la carga semanal es muy uniforme (sin días de
+  descarga). Valores altos indican poca variabilidad, lo que se asocia a
+  mayor riesgo si se mantiene en el tiempo.
+- **Fatiga (Strain)**: carga semanal total × monotonía. Combina volumen y
+  monotonía en un único indicador de riesgo acumulado.
+
+La escala de RPE es ahora de **0 a 10** (0 = ningún esfuerzo, 10 = máximo),
+con la misma descripción que usáis en el club.
+
 ## Cómo entienden el ACWR las tarjetas de riesgo
 
 `ACWR = carga media de los últimos 7 días / carga media de los últimos 28 días`
