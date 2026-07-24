@@ -1,5 +1,5 @@
-// Cálculos de carga: ACWR (Coupled / Uncoupled), EWMA, Monotonía y Fatiga (Foster).
-// Réplica de la lógica del Excel de control de cargas del club.
+// Cálculos de carga: Training Load, Carga Aguda/Crónica, ACWR clásico y EWMA
+// (Pre/Post), Monotonía, Fatiga (Strain), y cambios diario/semanal.
 
 const fechaISO = (date) => date.toISOString().slice(0, 10)
 
@@ -18,7 +18,8 @@ export function construirSerieDiaria(registros, dias, fechaReferencia = new Date
   return serie
 }
 
-const media = (arr) => (arr.length === 0 ? 0 : arr.reduce((a, b) => a + b, 0) / arr.length)
+const suma = (arr) => arr.reduce((a, b) => a + b, 0)
+const media = (arr) => (arr.length === 0 ? 0 : suma(arr) / arr.length)
 
 const desviacionEstandar = (arr) => {
   if (arr.length === 0) return 0
@@ -27,66 +28,127 @@ const desviacionEstandar = (arr) => {
   return Math.sqrt(varianza)
 }
 
-/** ACWR Coupled: la semana aguda está incluida dentro del período crónico (28 días). */
-export function acwrCoupled(registros, fechaReferencia) {
-  const serie = construirSerieDiaria(registros, 28, fechaReferencia)
-  const agudo = media(serie.slice(-7).map((d) => d.carga))
-  const cronico = media(serie.map((d) => d.carga))
-  return cronico > 0 ? agudo / cronico : null
+const DIAS_AGUDO = 7
+const DIAS_CRONICO = 28 // 4 semanas
+
+/** Carga Aguda: suma de las cargas de los últimos 7 días. */
+export function cargaAguda(registros, fechaReferencia = new Date()) {
+  const serie = construirSerieDiaria(registros, DIAS_AGUDO, fechaReferencia)
+  return suma(serie.map((d) => d.carga))
 }
 
-/** ACWR Uncoupled: el crónico se calcula solo con las 3 semanas PREVIAS a la semana aguda. */
-export function acwrUncoupled(registros, fechaReferencia) {
-  const serie = construirSerieDiaria(registros, 28, fechaReferencia)
-  const agudo = media(serie.slice(-7).map((d) => d.carga))
-  const previas = serie.slice(0, 21).map((d) => d.carga)
-  const cronico = media(previas)
-  return cronico > 0 ? agudo / cronico : null
+/** Carga Crónica: media diaria de los últimos 28 días (4 semanas). */
+export function cargaCronicaPromedio(registros, fechaReferencia = new Date()) {
+  const serie = construirSerieDiaria(registros, DIAS_CRONICO, fechaReferencia)
+  return media(serie.map((d) => d.carga))
 }
 
-function ewma(cargas, lambda) {
+/** ACWR clásico = (Carga Aguda / 7) ÷ Carga Crónica (media diaria sobre 28 días). */
+export function acwrClasico(registros, fechaReferencia = new Date()) {
+  const agudoPromedioDiario = cargaAguda(registros, fechaReferencia) / DIAS_AGUDO
+  const cronico = cargaCronicaPromedio(registros, fechaReferencia)
+  return cronico > 0 ? agudoPromedioDiario / cronico : null
+}
+
+function ewma(cargasOrdenadasPorFecha, lambda) {
   let valor = null
-  for (const c of cargas) {
+  for (const c of cargasOrdenadasPorFecha) {
     valor = valor === null ? c : c * lambda + valor * (1 - lambda)
   }
   return valor
 }
 
-/** Ratio EWMA: mismo concepto que ACWR pero con medias móviles exponenciales (más sensible a cambios recientes). */
-export function ratioEWMA(registros, fechaReferencia) {
-  const serie = construirSerieDiaria(registros, 28, fechaReferencia)
+/**
+ * Ratio EWMA: medias móviles ponderadas exponencialmente en vez de medias
+ * simples. Da más peso a las sesiones recientes y reacciona antes a cambios
+ * de carga que el ACWR clásico. Se usa una ventana de histórico más amplia
+ * (60 días) para que las medias tengan tiempo de estabilizarse.
+ */
+export function ratioEWMA(registros, fechaReferencia = new Date()) {
+  const serie = construirSerieDiaria(registros, 60, fechaReferencia)
   const cargas = serie.map((d) => d.carga)
-  const agudo = ewma(cargas, 2 / (7 + 1))
-  const cronico = ewma(cargas, 2 / (28 + 1))
+  const lambdaAgudo = 2 / (DIAS_AGUDO + 1)     // 0.25
+  const lambdaCronico = 2 / (DIAS_CRONICO + 1) // ≈ 0.069
+  const agudo = ewma(cargas, lambdaAgudo)
+  const cronico = ewma(cargas, lambdaCronico)
   return cronico > 0 ? agudo / cronico : null
 }
 
-/** Monotonía y Fatiga (índices de Foster) sobre los últimos 7 días. */
-export function monotoniaYFatiga(registros, fechaReferencia) {
-  const serie = construirSerieDiaria(registros, 7, fechaReferencia)
+function calcularACWR(registros, metodo, fechaReferencia) {
+  return metodo === 'ewma' ? ratioEWMA(registros, fechaReferencia) : acwrClasico(registros, fechaReferencia)
+}
+
+/** ACWR Pre-entreno: el ratio tal y como llega el jugador, sin contar el registro de hoy. */
+export function acwrPreEntreno(registros, metodo, fechaReferencia = new Date()) {
+  const ayer = new Date(fechaReferencia)
+  ayer.setDate(ayer.getDate() - 1)
+  return calcularACWR(registros, metodo, ayer)
+}
+
+/** ACWR Post-entreno: el ratio ya incluyendo el registro de hoy. */
+export function acwrPostEntreno(registros, metodo, fechaReferencia = new Date()) {
+  return calcularACWR(registros, metodo, fechaReferencia)
+}
+
+/** Monotonía y Fatiga (Training Strain), sobre los últimos 7 días. */
+export function monotoniaYFatiga(registros, fechaReferencia = new Date()) {
+  const serie = construirSerieDiaria(registros, DIAS_AGUDO, fechaReferencia)
   const cargas = serie.map((d) => d.carga)
   const m = media(cargas)
   const sd = desviacionEstandar(cargas)
   const monotonia = sd > 0 ? m / sd : null
-  const cargaSemanal = cargas.reduce((a, b) => a + b, 0)
+  const cargaSemanal = suma(cargas)
   const fatiga = monotonia !== null ? cargaSemanal * monotonia : null
   return { monotonia, fatiga, cargaSemanal }
 }
 
-/** Calcula el conjunto completo de métricas para un jugador, según el método de ACWR elegido. */
-export function calcularMetricas(registros, metodo, fechaReferencia = new Date()) {
-  const { monotonia, fatiga, cargaSemanal } = monotoniaYFatiga(registros, fechaReferencia)
-  let acwr = null
-  if (metodo === 'coupled') acwr = acwrCoupled(registros, fechaReferencia)
-  else if (metodo === 'uncoupled') acwr = acwrUncoupled(registros, fechaReferencia)
-  else if (metodo === 'ewma') acwr = ratioEWMA(registros, fechaReferencia)
-  return { acwr, monotonia, fatiga, cargaSemanal }
+/** Cambio diario: variación de la carga de hoy respecto a ayer. */
+export function cambioDiario(registros, fechaReferencia = new Date()) {
+  const serie = construirSerieDiaria(registros, 2, fechaReferencia)
+  const [ayer, hoy] = serie.map((d) => d.carga)
+  if (!ayer) return null
+  return hoy / ayer - 1
 }
 
-export function clasificarRiesgoACWR(acwr) {
-  if (acwr === null) return 'sin_datos'
-  if (acwr < 0.8) return 'bajo'
-  if (acwr <= 1.3) return 'optimo'
-  if (acwr <= 1.5) return 'medio'
-  return 'alto'
+/** Cambio semanal: variación de la carga de esta semana (7 días) respecto a la anterior. */
+export function cambioSemanal(registros, fechaReferencia = new Date()) {
+  const serie = construirSerieDiaria(registros, 14, fechaReferencia)
+  const semanaAnterior = suma(serie.slice(0, 7).map((d) => d.carga))
+  const semanaActual = suma(serie.slice(7).map((d) => d.carga))
+  if (!semanaAnterior) return null
+  return semanaActual / semanaAnterior - 1
+}
+
+/** Calcula el conjunto completo de métricas para un jugador, según el método de ACWR elegido. */
+export function calcularMetricas(registros, metodo = 'clasico', fechaReferencia = new Date()) {
+  const { monotonia, fatiga, cargaSemanal } = monotoniaYFatiga(registros, fechaReferencia)
+  return {
+    acwrPre: acwrPreEntreno(registros, metodo, fechaReferencia),
+    acwrPost: acwrPostEntreno(registros, metodo, fechaReferencia),
+    monotonia,
+    fatiga,
+    cargaSemanal,
+    cambioDiario: cambioDiario(registros, fechaReferencia),
+    cambioSemanal: cambioSemanal(registros, fechaReferencia),
+  }
+}
+
+/** Clasificación cualitativa del ACWR en 6 categorías, según el Excel del club. */
+export function clasificarRiesgoACWR(valor) {
+  if (valor === null || valor === undefined) return 'sin_datos'
+  if (valor < 0.5) return 'muy_baja'
+  if (valor < 0.8) return 'baja'
+  if (valor <= 1.1) return 'optima'
+  if (valor <= 1.5) return 'moderada_alta'
+  if (valor <= 2.0) return 'alta'
+  return 'muy_alta'
+}
+
+/** Clasificación cualitativa de la Monotonía. */
+export function clasificarMonotonia(valor) {
+  if (valor === null || valor === undefined) return 'sin_datos'
+  if (valor < 1) return 'muy_variable'
+  if (valor <= 2) return 'correcta'
+  if (valor <= 2.5) return 'elevada'
+  return 'riesgo_elevado'
 }

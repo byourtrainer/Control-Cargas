@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
-  ResponsiveContainer, LineChart, Line, BarChart, Bar,
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  ResponsiveContainer, BarChart, Bar,
+  XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts'
 import { supabase } from '../lib/supabaseClient'
-import { calcularMetricas, clasificarRiesgoACWR } from '../lib/cargaMetrics'
+import { calcularMetricas, clasificarRiesgoACWR, clasificarMonotonia } from '../lib/cargaMetrics'
 import './CoachDashboard.css'
 
 const diasAtras = (n) => {
@@ -14,25 +14,26 @@ const diasAtras = (n) => {
 }
 
 const metodosACWR = [
-  { valor: 'coupled', etiqueta: 'ACWR Coupled' },
-  { valor: 'uncoupled', etiqueta: 'ACWR Uncoupled' },
-  { valor: 'ewma', etiqueta: 'Ratio EWMA' },
+  { valor: 'clasico', etiqueta: 'ACWR Clásico (28 días)' },
+  { valor: 'ewma', etiqueta: 'ACWR EWMA' },
 ]
 
 export default function CoachDashboard() {
   const [jugadores, setJugadores] = useState([])
   const [registros, setRegistros] = useState([])
   const [jugadorSeleccionado, setJugadorSeleccionado] = useState('equipo')
-  const [metodoACWR, setMetodoACWR] = useState('coupled')
+  const [metodoACWR, setMetodoACWR] = useState('clasico')
   const [cargando, setCargando] = useState(true)
 
   useEffect(() => { cargarDatos() }, [])
 
   async function cargarDatos() {
     setCargando(true)
+    // Se piden 70 días de histórico: suficiente para la carga crónica clásica
+    // (28 días), el cambio semanal, y para que el EWMA tenga tiempo de estabilizarse.
     const [{ data: perfiles }, { data: regs }] = await Promise.all([
       supabase.from('perfiles').select('*').eq('rol', 'jugador').order('nombre'),
-      supabase.from('registros_diarios').select('*').gte('fecha', diasAtras(35)).order('fecha'),
+      supabase.from('registros_diarios').select('*').gte('fecha', diasAtras(70)).order('fecha'),
     ])
     setJugadores(perfiles || [])
     setRegistros(regs || [])
@@ -42,15 +43,13 @@ export default function CoachDashboard() {
   const resumenPorJugador = useMemo(() => {
     return jugadores.map((j) => {
       const suyos = registros.filter((r) => r.jugador_id === j.id)
-      const { acwr, monotonia, fatiga, cargaSemanal } = calcularMetricas(suyos, metodoACWR)
+      const metricas = calcularMetricas(suyos, metodoACWR)
       const ultimoRegistro = [...suyos].sort((a, b) => b.fecha.localeCompare(a.fecha))[0]
       return {
         ...j,
-        cargaSemana: cargaSemanal,
-        acwr,
-        monotonia,
-        fatiga,
-        riesgo: clasificarRiesgoACWR(acwr),
+        ...metricas,
+        riesgo: clasificarRiesgoACWR(metricas.acwrPost),
+        nivelMonotonia: clasificarMonotonia(metricas.monotonia),
         ultimoBienestar: ultimoRegistro
           ? promedio([ultimoRegistro.sueno, ultimoRegistro.fatiga, ultimoRegistro.dolor_muscular, ultimoRegistro.estres, ultimoRegistro.animo])
           : null,
@@ -70,6 +69,7 @@ export default function CoachDashboard() {
     })
     return Object.entries(porFecha)
       .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-21)
       .map(([fecha, carga]) => ({ fecha: fecha.slice(5), carga }))
   }, [registros, jugadorSeleccionado])
 
@@ -100,15 +100,15 @@ export default function CoachDashboard() {
           valor={`${resumenPorJugador.filter((j) => j.registroHoy).length} / ${jugadores.length}`}
         />
         <TarjetaResumen
-          etiqueta="En riesgo (ACWR alto)"
-          valor={resumenPorJugador.filter((j) => j.riesgo === 'alto').length}
+          etiqueta="En riesgo (ACWR alto o muy alto)"
+          valor={resumenPorJugador.filter((j) => j.riesgo === 'alta' || j.riesgo === 'muy_alta').length}
           tono="alto"
         />
       </section>
 
       <section className="grafico-card">
         <div className="grafico-cabecera">
-          <h3>Carga acumulada por día</h3>
+          <h3>Carga diaria (últimos 21 días)</h3>
           <select
             value={jugadorSeleccionado}
             onChange={(e) => setJugadorSeleccionado(e.target.value)}
@@ -134,40 +134,62 @@ export default function CoachDashboard() {
         </ResponsiveContainer>
       </section>
 
-      <section className="tabla-card">
+      <section className="tabla-card tabla-card-ancha">
         <h3>Estado por jugador</h3>
-        <table className="jugadores-tabla">
-          <thead>
-            <tr>
-              <th>Jugador</th>
-              <th>Hoy</th>
-              <th>Carga 7 días</th>
-              <th>ACWR</th>
-              <th>Riesgo</th>
-              <th>Monotonía</th>
-              <th>Fatiga</th>
-              <th>Bienestar reciente</th>
-            </tr>
-          </thead>
-          <tbody>
-            {resumenPorJugador.map((j) => (
-              <tr key={j.id}>
-                <td>{j.nombre}</td>
-                <td>{j.registroHoy ? <span className="punto-ok" /> : <span className="punto-pendiente" />}</td>
-                <td className="mono">{j.cargaSemana}</td>
-                <td className="mono">{j.acwr ? j.acwr.toFixed(2) : '—'}</td>
-                <td><span className={`riesgo-badge riesgo-${j.riesgo}`}>{traducirRiesgo(j.riesgo)}</span></td>
-                <td className="mono">{j.monotonia ? j.monotonia.toFixed(2) : '—'}</td>
-                <td className="mono">{j.fatiga ? Math.round(j.fatiga) : '—'}</td>
-                <td className="mono">{j.ultimoBienestar ? j.ultimoBienestar.toFixed(1) + ' / 5' : '—'}</td>
+        <div className="tabla-scroll">
+          <table className="jugadores-tabla">
+            <thead>
+              <tr>
+                <th>Jugador</th>
+                <th>Hoy</th>
+                <th>Carga 7d</th>
+                <th title="ACWR sin contar el registro de hoy: cómo llega el jugador">ACWR Pre</th>
+                <th title="ACWR incluyendo el registro de hoy">ACWR Post</th>
+                <th>Riesgo</th>
+                <th>Cambio diario</th>
+                <th>Cambio semanal</th>
+                <th>Monotonía</th>
+                <th>Fatiga</th>
+                <th>Bienestar</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {resumenPorJugador.map((j) => (
+                <tr key={j.id}>
+                  <td>{j.nombre}</td>
+                  <td>{j.registroHoy ? <span className="punto-ok" /> : <span className="punto-pendiente" />}</td>
+                  <td className="mono">{j.cargaSemanal}</td>
+                  <td className="mono">{j.acwrPre !== null ? j.acwrPre.toFixed(2) : '—'}</td>
+                  <td className="mono">{j.acwrPost !== null ? j.acwrPost.toFixed(2) : '—'}</td>
+                  <td><span className={`riesgo-badge riesgo-${j.riesgo}`}>{traducirRiesgo(j.riesgo)}</span></td>
+                  <td className="mono">{formatearPorcentaje(j.cambioDiario)}</td>
+                  <td className="mono">{formatearPorcentaje(j.cambioSemanal)}</td>
+                  <td className="mono">
+                    {j.monotonia !== null ? j.monotonia.toFixed(2) : '—'}
+                    {j.monotonia !== null && (
+                      <span className={`monotonia-punto monotonia-${j.nivelMonotonia}`} />
+                    )}
+                  </td>
+                  <td className="mono">{j.fatiga ? Math.round(j.fatiga) : '—'}</td>
+                  <td className="mono">{j.ultimoBienestar ? j.ultimoBienestar.toFixed(1) + ' / 5' : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
         {jugadores.length === 0 && (
           <p className="texto-dim">Todavía no hay jugadores registrados en el equipo.</p>
         )}
       </section>
+
+      <p className="leyenda-riesgo texto-dim">
+        ACWR — <span className="riesgo-badge riesgo-muy_baja">Muy baja</span> &lt;0.5 ·{' '}
+        <span className="riesgo-badge riesgo-baja">Baja</span> 0.5–0.8 ·{' '}
+        <span className="riesgo-badge riesgo-optima">Óptima</span> 0.8–1.1 ·{' '}
+        <span className="riesgo-badge riesgo-moderada_alta">Mod. alta</span> 1.1–1.5 ·{' '}
+        <span className="riesgo-badge riesgo-alta">Alta</span> 1.5–2.0 ·{' '}
+        <span className="riesgo-badge riesgo-muy_alta">Muy alta</span> &gt;2.0
+      </p>
     </div>
   )
 }
@@ -187,12 +209,20 @@ function promedio(valores) {
   return validos.reduce((a, b) => a + b, 0) / validos.length
 }
 
+function formatearPorcentaje(valor) {
+  if (valor === null || valor === undefined) return '—'
+  const signo = valor > 0 ? '+' : ''
+  return `${signo}${Math.round(valor * 100)}%`
+}
+
 function traducirRiesgo(r) {
   return {
     sin_datos: 'Sin datos',
-    bajo: 'Baja carga',
-    optimo: 'Óptimo',
-    medio: 'Vigilar',
-    alto: 'Alto riesgo',
+    muy_baja: 'Muy baja',
+    baja: 'Baja',
+    optima: 'Óptima',
+    moderada_alta: 'Mod. alta',
+    alta: 'Alta',
+    muy_alta: 'Muy alta',
   }[r]
 }

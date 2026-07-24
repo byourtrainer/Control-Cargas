@@ -45,6 +45,9 @@
   padding: 22px;
 }
 
+.tabla-card-ancha { padding: 22px 0 22px 22px; }
+.tabla-scroll { overflow-x: auto; padding-right: 22px; }
+
 .grafico-cabecera {
   display: flex;
   justify-content: space-between;
@@ -69,6 +72,7 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
+  white-space: nowrap;
 }
 
 .jugadores-tabla th {
@@ -76,11 +80,12 @@
   color: var(--text-faint);
   font-weight: 500;
   padding-bottom: 10px;
+  padding-right: 16px;
   border-bottom: 1px solid var(--line);
 }
 
 .jugadores-tabla td {
-  padding: 10px 8px 10px 0;
+  padding: 10px 16px 10px 0;
   border-bottom: 1px solid var(--line);
 }
 
@@ -97,9 +102,28 @@
   padding: 3px 8px;
   border-radius: 4px;
   font-family: var(--font-mono);
+  white-space: nowrap;
 }
 .riesgo-sin_datos { background: rgba(154,171,160,0.12); color: var(--text-faint); }
-.riesgo-bajo { background: rgba(111,207,125,0.12); color: var(--risk-low); }
-.riesgo-optimo { background: rgba(200,255,77,0.12); color: var(--accent); }
-.riesgo-medio { background: rgba(242,193,78,0.12); color: var(--risk-mid); }
-.riesgo-alto { background: rgba(234,92,74,0.12); color: var(--risk-high); }
+.riesgo-muy_baja { background: rgba(111,207,125,0.10); color: var(--risk-low); }
+.riesgo-baja { background: rgba(111,207,125,0.16); color: var(--risk-low); }
+.riesgo-optima { background: rgba(200,255,77,0.15); color: var(--accent); }
+.riesgo-moderada_alta { background: rgba(242,193,78,0.14); color: var(--risk-mid); }
+.riesgo-alta { background: rgba(234,92,74,0.14); color: var(--risk-high); }
+.riesgo-muy_alta { background: rgba(234,92,74,0.22); color: var(--risk-high); }
+
+.monotonia-punto {
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  margin-left: 6px;
+}
+.monotonia-muy_variable { background: var(--text-faint); }
+.monotonia-correcta { background: var(--risk-low); }
+.monotonia-elevada { background: var(--risk-mid); }
+.monotonia-riesgo_elevado { background: var(--risk-high); }
+
+.leyenda-riesgo {
+  font-size: 12px;
+  line-height: 2;
+}

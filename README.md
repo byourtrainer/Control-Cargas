@@ -53,40 +53,51 @@ en el archivo `.env`.
    a `entrenador`.
 4. Recarga la app — verás el panel del entrenador.
 
-## Cálculo de carga avanzado (v2, basado en tu Excel)
+## Cálculo de carga (metodología del club + EWMA)
 
-El panel del entrenador ahora permite elegir el método de cálculo, igual que
-en tu Excel de control de cargas:
+- **Training Load** = Session RPE (0-10) × duración en minutos.
+- **Carga Aguda**: suma de la carga de los últimos 7 días.
+- **Carga Crónica**: media diaria de los últimos **28 días** (4 semanas).
 
-- **ACWR Coupled**: el ratio agudo:crónico clásico, donde la semana aguda
-  (últimos 7 días) está incluida dentro del período crónico (últimos 28 días).
-- **ACWR Uncoupled**: el crónico se calcula solo con las 3 semanas *previas*
-  a la semana aguda, sin solaparse con ella.
-- **Ratio EWMA**: usa medias móviles exponenciales en vez de medias simples,
-  dando más peso a los días más recientes — más sensible a cambios bruscos.
+El panel del entrenador permite elegir entre dos métodos de cálculo del ACWR:
 
-También se calculan, sobre los últimos 7 días:
-- **Monotonía**: mide si la carga semanal es muy uniforme (sin días de
-  descarga). Valores altos indican poca variabilidad, lo que se asocia a
-  mayor riesgo si se mantiene en el tiempo.
-- **Fatiga (Strain)**: carga semanal total × monotonía. Combina volumen y
-  monotonía en un único indicador de riesgo acumulado.
+- **ACWR Clásico**: (Carga Aguda ÷ 7) ÷ Carga Crónica, con medias simples
+  sobre las ventanas de 7 y 28 días — el enfoque tradicional (Gabbett).
+- **ACWR EWMA**: usa medias móviles ponderadas exponencialmente en vez de
+  medias simples. Da más peso a las sesiones recientes, reacciona antes a
+  cambios de carga y evita el efecto de "escalón" que tiene la media simple
+  cuando una sesión con carga alta o baja sale de la ventana de golpe. Es el
+  método que prefieren muchos grupos de investigación y aplicaciones de alto
+  rendimiento actuales.
 
-La escala de RPE es ahora de **0 a 10** (0 = ningún esfuerzo, 10 = máximo),
-con la misma descripción que usáis en el club.
+De ambos métodos se muestran dos versiones:
+- **ACWR Pre**: cómo llega el jugador, sin contar el registro de hoy.
+- **ACWR Post**: el ratio ya con el registro de hoy incluido.
 
-## Cómo entienden el ACWR las tarjetas de riesgo
+Además:
+- **Cambio diario**: variación de la carga de hoy respecto a ayer.
+- **Cambio semanal**: variación de la carga de esta semana respecto a la
+  anterior (referencia habitual: evitar subidas de más del 15-20%).
+- **Monotonía** = media diaria semanal ÷ desviación estándar diaria (últimos
+  7 días).
+- **Fatiga (Training Strain)** = carga semanal × monotonía.
 
-`ACWR = carga media de los últimos 7 días / carga media de los últimos 28 días`
+Clasificación de riesgo del ACWR (6 niveles):
 
-- `< 0.8` → Baja carga (posible pérdida de forma)
-- `0.8 – 1.3` → Óptimo
-- `1.3 – 1.5` → Vigilar
-- `> 1.5` → Alto riesgo (subida brusca de carga)
+| Rango | Categoría |
+|---|---|
+| < 0.50 | Muy baja |
+| 0.50 – 0.80 | Baja |
+| 0.80 – 1.10 | Óptima |
+| 1.10 – 1.50 | Moderadamente alta |
+| 1.50 – 2.00 | Alta |
+| > 2.00 | Muy alta |
 
-Esto es un cálculo estándar en literatura de ciencias del deporte, pero
-podemos afinarlo o cambiar el método (ej. media móvil exponencial) en cuanto
-me pases las variables concretas de tu Excel.
+Clasificación de Monotonía: < 1 muy variable · 1–2 correcta · 2–2.5 elevada ·
+> 2.5 riesgo elevado (indicado con un punto de color junto al valor).
+
+La escala de RPE es de **0 a 10**, con la descripción exacta de vuestro
+Excel (0 = Ningún esfuerzo … 10 = Máximo).
 
 ## Próximos pasos posibles
 
