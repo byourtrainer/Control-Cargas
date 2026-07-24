@@ -46,11 +46,15 @@
 
 .tarjetas-resumen {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 16px;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 900px) {
+  .tarjetas-resumen { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 480px) {
   .tarjetas-resumen { grid-template-columns: 1fr; }
 }
 
@@ -88,6 +92,12 @@
 }
 
 .grafico-cabecera h3, .tabla-card h3 { font-size: 15px; color: var(--text-dim); font-weight: 500; }
+
+.grafico-selectores {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 
 .selector-jugador {
   background: var(--bg-elevated);

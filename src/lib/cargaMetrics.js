@@ -112,11 +112,16 @@ export function cambioDiario(registros, fechaReferencia = new Date()) {
 
 /** Cambio semanal: variación de la carga de esta semana (7 días) respecto a la anterior. */
 export function cambioSemanal(registros, fechaReferencia = new Date()) {
-  const serie = construirSerieDiaria(registros, 14, fechaReferencia)
-  const semanaAnterior = suma(serie.slice(0, 7).map((d) => d.carga))
-  const semanaActual = suma(serie.slice(7).map((d) => d.carga))
-  if (!semanaAnterior) return null
-  return semanaActual / semanaAnterior - 1
+  return cambioPeriodo(registros, 7, fechaReferencia)
+}
+
+/** Cambio genérico: variación de la carga de los últimos `dias` días respecto al periodo igual anterior. */
+export function cambioPeriodo(registros, dias, fechaReferencia = new Date()) {
+  const serie = construirSerieDiaria(registros, dias * 2, fechaReferencia)
+  const anterior = suma(serie.slice(0, dias).map((d) => d.carga))
+  const actual = suma(serie.slice(dias).map((d) => d.carga))
+  if (!anterior) return null
+  return actual / anterior - 1
 }
 
 /** Calcula el conjunto completo de métricas para un jugador, según el método de ACWR elegido. */

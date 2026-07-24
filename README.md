@@ -152,6 +152,22 @@ Excel (0 = Ningún esfuerzo … 10 = Máximo).
   valor alto es bueno), se promedian, y el resultado se traduce a una de las
   tres categorías.
 
+## Informes exportables, bienestar destacado y gráfico configurable
+
+- Nueva pestaña **"Informes"**: elige periodo (Diario / Semanal / Mensual) y
+  fecha de referencia, y genera una tabla con todas las variables de carga y
+  bienestar de los jugadores del equipo activo (incluye lesiones registradas
+  en el periodo). Se puede **exportar a CSV** (para abrir en Excel y enviarlo
+  al entrenador jefe) o **Imprimir / Guardar como PDF** directamente desde el
+  navegador.
+- El **Bienestar** ahora es la primera columna de la tabla del Resumen (justo
+  después del nombre), y hay una tarjeta dedicada arriba del todo
+  ("Bienestar bajo (Malo)") para verlo de un vistazo sin tener que mirar la
+  tabla.
+- El gráfico principal del Resumen ahora tiene un **selector de variable**:
+  Carga, ACWR Post, Monotonía, Fatiga o Bienestar (malestar) — se puede
+  combinar con el selector de jugador/equipo de al lado.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

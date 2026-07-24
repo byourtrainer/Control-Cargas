@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
-  ResponsiveContainer, BarChart, Bar,
+  ResponsiveContainer, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts'
 import { supabase } from '../lib/supabaseClient'
-import { calcularMetricas, clasificarRiesgoACWR, clasificarMonotonia } from '../lib/cargaMetrics'
+import { calcularMetricas, clasificarRiesgoACWR, clasificarMonotonia, construirSerieDiaria } from '../lib/cargaMetrics'
 import { calcularMalestar, clasificarBienestar } from '../lib/bienestar'
 import './CoachDashboard.css'
 
@@ -19,10 +19,19 @@ const metodosACWR = [
   { valor: 'ewma', etiqueta: 'ACWR EWMA' },
 ]
 
+const variablesGrafico = [
+  { valor: 'carga', etiqueta: 'Carga' },
+  { valor: 'acwr', etiqueta: 'ACWR Post' },
+  { valor: 'monotonia', etiqueta: 'Monotonía' },
+  { valor: 'fatiga', etiqueta: 'Fatiga (Strain)' },
+  { valor: 'malestar', etiqueta: 'Bienestar (malestar)' },
+]
+
 export default function CoachDashboard({ equipoActivo = 'todos' }) {
   const [jugadores, setJugadores] = useState([])
   const [registros, setRegistros] = useState([])
   const [jugadorSeleccionado, setJugadorSeleccionado] = useState('equipo')
+  const [variableGrafico, setVariableGrafico] = useState('carga')
   const [metodoACWR, setMetodoACWR] = useState('clasico')
   const [cargando, setCargando] = useState(true)
 
@@ -66,21 +75,45 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
   }, [jugadoresFiltrados, registros, metodoACWR])
 
   const datosGrafico = useMemo(() => {
-    const idsFiltrados = new Set(jugadoresFiltrados.map((j) => j.id))
-    const registrosFiltrados = registros.filter((r) => idsFiltrados.has(r.jugador_id))
-    const fuente = jugadorSeleccionado === 'equipo'
-      ? registrosFiltrados
-      : registrosFiltrados.filter((r) => r.jugador_id === jugadorSeleccionado)
+    const dias = 21
+    const jugadoresGrafico = jugadorSeleccionado === 'equipo'
+      ? jugadoresFiltrados
+      : jugadoresFiltrados.filter((j) => j.id === jugadorSeleccionado)
 
-    const porFecha = {}
-    fuente.forEach((r) => {
-      porFecha[r.fecha] = (porFecha[r.fecha] || 0) + (r.carga || 0)
+    const fechas = []
+    for (let i = dias - 1; i >= 0; i--) {
+      const d = new Date()
+      d.setDate(d.getDate() - i)
+      fechas.push(d)
+    }
+
+    return fechas.map((fecha) => {
+      const fechaISO = fecha.toISOString().slice(0, 10)
+      const valoresDelDia = jugadoresGrafico.map((j) => {
+        const suyos = registros.filter((r) => r.jugador_id === j.id)
+        if (variableGrafico === 'carga') {
+          return construirSerieDiaria(suyos, 1, fecha)[0].carga
+        }
+        if (variableGrafico === 'malestar') {
+          const registroDia = suyos.find((r) => r.fecha === fechaISO)
+          return registroDia ? calcularMalestar(registroDia) : null
+        }
+        const metricas = calcularMetricas(suyos, metodoACWR, fecha)
+        if (variableGrafico === 'acwr') return metricas.acwrPost
+        if (variableGrafico === 'monotonia') return metricas.monotonia
+        if (variableGrafico === 'fatiga') return metricas.fatiga
+        return null
+      }).filter((v) => v !== null && v !== undefined)
+
+      let valor = null
+      if (valoresDelDia.length > 0) {
+        valor = variableGrafico === 'carga'
+          ? valoresDelDia.reduce((a, b) => a + b, 0)               // suma total del grupo
+          : valoresDelDia.reduce((a, b) => a + b, 0) / valoresDelDia.length // media del grupo
+      }
+      return { fecha: fechaISO.slice(5), valor: valor !== null ? Number(valor.toFixed(2)) : null }
     })
-    return Object.entries(porFecha)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .slice(-21)
-      .map(([fecha, carga]) => ({ fecha: fecha.slice(5), carga }))
-  }, [registros, jugadorSeleccionado, jugadoresFiltrados])
+  }, [registros, jugadorSeleccionado, jugadoresFiltrados, variableGrafico, metodoACWR])
 
   if (cargando) return <p className="mono texto-dim">Cargando datos del equipo…</p>
 
@@ -109,6 +142,11 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
           valor={`${resumenPorJugador.filter((j) => j.registroHoy).length} / ${jugadoresFiltrados.length}`}
         />
         <TarjetaResumen
+          etiqueta="Bienestar bajo (Malo)"
+          valor={resumenPorJugador.filter((j) => j.nivelBienestar === 'malo').length}
+          tono="alto"
+        />
+        <TarjetaResumen
           etiqueta="En riesgo (ACWR alto o muy alto)"
           valor={resumenPorJugador.filter((j) => j.riesgo === 'alta' || j.riesgo === 'muy_alta').length}
           tono="alto"
@@ -117,20 +155,31 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
 
       <section className="grafico-card">
         <div className="grafico-cabecera">
-          <h3>Carga diaria (últimos 21 días)</h3>
-          <select
-            value={jugadorSeleccionado}
-            onChange={(e) => setJugadorSeleccionado(e.target.value)}
-            className="selector-jugador"
-          >
-            <option value="equipo">{equipoActivo === 'todos' ? 'Todo el equipo' : 'Todo el grupo seleccionado'}</option>
-            {jugadoresFiltrados.map((j) => (
-              <option key={j.id} value={j.id}>{j.nombre}</option>
-            ))}
-          </select>
+          <h3>{variablesGrafico.find((v) => v.valor === variableGrafico).etiqueta} (últimos 21 días)</h3>
+          <div className="grafico-selectores">
+            <select
+              value={variableGrafico}
+              onChange={(e) => setVariableGrafico(e.target.value)}
+              className="selector-jugador"
+            >
+              {variablesGrafico.map((v) => (
+                <option key={v.valor} value={v.valor}>{v.etiqueta}</option>
+              ))}
+            </select>
+            <select
+              value={jugadorSeleccionado}
+              onChange={(e) => setJugadorSeleccionado(e.target.value)}
+              className="selector-jugador"
+            >
+              <option value="equipo">{equipoActivo === 'todos' ? 'Todo el equipo' : 'Todo el grupo seleccionado'}</option>
+              {jugadoresFiltrados.map((j) => (
+                <option key={j.id} value={j.id}>{j.nombre}</option>
+              ))}
+            </select>
+          </div>
         </div>
         <ResponsiveContainer width="100%" height={260}>
-          <BarChart data={datosGrafico}>
+          <LineChart data={datosGrafico}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
             <XAxis dataKey="fecha" stroke="var(--text-faint)" fontSize={12} />
             <YAxis stroke="var(--text-faint)" fontSize={12} />
@@ -138,8 +187,8 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
               contentStyle={{ background: 'var(--bg-elevated)', border: '1px solid var(--line-strong)', borderRadius: 8 }}
               labelStyle={{ color: 'var(--text)' }}
             />
-            <Bar dataKey="carga" fill="var(--accent)" radius={[4, 4, 0, 0]} />
-          </BarChart>
+            <Line type="monotone" dataKey="valor" stroke="var(--accent)" strokeWidth={2} dot={false} connectNulls />
+          </LineChart>
         </ResponsiveContainer>
       </section>
 
@@ -150,6 +199,7 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
             <thead>
               <tr>
                 <th>Jugador</th>
+                <th>Bienestar</th>
                 <th>Equipo</th>
                 <th>Hoy</th>
                 <th title="Suma de carga de los últimos 7 días">Carga Aguda</th>
@@ -161,13 +211,19 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
                 <th>Cambio semanal</th>
                 <th>Monotonía</th>
                 <th>Fatiga (Strain)</th>
-                <th>Bienestar</th>
               </tr>
             </thead>
             <tbody>
               {resumenPorJugador.map((j) => (
                 <tr key={j.id}>
                   <td>{j.nombre}</td>
+                  <td>
+                    {j.malestar !== null ? (
+                      <span className={`bienestar-badge bienestar-${j.nivelBienestar}`}>
+                        {traducirBienestar(j.nivelBienestar)}
+                      </span>
+                    ) : '—'}
+                  </td>
                   <td className="texto-dim">{j.equipos?.nombre || '—'}</td>
                   <td>{j.registroHoy ? <span className="punto-ok" /> : <span className="punto-pendiente" />}</td>
                   <td className="mono">{j.cargaSemanal}</td>
@@ -185,13 +241,6 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
                     ) : '—'}
                   </td>
                   <td className="mono">{j.fatiga ? Math.round(j.fatiga) : '—'}</td>
-                  <td>
-                    {j.malestar !== null ? (
-                      <span className={`bienestar-badge bienestar-${j.nivelBienestar}`}>
-                        {traducirBienestar(j.nivelBienestar)}
-                      </span>
-                    ) : '—'}
-                  </td>
                 </tr>
               ))}
             </tbody>

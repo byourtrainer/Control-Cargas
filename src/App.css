@@ -143,6 +143,11 @@
   border-bottom-color: var(--accent);
 }
 
+@media print {
+  .topbar, .pestanas-nav { display: none !important; }
+  .contenido { padding: 0 !important; max-width: 100% !important; }
+}
+
 @media (max-width: 640px) {
   .contenido { padding: 20px 16px; }
   .usuario-nombre { display: none; }

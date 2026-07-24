@@ -1,0 +1,124 @@
+.informes-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.informes-controles {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px 20px;
+}
+
+.informes-selector-periodo {
+  display: flex;
+  gap: 4px;
+  background: var(--bg-elevated);
+  border-radius: 8px;
+  padding: 4px;
+}
+
+.periodo-btn {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  padding: 6px 14px;
+  font-size: 13px;
+  border-radius: 6px;
+}
+
+.periodo-activo {
+  background: var(--accent);
+  color: #0d1210;
+  font-weight: 600;
+}
+
+.informes-fecha {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.informes-fecha input {
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+.informes-acciones {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.btn-exportar {
+  background: none;
+  border: 1px solid var(--line-strong);
+  color: var(--text-dim);
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.btn-exportar:hover { border-color: var(--accent); color: var(--accent); }
+
+.informe-card {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 24px;
+}
+
+.informe-cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.informe-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.informe-tabla th {
+  text-align: left;
+  color: var(--text-faint);
+  font-weight: 500;
+  padding-bottom: 10px;
+  padding-right: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.informe-tabla td {
+  padding: 9px 16px 9px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+/* Impresión / Guardar como PDF: solo se ve el informe, sin barra ni pestañas */
+@media print {
+  .no-imprimir { display: none !important; }
+  body, .app-shell { background: white !important; color: black !important; }
+  .informe-card {
+    background: white !important;
+    border: none !important;
+    color: black !important;
+  }
+  .informe-tabla th, .informe-tabla td { border-color: #ccc !important; color: black !important; }
+  .bienestar-badge, .texto-dim { color: black !important; }
+}
