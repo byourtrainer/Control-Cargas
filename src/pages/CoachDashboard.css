@@ -193,6 +193,11 @@
   white-space: nowrap;
 }
 
+.tabla-fecha-nota {
+  font-size: 12px;
+  font-weight: 400;
+}
+
 .btn-exportar {
   background: none;
   border: 1px solid var(--line-strong);

@@ -174,10 +174,13 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
   }, [jugadores, equipoActivo])
 
   const resumenPorJugador = useMemo(() => {
+    const fechaRef = new Date(fechaHastaGrafico + 'T00:00:00')
     return jugadoresFiltrados.map((j) => {
       const suyos = registros.filter((r) => r.jugador_id === j.id)
-      const metricas = calcularMetricas(suyos, metodoACWR)
-      const ultimoRegistro = [...suyos].sort((a, b) => b.fecha.localeCompare(a.fecha))[0]
+      const metricas = calcularMetricas(suyos, metodoACWR, fechaRef)
+      const ultimoRegistro = [...suyos]
+        .filter((r) => r.fecha <= fechaHastaGrafico)
+        .sort((a, b) => b.fecha.localeCompare(a.fecha))[0]
       const malestar = ultimoRegistro ? calcularMalestar(ultimoRegistro) : null
       return {
         ...j,
@@ -186,13 +189,13 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
         nivelMonotonia: clasificarMonotonia(metricas.monotonia),
         malestar,
         nivelBienestar: clasificarBienestar(malestar),
-        molestiaHoy: ultimoRegistro?.fecha === diasAtras(0) && ultimoRegistro?.tiene_molestia
+        molestiaFecha: ultimoRegistro?.fecha === fechaHastaGrafico && ultimoRegistro?.tiene_molestia
           ? ultimoRegistro.zona_molestia
           : null,
-        registroHoy: suyos.some((r) => r.fecha === diasAtras(0)),
+        registroFecha: suyos.some((r) => r.fecha === fechaHastaGrafico),
       }
     })
-  }, [jugadoresFiltrados, registros, metodoACWR])
+  }, [jugadoresFiltrados, registros, metodoACWR, fechaHastaGrafico])
 
   const jugadoresGrafico = useMemo(() => (
     jugadorSeleccionado === 'equipo'
@@ -456,7 +459,12 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
       </section>
 
       <section className="tabla-card tabla-card-ancha no-imprimir">
-        <h3>Estado por jugador</h3>
+        <h3>
+          Estado por jugador
+          <span className="texto-dim mono tabla-fecha-nota">
+            {' '}— a fecha {new Date(fechaHastaGrafico + 'T00:00:00').toLocaleDateString('es-ES')}
+          </span>
+        </h3>
         <div className="tabla-scroll">
           <table className="jugadores-tabla">
             <thead>
@@ -465,11 +473,11 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
                 <th>Bienestar</th>
                 <th>Molestia</th>
                 <th>Equipo</th>
-                <th>Hoy</th>
-                <th title="Suma de carga de los últimos 7 días">Carga Aguda</th>
-                <th title="Media diaria de carga de los últimos 28 días">Carga Crónica</th>
-                <th title="ACWR sin contar el registro de hoy: cómo llega el jugador">ACWR Pre</th>
-                <th title="ACWR incluyendo el registro de hoy">ACWR Post</th>
+                <th title={`¿Registró RPE el ${fechaHastaGrafico}?`}>Registró</th>
+                <th title="Suma de carga de los últimos 7 días hasta la fecha elegida">Carga Aguda</th>
+                <th title="Media diaria de carga de los últimos 28 días hasta la fecha elegida">Carga Crónica</th>
+                <th title="ACWR sin contar el registro de la fecha elegida: cómo llega el jugador">ACWR Pre</th>
+                <th title="ACWR incluyendo el registro de la fecha elegida">ACWR Post</th>
                 <th>Riesgo</th>
                 <th>Cambio diario</th>
                 <th>Cambio semanal</th>
@@ -489,8 +497,8 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
                     ) : '—'}
                   </td>
                   <td>
-                    {j.molestiaHoy ? (
-                      <span className="molestia-badge">{j.molestiaHoy}</span>
+                    {j.molestiaFecha ? (
+                      <span className="molestia-badge">{j.molestiaFecha}</span>
                     ) : '—'}
                   </td>
                   <td className="texto-dim">
@@ -501,7 +509,7 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
                       </span>
                     ) : '—'}
                   </td>
-                  <td>{j.registroHoy ? <span className="punto-ok" /> : <span className="punto-pendiente" />}</td>
+                  <td>{j.registroFecha ? <span className="punto-ok" /> : <span className="punto-pendiente" />}</td>
                   <td className="mono">{j.cargaSemanal}</td>
                   <td className="mono">{j.cargaCronica ? Math.round(j.cargaCronica) : '—'}</td>
                   <td className="mono">{j.acwrPre !== null ? j.acwrPre.toFixed(2) : '—'}</td>

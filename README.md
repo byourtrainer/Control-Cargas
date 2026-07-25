@@ -455,6 +455,19 @@ Nueva pestaña **"Tests"** para el entrenador:
     Carga media por jugador, Bienestar medio, ACWR medio, Monotonía media,
     Fatiga media y Nº en riesgo.
 
+## Tabla "Estado por jugador" ligada a la fecha "Hasta"
+
+- La tabla ya no está fijada a "hoy": ahora usa la fecha **"Hasta"** que
+  elijas en el gráfico de arriba como referencia para todos sus cálculos
+  (ACWR Pre/Post, Riesgo, Monotonía, Fatiga, Bienestar más reciente hasta
+  esa fecha, cambios diario/semanal, y la columna "Registró").
+- El título de la tabla muestra la fecha de referencia usada, y la columna
+  que antes decía "Hoy" ahora se llama "Registró" (con un tooltip que
+  aclara qué fecha concreta comprueba).
+- Con esto, las tarjetas de resumen y la tabla siempre están sincronizadas
+  con el mismo periodo/fecha, sin importar si estás mirando datos actuales
+  o de un mes pasado como junio.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.
