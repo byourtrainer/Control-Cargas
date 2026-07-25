@@ -358,6 +358,53 @@ export default function Tests({ equipoActivo = 'todos' }) {
     return frases
   }
 
+  // --- Comentarios guardados de cada jugador, para el informe de "varios" ---
+  const [comentariosVarios, setComentariosVarios] = useState({})
+
+  useEffect(() => {
+    if (modoInforme !== 'varios' || jugadoresInforme.length === 0) return
+    let activo = true
+    supabase.from('interpretaciones_fisicas').select('jugador_id, texto')
+      .in('jugador_id', jugadoresInforme.map((j) => j.id))
+      .then(({ data }) => {
+        if (!activo) return
+        const mapa = {}
+        ;(data || []).forEach((r) => { if (r.texto) mapa[r.jugador_id] = r.texto })
+        setComentariosVarios(mapa)
+      })
+    return () => { activo = false }
+  }, [modoInforme, jugadoresInforme.map((j) => j.id).join(',')])
+
+  // --- Comentario único para todo el grupo/equipo seleccionado ---
+  const claveGrupo = useMemo(
+    () => jugadoresInforme.map((j) => j.id).slice().sort().join(','),
+    [jugadoresInforme]
+  )
+  const [comentarioGrupoTexto, setComentarioGrupoTexto] = useState('')
+  const [editandoComentarioGrupo, setEditandoComentarioGrupo] = useState(false)
+  const [guardandoComentarioGrupo, setGuardandoComentarioGrupo] = useState(false)
+  const [mensajeComentarioGrupo, setMensajeComentarioGrupo] = useState(null)
+
+  useEffect(() => {
+    if (modoInforme !== 'varios' || !claveGrupo) { setComentarioGrupoTexto(''); return }
+    let activo = true
+    supabase.from('comentarios_grupales').select('texto').eq('clave', claveGrupo).maybeSingle()
+      .then(({ data }) => { if (activo) setComentarioGrupoTexto(data?.texto || '') })
+    setEditandoComentarioGrupo(false)
+    setMensajeComentarioGrupo(null)
+    return () => { activo = false }
+  }, [claveGrupo, modoInforme])
+
+  async function guardarComentarioGrupo() {
+    setGuardandoComentarioGrupo(true)
+    setMensajeComentarioGrupo(null)
+    const { error } = await supabase.from('comentarios_grupales')
+      .upsert({ clave: claveGrupo, texto: comentarioGrupoTexto }, { onConflict: 'clave' })
+    if (error) setMensajeComentarioGrupo({ tipo: 'error', texto: 'No se pudo guardar.' })
+    else { setMensajeComentarioGrupo({ tipo: 'ok', texto: 'Guardado.' }); setEditandoComentarioGrupo(false) }
+    setGuardandoComentarioGrupo(false)
+  }
+
   function construirSerieEvolucion(jugadorId, metrica, peso) {
     return tests
       .filter((t) => t.jugador_id === jugadorId && t.tipo_test === metrica.tipoTest)
@@ -699,7 +746,7 @@ export default function Tests({ equipoActivo = 'todos' }) {
             </>
           ) : (
             <>
-              <div className="informe-graficos-grid">
+              <div className="informe-graficos-grid no-imprimir">
                 {metricasInforme.map((m) => {
                   const datos = construirComparativa(m)
                   if (datos.length === 0) return null
@@ -730,6 +777,54 @@ export default function Tests({ equipoActivo = 'todos' }) {
                   <GraficoCuadrante2 datos={cuadrante2Informe} maxX={maxX2i} maxY={maxY2i} />
                 </div>
               </div>
+
+              <div className="interpretacion-card">
+                <h4>Comentario del entrenador sobre este grupo</h4>
+
+                <div className="no-imprimir">
+                  {editandoComentarioGrupo ? (
+                    <>
+                      <textarea
+                        className="interpretacion-textarea"
+                        rows={4}
+                        value={comentarioGrupoTexto}
+                        onChange={(e) => setComentarioGrupoTexto(e.target.value)}
+                        placeholder="Escribe aquí tu valoración conjunta de estos jugadores…"
+                      />
+                      {mensajeComentarioGrupo && (
+                        <div className={mensajeComentarioGrupo.tipo === 'ok' ? 'aviso-ok' : 'aviso-error'}>{mensajeComentarioGrupo.texto}</div>
+                      )}
+                      <div className="mis-datos-botones">
+                        <button className="btn-principal" onClick={guardarComentarioGrupo} disabled={guardandoComentarioGrupo}>
+                          {guardandoComentarioGrupo ? 'Guardando…' : 'Guardar comentario'}
+                        </button>
+                        <button className="equipo-cancelar" onClick={() => setEditandoComentarioGrupo(false)}>Cancelar</button>
+                      </div>
+                    </>
+                  ) : (
+                    <button className="equipo-cambiar-link" onClick={() => setEditandoComentarioGrupo(true)}>
+                      {comentarioGrupoTexto ? 'Editar comentario del grupo' : '+ Añadir comentario sobre este grupo'}
+                    </button>
+                  )}
+                </div>
+
+                {!editandoComentarioGrupo && comentarioGrupoTexto && (
+                  <p className="interpretacion-comentario">"{comentarioGrupoTexto}"</p>
+                )}
+              </div>
+
+              {jugadoresInforme.some((j) => comentariosVarios[j.id]) && (
+                <div className="interpretacion-card">
+                  <h4>Comentarios individuales guardados</h4>
+                  <ul className="interpretacion-automatica">
+                    {jugadoresInforme.filter((j) => comentariosVarios[j.id]).map((j) => (
+                      <li key={j.id}>
+                        <strong>{j.nombre}:</strong> <em>"{comentariosVarios[j.id]}"</em>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </>
           )}
         </div>

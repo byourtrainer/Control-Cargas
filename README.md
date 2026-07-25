@@ -342,6 +342,30 @@ Nueva pestaña **"Tests"** para el entrenador:
   - 🟡 Ámbar: una cualidad buena y la otra no (casos mixtos).
   - 🔴 Rojo: las dos cualidades en su lado débil (peor caso).
 
+## Informe de "varios jugadores": mismo criterio que el individual
+
+- Al exportar/imprimir el informe con varios jugadores seleccionados, ahora
+  solo aparecen los **dos cuadrantes** (las barras comparativas por métrica
+  se quedan solo en pantalla, igual que en el modo individual).
+- Debajo de los cuadrantes se listan los **comentarios que el entrenador
+  haya guardado** para cada uno de los jugadores incluidos (los mismos que
+  se escriben desde el perfil individual de cada uno) — si un jugador no
+  tiene comentario guardado, simplemente no aparece en la lista.
+
+## Comentario único para todo un grupo/equipo
+
+- En el modo "Varios jugadores" del informe físico, ahora hay un
+  **comentario del entrenador sobre el grupo entero**, con su propio botón
+  de editar/guardar — no hace falta entrar jugador por jugador.
+- Ese comentario queda asociado a la combinación exacta de jugadores
+  seleccionados: si eliges el mismo equipo o la misma selección más
+  adelante, recuperas el mismo comentario; si cambias la selección, empieza
+  en blanco (puedes escribir uno distinto para cada agrupación).
+- Debajo sigue apareciendo, si los hay, el listado de comentarios
+  individuales que ya hubieras guardado desde el perfil de cada jugador —
+  ahora bajo el título "Comentarios individuales guardados", para
+  diferenciarlo del comentario de grupo.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.
