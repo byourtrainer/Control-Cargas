@@ -126,7 +126,7 @@ export default function Tests({ equipoActivo = 'todos' }) {
   const maxX1 = Math.max(3, ...datosCuadrante1.map((d) => d.x), 2.2)
   const maxY1 = Math.max(60, ...datosCuadrante1.map((d) => d.y), 44)
   const maxX2 = Math.max(35, ...datosCuadrante2.map((d) => d.x), 22)
-  const maxY2 = Math.max(20, ...datosCuadrante2.map((d) => d.y), 17)
+  const maxY2 = Math.max(20, ...datosCuadrante2.map((d) => d.y), 11)
 
   if (cargando) return <p className="mono texto-dim">Cargando tests…</p>
 
@@ -279,7 +279,7 @@ export default function Tests({ equipoActivo = 'todos' }) {
         <section className="cuadrante-card">
           <h3>Potencia vs. capacidad de repetirla (Wingate)</h3>
           <p className="cuadrante-sub">
-            Eje Y: Potencia (PP1 en W/kg), dividido en 16 W/kg · Eje X: Índice de fatiga (%), dividido en 20% —
+            Eje Y: Potencia (PP1 en W/kg), dividido en 10 W/kg · Eje X: Índice de fatiga (%), dividido en 20% —
             eje invertido: más a la derecha = menor fatiga = mejor capacidad de repetir potencia
           </p>
           <ResponsiveContainer width="100%" height={280}>
@@ -289,7 +289,7 @@ export default function Tests({ equipoActivo = 'todos' }) {
               <YAxis type="number" dataKey="y" name="Potencia" domain={[0, maxY2]} stroke="var(--text-faint)" fontSize={12} />
               <ZAxis range={[80, 80]} />
               <ReferenceLine x={20} stroke="var(--text-faint)" strokeDasharray="4 4" />
-              <ReferenceLine y={16} stroke="var(--text-faint)" strokeDasharray="4 4" />
+              <ReferenceLine y={10} stroke="var(--text-faint)" strokeDasharray="4 4" />
               <Tooltip content={<TooltipCuadrante etiquetaX="Índice fatiga (%)" etiquetaY="Potencia (W/kg)" />} cursor={{ strokeDasharray: '3 3' }} />
               <Scatter data={datosCuadrante2}>
                 {datosCuadrante2.map((d, i) => <Cell key={i} fill={d.color} />)}

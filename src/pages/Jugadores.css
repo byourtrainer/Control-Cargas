@@ -18,7 +18,10 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 14px;
+  white-space: nowrap;
 }
+
+.tabla-scroll { overflow-x: auto; }
 
 .jugadores-plantilla-tabla th {
   text-align: left;

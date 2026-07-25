@@ -260,6 +260,15 @@ Nueva pestaña **"Tests"** para el entrenador:
   **PP1** (potencia pico) en vez de MP1 (potencia media), tal y como debía
   ser.
 
+## Ajustes en Tests y ficha completa en Jugadores
+
+- Corregido el umbral del eje Y en el cuadrante Potencia/Wingate: ahora
+  divide en **10 W/kg** (antes eran 16 W/kg, por error).
+- La pestaña "Jugadores" ahora muestra en una sola tabla: nombre, equipo,
+  peso corporal, altura, fecha de nacimiento (con la edad calculada al lado)
+  y fecha de alta — todos los datos de la ficha de un vistazo, sin tener que
+  entrar en otra pantalla.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

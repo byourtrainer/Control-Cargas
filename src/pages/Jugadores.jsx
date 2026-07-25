@@ -2,6 +2,17 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import './Jugadores.css'
 
+function calcularEdad(fechaNacimiento) {
+  if (!fechaNacimiento) return null
+  const hoy = new Date()
+  const nacimiento = new Date(fechaNacimiento)
+  let edad = hoy.getFullYear() - nacimiento.getFullYear()
+  const aunNoCumplido = hoy.getMonth() < nacimiento.getMonth() ||
+    (hoy.getMonth() === nacimiento.getMonth() && hoy.getDate() < nacimiento.getDate())
+  if (aunNoCumplido) edad--
+  return edad
+}
+
 export default function Jugadores({ equipoActivo = 'todos' }) {
   const [jugadores, setJugadores] = useState([])
   const [cargando, setCargando] = useState(true)
@@ -51,9 +62,13 @@ export default function Jugadores({ equipoActivo = 'todos' }) {
       {jugadoresFiltrados.length === 0 ? (
         <p className="texto-dim">No hay jugadores en este grupo todavía.</p>
       ) : (
+        <div className="tabla-scroll">
         <table className="jugadores-plantilla-tabla">
           <thead>
-            <tr><th>Jugador</th><th>Equipo</th><th>Peso corporal</th><th>Dado de alta</th></tr>
+            <tr>
+              <th>Jugador</th><th>Equipo</th><th>Peso corporal</th><th>Altura</th>
+              <th>Fecha nacimiento</th><th>Dado de alta</th>
+            </tr>
           </thead>
           <tbody>
             {jugadoresFiltrados.map((j) => (
@@ -87,6 +102,12 @@ export default function Jugadores({ equipoActivo = 'todos' }) {
                     </button>
                   )}
                 </td>
+                <td className="mono texto-dim">{j.altura_m ? `${j.altura_m} m` : '—'}</td>
+                <td className="mono texto-dim">
+                  {j.fecha_nacimiento
+                    ? `${new Date(j.fecha_nacimiento).toLocaleDateString('es-ES')} (${calcularEdad(j.fecha_nacimiento)} años)`
+                    : '—'}
+                </td>
                 <td className="mono texto-dim">
                   {j.creado_en ? new Date(j.creado_en).toLocaleDateString('es-ES') : '—'}
                 </td>
@@ -94,6 +115,7 @@ export default function Jugadores({ equipoActivo = 'todos' }) {
             ))}
           </tbody>
         </table>
+        </div>
       )}
     </section>
   )
