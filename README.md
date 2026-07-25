@@ -246,6 +246,20 @@ Nueva pestaña **"Tests"** para el entrenador:
 - **Historial completo** de todos los tests registrados, con el valor
   relativo o el índice de fatiga ya calculado.
 
+## Ficha del jugador al registrarse y correcciones en Tests
+
+- El registro de un jugador ahora pide también **fecha de nacimiento**,
+  **altura (m)**, **peso (kg)** y **sexo** (masculino/femenino/neutro),
+  además de nombre, correo y contraseña. El peso queda guardado en el mismo
+  campo que usa el módulo de Tests, así que ya no hace falta añadirlo a mano
+  la primera vez desde la pestaña Jugadores (aunque se puede seguir
+  ajustando ahí si cambia).
+- Corregido el nombre de **DRI**: es *Dynamic Rebound Index*, no *Drop Jump
+  Reactive Index*.
+- En el cuadrante Potencia vs. Índice de fatiga (Wingate), el eje Y ahora usa
+  **PP1** (potencia pico) en vez de MP1 (potencia media), tal y como debía
+  ser.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

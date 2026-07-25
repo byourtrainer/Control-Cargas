@@ -5,6 +5,10 @@ import './Login.css'
 export default function Login() {
   const [modo, setModo] = useState('entrar') // 'entrar' | 'registrar'
   const [nombre, setNombre] = useState('')
+  const [fechaNacimiento, setFechaNacimiento] = useState('')
+  const [alturaM, setAlturaM] = useState('')
+  const [pesoKg, setPesoKg] = useState('')
+  const [sexo, setSexo] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState(null)
@@ -24,7 +28,15 @@ export default function Login() {
       const { error } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { nombre } },
+        options: {
+          data: {
+            nombre,
+            fecha_nacimiento: fechaNacimiento,
+            altura_m: alturaM,
+            peso_corporal_kg: pesoKg,
+            sexo,
+          },
+        },
       })
       if (error) {
         setError(traducirError(error.message))
@@ -53,16 +65,61 @@ export default function Login() {
 
         <form onSubmit={manejarEnvio} className="login-form">
           {modo === 'registrar' && (
-            <label className="campo">
-              <span>Nombre completo</span>
-              <input
-                type="text"
-                value={nombre}
-                onChange={(e) => setNombre(e.target.value)}
-                required
-                placeholder="Nombre y apellidos"
-              />
-            </label>
+            <>
+              <label className="campo">
+                <span>Nombre completo</span>
+                <input
+                  type="text"
+                  value={nombre}
+                  onChange={(e) => setNombre(e.target.value)}
+                  required
+                  placeholder="Nombre y apellidos"
+                />
+              </label>
+
+              <label className="campo">
+                <span>Fecha de nacimiento</span>
+                <input
+                  type="date"
+                  value={fechaNacimiento}
+                  onChange={(e) => setFechaNacimiento(e.target.value)}
+                  required
+                />
+              </label>
+
+              <div className="campo-fila-doble">
+                <label className="campo">
+                  <span>Altura (m)</span>
+                  <input
+                    type="number" step="0.01" min="0"
+                    value={alturaM}
+                    onChange={(e) => setAlturaM(e.target.value)}
+                    required
+                    placeholder="1.78"
+                  />
+                </label>
+                <label className="campo">
+                  <span>Peso (kg)</span>
+                  <input
+                    type="number" step="0.1" min="0"
+                    value={pesoKg}
+                    onChange={(e) => setPesoKg(e.target.value)}
+                    required
+                    placeholder="75"
+                  />
+                </label>
+              </div>
+
+              <label className="campo">
+                <span>Sexo</span>
+                <select value={sexo} onChange={(e) => setSexo(e.target.value)} required>
+                  <option value="" disabled>Selecciona una opción</option>
+                  <option value="masculino">Masculino</option>
+                  <option value="femenino">Femenino</option>
+                  <option value="neutro">Neutro</option>
+                </select>
+              </label>
+            </>
           )}
 
           <label className="campo">

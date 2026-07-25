@@ -113,7 +113,7 @@ export default function Tests({ equipoActivo = 'todos' }) {
       const wingate = porTipo.wingate
       if (!wingate) return null
       const peso = wingate.peso_corporal_kg || j.peso_corporal_kg
-      const potencia = valorRelativo(wingate.mp1, peso)
+      const potencia = valorRelativo(wingate.pp1, peso)
       const fatiga = wingate.indice_fatiga ?? indiceFatiga(wingate.mp1, wingate.mp2)
       if (potencia === null || fatiga === null || fatiga === undefined) return null
       return {
@@ -202,7 +202,7 @@ export default function Tests({ equipoActivo = 'todos' }) {
 
           {form.tipo_test === 'drop_jump' && (
             <label className="campo-test">
-              <span>DRI (Drop Jump Reactive Index)</span>
+              <span>DRI (Dynamic Rebound Index)</span>
               <input type="number" step="0.01" value={form.dri} onChange={(e) => setForm({ ...form, dri: e.target.value })} />
             </label>
           )}
@@ -232,9 +232,11 @@ export default function Tests({ equipoActivo = 'todos' }) {
               {form.mp1 && form.mp2 && (
                 <div className="preview-test mono">
                   Índice de fatiga: <strong>{indiceFatiga(Number(form.mp1), Number(form.mp2)).toFixed(1)}%</strong>
-                  {form.peso_corporal_kg && (
-                    <> · Potencia: <strong>{(Number(form.mp1) / Number(form.peso_corporal_kg)).toFixed(2)}</strong> W/kg</>
-                  )}
+                </div>
+              )}
+              {form.pp1 && form.peso_corporal_kg && (
+                <div className="preview-test mono">
+                  Potencia (PP1): <strong>{(Number(form.pp1) / Number(form.peso_corporal_kg)).toFixed(2)}</strong> W/kg
                 </div>
               )}
             </>
@@ -277,7 +279,7 @@ export default function Tests({ equipoActivo = 'todos' }) {
         <section className="cuadrante-card">
           <h3>Potencia vs. capacidad de repetirla (Wingate)</h3>
           <p className="cuadrante-sub">
-            Eje Y: Potencia (MP1 en W/kg), dividido en 16 W/kg · Eje X: Índice de fatiga (%), dividido en 20% —
+            Eje Y: Potencia (PP1 en W/kg), dividido en 16 W/kg · Eje X: Índice de fatiga (%), dividido en 20% —
             eje invertido: más a la derecha = menor fatiga = mejor capacidad de repetir potencia
           </p>
           <ResponsiveContainer width="100%" height={280}>
@@ -351,7 +353,7 @@ function formatearValorPrincipal(t) {
     return t.valor_cm !== null ? `${t.valor_cm} cm` : '—'
   }
   if (t.tipo_test === 'drop_jump') return t.dri !== null ? `DRI ${t.dri}` : '—'
-  if (t.tipo_test === 'wingate') return t.mp1 !== null ? `MP1 ${t.mp1} W` : '—'
+  if (t.tipo_test === 'wingate') return t.pp1 !== null ? `PP1 ${t.pp1} W` : '—'
   return '—'
 }
 

@@ -11,7 +11,7 @@
 
 .login-tarjeta {
   width: 100%;
-  max-width: 380px;
+  max-width: 420px;
   background: var(--bg-card);
   border: 1px solid var(--line);
   border-radius: 14px;
@@ -53,7 +53,7 @@
   color: var(--text-dim);
 }
 
-.campo input {
+.campo input, .campo select {
   background: var(--bg-elevated);
   border: 1px solid var(--line-strong);
   border-radius: 8px;
@@ -62,8 +62,14 @@
   font-size: 14px;
 }
 
-.campo input:focus {
+.campo input:focus, .campo select:focus {
   border-color: var(--accent);
+}
+
+.campo-fila-doble {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
 }
 
 .btn-principal {
