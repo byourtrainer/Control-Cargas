@@ -1,13 +1,26 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   ResponsiveContainer, ScatterChart, Scatter, XAxis, YAxis, ZAxis,
-  CartesianGrid, Tooltip, ReferenceLine, Cell, LineChart, Line, BarChart, Bar,
+  CartesianGrid, Tooltip, ReferenceLine, ReferenceArea, Cell, LineChart, Line, BarChart, Bar,
 } from 'recharts'
 import { supabase } from '../lib/supabaseClient'
 import { valorRelativo, indiceFatiga, tiposTest, traducirTipoTest, ultimosTestsPorTipo, interpretarCMJ, interpretarSentadilla, interpretarPotencia, interpretarFatigaWingate } from '../lib/testsFisicos'
 import './Tests.css'
 
 const hoyISO = () => new Date().toISOString().slice(0, 10)
+
+function calcularEdad(fechaNacimiento) {
+  if (!fechaNacimiento) return null
+  const hoy = new Date()
+  const nacimiento = new Date(fechaNacimiento)
+  let edad = hoy.getFullYear() - nacimiento.getFullYear()
+  const aunNoCumplido = hoy.getMonth() < nacimiento.getMonth() ||
+    (hoy.getMonth() === nacimiento.getMonth() && hoy.getDate() < nacimiento.getDate())
+  if (aunNoCumplido) edad--
+  return edad
+}
+
+const traducirSexo = (s) => ({ masculino: 'Masculino', femenino: 'Femenino', neutro: 'Neutro' }[s] || '—')
 
 const formularioVacio = {
   jugador_id: '', tipo_test: 'sentadilla', fecha: hoyISO(), peso_corporal_kg: '',
@@ -59,6 +72,18 @@ function calcularDatosCuadrante2(jugadoresLista, testsLista) {
   }).filter(Boolean)
 }
 
+function EtiquetaZona({ viewBox, linea1, linea2, color }) {
+  if (!viewBox) return null
+  const cx = viewBox.x + viewBox.width / 2
+  const cy = viewBox.y + viewBox.height / 2
+  return (
+    <g>
+      <text x={cx} y={cy - 6} textAnchor="middle" fontSize="11" fontWeight="600" fill={color}>{linea1}</text>
+      <text x={cx} y={cy + 10} textAnchor="middle" fontSize="11" fontWeight="600" fill={color}>{linea2}</text>
+    </g>
+  )
+}
+
 function GraficoCuadrante1({ datos, maxX, maxY }) {
   return (
     <>
@@ -70,6 +95,14 @@ function GraficoCuadrante1({ datos, maxX, maxY }) {
           <XAxis type="number" dataKey="x" name="Sentadilla relativa" domain={[0, maxX]} stroke="var(--text-faint)" fontSize={12} />
           <YAxis type="number" dataKey="y" name="CMJ" domain={[0, maxY]} stroke="var(--text-faint)" fontSize={12} />
           <ZAxis range={[80, 80]} />
+          <ReferenceArea x1={0} x2={2.0} y1={0} y2={40} fill="var(--risk-high)" fillOpacity={0.1} stroke="none"
+            label={<EtiquetaZona linea1="Poco explosivo" linea2="Poco fuerte" color="var(--risk-high)" />} />
+          <ReferenceArea x1={2.0} x2={maxX} y1={0} y2={40} fill="var(--risk-mid)" fillOpacity={0.1} stroke="none"
+            label={<EtiquetaZona linea1="Poco explosivo" linea2="Fuerte" color="var(--risk-mid)" />} />
+          <ReferenceArea x1={0} x2={2.0} y1={40} y2={maxY} fill="var(--risk-mid)" fillOpacity={0.1} stroke="none"
+            label={<EtiquetaZona linea1="Explosivo" linea2="Poco fuerte" color="var(--risk-mid)" />} />
+          <ReferenceArea x1={2.0} x2={maxX} y1={40} y2={maxY} fill="var(--risk-low)" fillOpacity={0.12} stroke="none"
+            label={<EtiquetaZona linea1="Explosivo" linea2="Fuerte" color="var(--risk-low)" />} />
           <ReferenceLine x={2.0} stroke="var(--text-faint)" strokeDasharray="4 4" />
           <ReferenceLine y={40} stroke="var(--text-faint)" strokeDasharray="4 4" />
           <Tooltip content={<TooltipCuadrante etiquetaX="Sentadilla rel." etiquetaY="CMJ (cm)" />} cursor={{ strokeDasharray: '3 3' }} />
@@ -101,6 +134,14 @@ function GraficoCuadrante2({ datos, maxX, maxY }) {
           <XAxis type="number" dataKey="x" name="Índice de fatiga" domain={[0, maxX]} reversed stroke="var(--text-faint)" fontSize={12} />
           <YAxis type="number" dataKey="y" name="Potencia" domain={[0, maxY]} stroke="var(--text-faint)" fontSize={12} />
           <ZAxis range={[80, 80]} />
+          <ReferenceArea x1={20} x2={maxX} y1={0} y2={10} fill="var(--risk-high)" fillOpacity={0.1} stroke="none"
+            label={<EtiquetaZona linea1="Poco potente" linea2="Baja capacidad" color="var(--risk-high)" />} />
+          <ReferenceArea x1={0} x2={20} y1={0} y2={10} fill="var(--risk-mid)" fillOpacity={0.1} stroke="none"
+            label={<EtiquetaZona linea1="Poco potente" linea2="Alta capacidad" color="var(--risk-mid)" />} />
+          <ReferenceArea x1={20} x2={maxX} y1={10} y2={maxY} fill="var(--risk-mid)" fillOpacity={0.1} stroke="none"
+            label={<EtiquetaZona linea1="Potente" linea2="Baja capacidad" color="var(--risk-mid)" />} />
+          <ReferenceArea x1={0} x2={20} y1={10} y2={maxY} fill="var(--risk-low)" fillOpacity={0.12} stroke="none"
+            label={<EtiquetaZona linea1="Potente" linea2="Alta capacidad" color="var(--risk-low)" />} />
           <ReferenceLine x={20} stroke="var(--text-faint)" strokeDasharray="4 4" />
           <ReferenceLine y={10} stroke="var(--text-faint)" strokeDasharray="4 4" />
           <Tooltip content={<TooltipCuadrante etiquetaX="Índice fatiga (%)" etiquetaY="Potencia (W/kg)" />} cursor={{ strokeDasharray: '3 3' }} />
@@ -568,9 +609,15 @@ export default function Tests({ equipoActivo = 'todos' }) {
                 <span>{jugadorIndividual.equipos?.nombre || 'Sin equipo'}</span>
                 <span>{jugadorIndividual.peso_corporal_kg ? `${jugadorIndividual.peso_corporal_kg} kg` : '—'}</span>
                 <span>{jugadorIndividual.altura_m ? `${jugadorIndividual.altura_m} m` : '—'}</span>
+                <span>
+                  {jugadorIndividual.fecha_nacimiento
+                    ? `${new Date(jugadorIndividual.fecha_nacimiento).toLocaleDateString('es-ES')} (${calcularEdad(jugadorIndividual.fecha_nacimiento)} años)`
+                    : '—'}
+                </span>
+                <span>{traducirSexo(jugadorIndividual.sexo)}</span>
               </div>
 
-              <div className="informe-graficos-grid">
+              <div className="informe-graficos-grid no-imprimir">
                 {metricasInforme.map((m) => {
                   const serie = construirSerieEvolucion(jugadorIndividual.id, m, jugadorIndividual.peso_corporal_kg)
                   if (serie.length === 0) return null
@@ -598,7 +645,7 @@ export default function Tests({ equipoActivo = 'todos' }) {
                 })}
               </div>
               {metricasInforme.every((m) => construirSerieEvolucion(jugadorIndividual.id, m, jugadorIndividual.peso_corporal_kg).length === 0) && (
-                <p className="texto-dim">Este jugador todavía no tiene tests registrados.</p>
+                <p className="texto-dim no-imprimir">Este jugador todavía no tiene tests registrados.</p>
               )}
 
               <div className="informe-cuadrantes-grid">

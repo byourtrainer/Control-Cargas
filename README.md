@@ -328,6 +328,20 @@ Nueva pestaña **"Tests"** para el entrenador:
   mini-gráfica aparece el puesto del jugador dentro del equipo activo (ej.
   "Puesto 3 de 12, percentil 82") para esa métrica en concreto.
 
+## Hoja del informe individual: solo cuadrantes, datos completos y zonas coloreadas
+
+- La **hoja impresa/exportada** del perfil individual ahora muestra
+  únicamente: datos personales completos (peso, altura, fecha de
+  nacimiento con edad, sexo), equipo, los **dos cuadrantes** y el
+  **comentario del entrenador** debajo — las mini-gráficas de evolución y
+  el ranking comparativo se quedan solo en pantalla (son útiles para
+  explorar, no para la hoja final).
+- Cada uno de los **4 cuadrantes** de ambos gráficos tiene ahora **fondo de
+  color y texto explicativo** (ej. "Explosivo · Fuerte"), con este esquema:
+  - 🟢 Verde: las dos cualidades en su lado bueno (mejor caso).
+  - 🟡 Ámbar: una cualidad buena y la otra no (casos mixtos).
+  - 🔴 Rojo: las dos cualidades en su lado débil (peor caso).
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.
