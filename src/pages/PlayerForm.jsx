@@ -5,6 +5,19 @@ import './PlayerForm.css'
 
 const hoyISO = () => new Date().toISOString().slice(0, 10)
 
+function calcularEdad(fechaNacimiento) {
+  if (!fechaNacimiento) return null
+  const hoy = new Date()
+  const nacimiento = new Date(fechaNacimiento)
+  let edad = hoy.getFullYear() - nacimiento.getFullYear()
+  const aunNoCumplido = hoy.getMonth() < nacimiento.getMonth() ||
+    (hoy.getMonth() === nacimiento.getMonth() && hoy.getDate() < nacimiento.getDate())
+  if (aunNoCumplido) edad--
+  return edad
+}
+
+const traducirSexo = (s) => ({ masculino: 'Masculino', femenino: 'Femenino', neutro: 'Neutro' }[s] || '—')
+
 // Escala RPE 0-10 tal y como se usa en el club (escala de Foster / CR-10 modificada)
 const descripcionesRPE = [
   'Ningún esfuerzo', 'Muy muy suave', 'Muy suave', 'Suave', 'Moderado',
@@ -312,6 +325,22 @@ export default function PlayerForm({ perfil }) {
           </section>
         </div>
 
+        <div className="player-columna-lateral">
+        <section className="historial-card">
+          <h3>Mis datos</h3>
+          <dl className="mis-datos-lista">
+            <div><dt>Equipo</dt><dd>{nombreEquipoActual || 'Sin asignar'}</dd></div>
+            <div><dt>Peso</dt><dd>{perfil.peso_corporal_kg ? `${perfil.peso_corporal_kg} kg` : '—'}</dd></div>
+            <div><dt>Altura</dt><dd>{perfil.altura_m ? `${perfil.altura_m} m` : '—'}</dd></div>
+            <div><dt>Fecha de nacimiento</dt><dd>
+              {perfil.fecha_nacimiento
+                ? `${new Date(perfil.fecha_nacimiento).toLocaleDateString('es-ES')} (${calcularEdad(perfil.fecha_nacimiento)} años)`
+                : '—'}
+            </dd></div>
+            <div><dt>Sexo</dt><dd>{traducirSexo(perfil.sexo)}</dd></div>
+          </dl>
+        </section>
+
         <section className="historial-card">
           <h3>Últimos 7 registros</h3>
           {cargandoHistorial ? (
@@ -336,6 +365,7 @@ export default function PlayerForm({ perfil }) {
             </table>
           )}
         </section>
+        </div>
       </div>
     </div>
   )

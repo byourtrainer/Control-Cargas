@@ -13,6 +13,8 @@ function calcularEdad(fechaNacimiento) {
   return edad
 }
 
+const traducirSexo = (s) => ({ masculino: 'Masculino', femenino: 'Femenino', neutro: 'Neutro' }[s] || '—')
+
 export default function Jugadores({ equipoActivo = 'todos' }) {
   const [jugadores, setJugadores] = useState([])
   const [cargando, setCargando] = useState(true)
@@ -67,7 +69,7 @@ export default function Jugadores({ equipoActivo = 'todos' }) {
           <thead>
             <tr>
               <th>Jugador</th><th>Equipo</th><th>Peso corporal</th><th>Altura</th>
-              <th>Fecha nacimiento</th><th>Dado de alta</th>
+              <th>Fecha nacimiento</th><th>Sexo</th><th>Dado de alta</th>
             </tr>
           </thead>
           <tbody>
@@ -108,6 +110,7 @@ export default function Jugadores({ equipoActivo = 'todos' }) {
                     ? `${new Date(j.fecha_nacimiento).toLocaleDateString('es-ES')} (${calcularEdad(j.fecha_nacimiento)} años)`
                     : '—'}
                 </td>
+                <td className="texto-dim">{traducirSexo(j.sexo)}</td>
                 <td className="mono texto-dim">
                   {j.creado_en ? new Date(j.creado_en).toLocaleDateString('es-ES') : '—'}
                 </td>

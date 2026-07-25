@@ -269,6 +269,23 @@ Nueva pestaña **"Tests"** para el entrenador:
   y fecha de alta — todos los datos de la ficha de un vistazo, sin tener que
   entrar en otra pantalla.
 
+## Datos personales, menú desplegable y perfil físico
+
+- El jugador ahora tiene una tarjeta **"Mis datos"** en su propia vista, con
+  equipo, peso, altura, fecha de nacimiento (y edad) y sexo — de solo
+  lectura, tal como los introdujo al registrarse.
+- La pestaña **"Jugadores"** del entrenador ya mostraba peso/altura/equipo/
+  fecha de alta; ahora también incluye el **sexo**, para tener exactamente
+  los mismos datos que ve el jugador.
+- Las pestañas del entrenador (que ya eran siete) se han convertido en un
+  **menú desplegable** en vez de una fila de botones, para que quepan bien
+  y sea más cómodo navegar según van creciendo.
+- Nueva pestaña **"Perfil Físico"**: informe de todos los resultados de
+  tests (Sentadilla, ISO SQ, CMJ, SJ, Drop Jump, Wingate) de un grupo de
+  jugadores, con chips para incluir o excluir jugadores concretos dentro
+  del equipo activo (por defecto se incluyen todos). Exportable a **CSV** o
+  **Imprimir/Guardar PDF**, igual que en Informes.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

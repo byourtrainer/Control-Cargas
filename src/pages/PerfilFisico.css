@@ -1,0 +1,116 @@
+.perfil-fisico-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.perfil-controles {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px 20px;
+}
+
+.perfil-seleccion-titulo {
+  font-size: 13px;
+  color: var(--text-dim);
+  display: block;
+  margin-bottom: 10px;
+}
+
+.perfil-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.perfil-chip {
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-strong);
+  color: var(--text-faint);
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 12px;
+}
+
+.perfil-chip:hover { border-color: var(--accent); }
+
+.perfil-chip-activo {
+  background: rgba(200,255,77,0.1);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.perfil-acciones {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-exportar {
+  background: none;
+  border: 1px solid var(--line-strong);
+  color: var(--text-dim);
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.btn-exportar:hover { border-color: var(--accent); color: var(--accent); }
+
+.perfil-card {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 24px;
+}
+
+.perfil-cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.tabla-scroll { overflow-x: auto; }
+
+.perfil-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.perfil-tabla th {
+  text-align: left;
+  color: var(--text-faint);
+  font-weight: 500;
+  padding-bottom: 10px;
+  padding-right: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.perfil-tabla td {
+  padding: 10px 16px 10px 0;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+
+/* Impresión / Guardar como PDF: autocontenido, no depende de que se haya
+   cargado la pestaña de Informes en esta sesión. */
+@media print {
+  .no-imprimir { display: none !important; }
+  body, .app-shell { background: white !important; color: black !important; }
+  .perfil-card {
+    background: white !important;
+    border: none !important;
+    color: black !important;
+  }
+  .perfil-tabla th, .perfil-tabla td { border-color: #ccc !important; color: black !important; }
+  .texto-dim { color: #555 !important; }
+}

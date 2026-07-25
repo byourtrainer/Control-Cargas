@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from './lib/supabaseClient'
 import Login from './pages/Login'
 import PlayerForm from './pages/PlayerForm'
@@ -9,12 +9,14 @@ import Equipos from './pages/Equipos'
 import Informes from './pages/Informes'
 import Jugadores from './pages/Jugadores'
 import Tests from './pages/Tests'
+import PerfilFisico from './pages/PerfilFisico'
 import './App.css'
 
 const pestanasEntrenador = [
   { clave: 'resumen', etiqueta: 'Resumen' },
   { clave: 'jugadores', etiqueta: 'Jugadores' },
   { clave: 'tests', etiqueta: 'Tests' },
+  { clave: 'perfil_fisico', etiqueta: 'Perfil Físico' },
   { clave: 'equipos', etiqueta: 'Equipos' },
   { clave: 'sesion', etiqueta: 'Sesión del día' },
   { clave: 'lesiones', etiqueta: 'Lesiones' },
@@ -28,6 +30,16 @@ export default function App() {
   const [pestana, setPestana] = useState('resumen')
   const [equipos, setEquipos] = useState([])
   const [equipoActivo, setEquipoActivo] = useState('todos')
+  const [menuAbierto, setMenuAbierto] = useState(false)
+  const menuRef = useRef(null)
+
+  useEffect(() => {
+    function alClicarFuera(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuAbierto(false)
+    }
+    document.addEventListener('mousedown', alClicarFuera)
+    return () => document.removeEventListener('mousedown', alClicarFuera)
+  }, [])
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -119,16 +131,24 @@ export default function App() {
       </header>
 
       {perfil.rol === 'entrenador' && (
-        <nav className="pestanas-nav">
-          {pestanasEntrenador.map((p) => (
-            <button
-              key={p.clave}
-              className={`pestana-btn ${pestana === p.clave ? 'pestana-activa' : ''}`}
-              onClick={() => setPestana(p.clave)}
-            >
-              {p.etiqueta}
-            </button>
-          ))}
+        <nav className="pestanas-nav" ref={menuRef}>
+          <button className="menu-desplegable-boton" onClick={() => setMenuAbierto(!menuAbierto)}>
+            <span>{pestanasEntrenador.find((p) => p.clave === pestana)?.etiqueta}</span>
+            <span className={`menu-flecha ${menuAbierto ? 'menu-flecha-abierta' : ''}`}>▾</span>
+          </button>
+          {menuAbierto && (
+            <div className="menu-desplegable-lista">
+              {pestanasEntrenador.map((p) => (
+                <button
+                  key={p.clave}
+                  className={`menu-desplegable-item ${pestana === p.clave ? 'menu-desplegable-item-activo' : ''}`}
+                  onClick={() => { setPestana(p.clave); setMenuAbierto(false) }}
+                >
+                  {p.etiqueta}
+                </button>
+              ))}
+            </div>
+          )}
         </nav>
       )}
 
@@ -139,6 +159,7 @@ export default function App() {
           : pestana === 'informes' ? <Informes equipoActivo={equipoActivo} />
           : pestana === 'jugadores' ? <Jugadores equipoActivo={equipoActivo} />
           : pestana === 'tests' ? <Tests equipoActivo={equipoActivo} />
+          : pestana === 'perfil_fisico' ? <PerfilFisico equipoActivo={equipoActivo} />
           : pestana === 'equipos' ? (
             <Equipos
               equipos={equipos}
