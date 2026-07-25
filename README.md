@@ -220,6 +220,32 @@ jugadores vean una versión desactualizada mientras seguimos haciendo cambios
 frecuentes en la app. Se puede añadir más adelante, cuando el desarrollo se
 estabilice, para que funcione incluso sin conexión.
 
+## Módulo de tests físicos
+
+Nueva pestaña **"Tests"** para el entrenador:
+
+- **Registro de test**: elige jugador, tipo de test (Sentadilla, ISO SQ, CMJ,
+  SJ, Drop Jump, Doble Wingate) y fecha. Los campos cambian según el tipo:
+  - Sentadilla / ISO SQ: carga (kg) + peso corporal en el test → calcula el
+    valor relativo (kg/peso corporal) al momento.
+  - CMJ: altura (cm) + RSI modificado.
+  - SJ: altura (cm).
+  - Drop Jump: DRI.
+  - Doble Wingate: PP1, MP1, PP2, MP2 → calcula el **índice de fatiga**
+    automáticamente: `(MP1-MP2)/MP2 × 100`, en %.
+- **Peso corporal**: se gestiona en la pestaña "Jugadores" (columna editable),
+  y se usa como valor por defecto al registrar un test — aunque se puede
+  ajustar test a test, ya que el peso puede variar con el tiempo.
+- **Dos gráficos de cuadrantes**, filtrados por el equipo activo y coloreados
+  según el color del equipo de cada jugador:
+  1. **CMJ vs. Sentadilla relativa** — eje Y (CMJ) dividido en 40 cm, eje X
+     (sentadilla en kg/peso corporal) dividido en 2.0×. Usa el test más
+     reciente de cada tipo por jugador.
+  2. **Potencia vs. Índice de fatiga (Wingate)** — eje Y (MP1 en W/kg)
+     dividido en 16 W/kg, eje X (índice de fatiga) dividido en 20%.
+- **Historial completo** de todos los tests registrados, con el valor
+  relativo o el índice de fatiga ya calculado.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

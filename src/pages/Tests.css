@@ -1,0 +1,117 @@
+.tests-layout {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 950px) {
+  .tests-layout { grid-template-columns: 1fr; }
+}
+
+.tests-columna-derecha {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.tests-historial-card {
+  grid-column: 1 / -1;
+}
+
+.test-form-card, .cuadrante-card, .tests-historial-card {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 24px;
+}
+
+.campo-test {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--text-dim);
+  margin-bottom: 16px;
+}
+
+.campo-test input, .campo-test select, .campo-test textarea {
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 14px;
+  resize: vertical;
+}
+
+.campo-test input:focus, .campo-test select:focus, .campo-test textarea:focus {
+  border-color: var(--accent);
+}
+
+.fila-doble {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.preview-test {
+  background: rgba(200,255,77,0.06);
+  border: 1px dashed rgba(200,255,77,0.3);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 16px;
+}
+
+.preview-test strong { color: var(--accent); }
+
+.cuadrante-card h3 { font-size: 15px; color: var(--text-dim); font-weight: 500; margin-bottom: 4px; }
+
+.cuadrante-sub {
+  font-size: 11px;
+  color: var(--text-faint);
+  margin: 0 0 12px;
+  line-height: 1.5;
+}
+
+.cuadrante-vacio {
+  font-size: 12px;
+  text-align: center;
+  margin-top: 8px;
+}
+
+.tooltip-cuadrante {
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.6;
+}
+
+.tests-historial-card h3 { font-size: 15px; color: var(--text-dim); font-weight: 500; margin-bottom: 16px; }
+
+.tests-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.tests-tabla th {
+  text-align: left;
+  color: var(--text-faint);
+  font-weight: 500;
+  padding-bottom: 10px;
+  padding-right: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.tests-tabla td {
+  padding: 9px 16px 9px 0;
+  border-bottom: 1px solid var(--line);
+}

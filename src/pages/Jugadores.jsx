@@ -5,6 +5,8 @@ import './Jugadores.css'
 export default function Jugadores({ equipoActivo = 'todos' }) {
   const [jugadores, setJugadores] = useState([])
   const [cargando, setCargando] = useState(true)
+  const [editandoPeso, setEditandoPeso] = useState(null)
+  const [pesoTemp, setPesoTemp] = useState('')
 
   useEffect(() => { cargarJugadores() }, [])
 
@@ -17,6 +19,18 @@ export default function Jugadores({ equipoActivo = 'todos' }) {
       .order('nombre')
     setJugadores(data || [])
     setCargando(false)
+  }
+
+  function empezarEdicionPeso(j) {
+    setEditandoPeso(j.id)
+    setPesoTemp(j.peso_corporal_kg ?? '')
+  }
+
+  async function guardarPeso(id) {
+    const valor = pesoTemp === '' ? null : Number(pesoTemp)
+    await supabase.from('perfiles').update({ peso_corporal_kg: valor }).eq('id', id)
+    setEditandoPeso(null)
+    cargarJugadores()
   }
 
   const jugadoresFiltrados = jugadores.filter((j) => {
@@ -39,7 +53,7 @@ export default function Jugadores({ equipoActivo = 'todos' }) {
       ) : (
         <table className="jugadores-plantilla-tabla">
           <thead>
-            <tr><th>Jugador</th><th>Equipo</th><th>Dado de alta</th></tr>
+            <tr><th>Jugador</th><th>Equipo</th><th>Peso corporal</th><th>Dado de alta</th></tr>
           </thead>
           <tbody>
             {jugadoresFiltrados.map((j) => (
@@ -53,6 +67,24 @@ export default function Jugadores({ equipoActivo = 'todos' }) {
                     </span>
                   ) : (
                     <span className="texto-dim">Sin asignar</span>
+                  )}
+                </td>
+                <td className="mono">
+                  {editandoPeso === j.id ? (
+                    <span className="peso-editor">
+                      <input
+                        type="number" step="0.1" min="0" autoFocus
+                        value={pesoTemp}
+                        onChange={(e) => setPesoTemp(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && guardarPeso(j.id)}
+                      />
+                      <button onClick={() => guardarPeso(j.id)}>✓</button>
+                      <button onClick={() => setEditandoPeso(null)}>✕</button>
+                    </span>
+                  ) : (
+                    <button className="peso-boton" onClick={() => empezarEdicionPeso(j)}>
+                      {j.peso_corporal_kg ? `${j.peso_corporal_kg} kg` : 'Añadir peso'}
+                    </button>
                   )}
                 </td>
                 <td className="mono texto-dim">
