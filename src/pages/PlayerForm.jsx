@@ -45,6 +45,16 @@ export default function PlayerForm({ perfil }) {
   const [registroHoy, setRegistroHoy] = useState(null)
   const [cargandoRegistro, setCargandoRegistro] = useState(true)
 
+  // Mis datos
+  const [misDatos, setMisDatos] = useState({
+    peso_corporal_kg: perfil.peso_corporal_kg, altura_m: perfil.altura_m,
+    fecha_nacimiento: perfil.fecha_nacimiento, sexo: perfil.sexo,
+  })
+  const [editandoDatos, setEditandoDatos] = useState(false)
+  const [formDatos, setFormDatos] = useState(misDatos)
+  const [guardandoDatos, setGuardandoDatos] = useState(false)
+  const [mensajeDatos, setMensajeDatos] = useState(null)
+
   // Bienestar
   const [valores, setValores] = useState({ sueno: 3, fatiga: 3, dolor_muscular: 3, estres: 3, animo: 3 })
   const [tieneMolestia, setTieneMolestia] = useState(false)
@@ -98,6 +108,34 @@ export default function PlayerForm({ perfil }) {
   async function cargarEquipos() {
     const { data } = await supabase.from('equipos').select('*').order('nombre')
     setEquipos(data || [])
+  }
+
+  function empezarEdicionDatos() {
+    setFormDatos(misDatos)
+    setMensajeDatos(null)
+    setEditandoDatos(true)
+  }
+
+  async function guardarDatos(e) {
+    e.preventDefault()
+    setGuardandoDatos(true)
+    setMensajeDatos(null)
+
+    const { error } = await supabase.rpc('actualizar_mis_datos', {
+      nuevo_peso: formDatos.peso_corporal_kg === '' || formDatos.peso_corporal_kg === null ? null : Number(formDatos.peso_corporal_kg),
+      nueva_altura: formDatos.altura_m === '' || formDatos.altura_m === null ? null : Number(formDatos.altura_m),
+      nueva_fecha_nacimiento: formDatos.fecha_nacimiento || null,
+      nuevo_sexo: formDatos.sexo || null,
+    })
+
+    if (error) {
+      setMensajeDatos({ tipo: 'error', texto: 'No se pudieron guardar los cambios.' })
+    } else {
+      setMisDatos(formDatos)
+      setEditandoDatos(false)
+      setMensajeDatos({ tipo: 'ok', texto: 'Datos actualizados.' })
+    }
+    setGuardandoDatos(false)
   }
 
   async function manejarCambioEquipo(e) {
@@ -327,18 +365,85 @@ export default function PlayerForm({ perfil }) {
 
         <div className="player-columna-lateral">
         <section className="historial-card">
-          <h3>Mis datos</h3>
-          <dl className="mis-datos-lista">
-            <div><dt>Equipo</dt><dd>{nombreEquipoActual || 'Sin asignar'}</dd></div>
-            <div><dt>Peso</dt><dd>{perfil.peso_corporal_kg ? `${perfil.peso_corporal_kg} kg` : '—'}</dd></div>
-            <div><dt>Altura</dt><dd>{perfil.altura_m ? `${perfil.altura_m} m` : '—'}</dd></div>
-            <div><dt>Fecha de nacimiento</dt><dd>
-              {perfil.fecha_nacimiento
-                ? `${new Date(perfil.fecha_nacimiento).toLocaleDateString('es-ES')} (${calcularEdad(perfil.fecha_nacimiento)} años)`
-                : '—'}
-            </dd></div>
-            <div><dt>Sexo</dt><dd>{traducirSexo(perfil.sexo)}</dd></div>
-          </dl>
+          <div className="mis-datos-header">
+            <h3>Mis datos</h3>
+            {!editandoDatos && (
+              <button type="button" className="equipo-cambiar-link" onClick={empezarEdicionDatos}>Editar</button>
+            )}
+          </div>
+
+          {editandoDatos ? (
+            <form onSubmit={guardarDatos}>
+              <label className="campo-notas">
+                <span>Peso (kg)</span>
+                <input
+                  type="number" step="0.1" min="0"
+                  value={formDatos.peso_corporal_kg ?? ''}
+                  onChange={(e) => setFormDatos({ ...formDatos, peso_corporal_kg: e.target.value })}
+                />
+              </label>
+              <label className="campo-notas">
+                <span>Altura (m)</span>
+                <input
+                  type="number" step="0.01" min="0"
+                  value={formDatos.altura_m ?? ''}
+                  onChange={(e) => setFormDatos({ ...formDatos, altura_m: e.target.value })}
+                />
+              </label>
+              <label className="campo-notas">
+                <span>Fecha de nacimiento</span>
+                <input
+                  type="date"
+                  value={formDatos.fecha_nacimiento ?? ''}
+                  onChange={(e) => setFormDatos({ ...formDatos, fecha_nacimiento: e.target.value })}
+                />
+              </label>
+              <label className="campo-notas">
+                <span>Sexo</span>
+                <select
+                  value={formDatos.sexo ?? ''}
+                  onChange={(e) => setFormDatos({ ...formDatos, sexo: e.target.value })}
+                >
+                  <option value="">Sin especificar</option>
+                  <option value="masculino">Masculino</option>
+                  <option value="femenino">Femenino</option>
+                  <option value="neutro">Neutro</option>
+                </select>
+              </label>
+
+              {mensajeDatos && (
+                <div className={mensajeDatos.tipo === 'ok' ? 'aviso-ok' : 'aviso-error'}>{mensajeDatos.texto}</div>
+              )}
+
+              <div className="mis-datos-botones">
+                <button type="submit" className="btn-principal" disabled={guardandoDatos}>
+                  {guardandoDatos ? 'Guardando…' : 'Guardar'}
+                </button>
+                <button type="button" className="equipo-cancelar" onClick={() => setEditandoDatos(false)}>
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          ) : (
+            <>
+              <dl className="mis-datos-lista">
+                <div><dt>Equipo</dt><dd>{nombreEquipoActual || 'Sin asignar'}</dd></div>
+                <div><dt>Peso</dt><dd>{misDatos.peso_corporal_kg ? `${misDatos.peso_corporal_kg} kg` : '—'}</dd></div>
+                <div><dt>Altura</dt><dd>{misDatos.altura_m ? `${misDatos.altura_m} m` : '—'}</dd></div>
+                <div><dt>Fecha de nacimiento</dt><dd>
+                  {misDatos.fecha_nacimiento
+                    ? `${new Date(misDatos.fecha_nacimiento).toLocaleDateString('es-ES')} (${calcularEdad(misDatos.fecha_nacimiento)} años)`
+                    : '—'}
+                </dd></div>
+                <div><dt>Sexo</dt><dd>{traducirSexo(misDatos.sexo)}</dd></div>
+              </dl>
+              {mensajeDatos && (
+                <div className={mensajeDatos.tipo === 'ok' ? 'aviso-ok' : 'aviso-error'} style={{ marginTop: 12 }}>
+                  {mensajeDatos.texto}
+                </div>
+              )}
+            </>
+          )}
         </section>
 
         <section className="historial-card">

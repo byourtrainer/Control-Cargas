@@ -286,6 +286,29 @@ Nueva pestaña **"Tests"** para el entrenador:
   del equipo activo (por defecto se incluyen todos). Exportable a **CSV** o
   **Imprimir/Guardar PDF**, igual que en Informes.
 
+## Informe de perfil físico con gráficos, edición de datos y exportación con el diseño de la app
+
+- El informe de perfil físico ya no es una pestaña aparte: ahora vive
+  **dentro de la pestaña "Tests"**, justo debajo de los cuadrantes.
+- Se elige entre **"Perfil individual"** (el jugador que tengas seleccionado
+  en el formulario de "Registrar test" de arriba) o **"Varios jugadores"**
+  (chips para incluir/excluir dentro del equipo activo).
+- El perfil individual muestra una **mini-gráfica de evolución** por cada
+  métrica con al menos un test (Sentadilla, ISO SQ, CMJ, SJ, Drop Jump,
+  Potencia e Índice de fatiga del Wingate). La comparativa de varios
+  jugadores muestra **gráficos de barras** por métrica, coloreados según el
+  color del equipo de cada jugador.
+- **Exportar CSV** e **Imprimir / Guardar PDF** están ahora en esta misma
+  sección. Al exportar a PDF, el documento **mantiene el diseño oscuro y los
+  colores de la app** (antes se forzaba fondo blanco) — para que se vea bien
+  necesitas tener activado "Gráficos de fondo" / "Background graphics" en el
+  diálogo de impresión de tu navegador. Este mismo criterio se aplicó
+  también a las exportaciones de la pestaña "Informes".
+- Se eliminó la pestaña independiente "Perfil Físico" (fusionada en Tests).
+- Los datos personales del jugador (peso, altura, fecha de nacimiento,
+  sexo) ahora son **editables** desde su propia tarjeta "Mis datos", no solo
+  de lectura.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

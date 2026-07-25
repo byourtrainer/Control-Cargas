@@ -9,14 +9,12 @@ import Equipos from './pages/Equipos'
 import Informes from './pages/Informes'
 import Jugadores from './pages/Jugadores'
 import Tests from './pages/Tests'
-import PerfilFisico from './pages/PerfilFisico'
 import './App.css'
 
 const pestanasEntrenador = [
   { clave: 'resumen', etiqueta: 'Resumen' },
   { clave: 'jugadores', etiqueta: 'Jugadores' },
   { clave: 'tests', etiqueta: 'Tests' },
-  { clave: 'perfil_fisico', etiqueta: 'Perfil Físico' },
   { clave: 'equipos', etiqueta: 'Equipos' },
   { clave: 'sesion', etiqueta: 'Sesión del día' },
   { clave: 'lesiones', etiqueta: 'Lesiones' },
@@ -159,7 +157,6 @@ export default function App() {
           : pestana === 'informes' ? <Informes equipoActivo={equipoActivo} />
           : pestana === 'jugadores' ? <Jugadores equipoActivo={equipoActivo} />
           : pestana === 'tests' ? <Tests equipoActivo={equipoActivo} />
-          : pestana === 'perfil_fisico' ? <PerfilFisico equipoActivo={equipoActivo} />
           : pestana === 'equipos' ? (
             <Equipos
               equipos={equipos}

@@ -75,6 +75,21 @@
   gap: 20px;
 }
 
+.mis-datos-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.mis-datos-header h3 { margin: 0; }
+
+.mis-datos-botones {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
 .mis-datos-lista {
   display: flex;
   flex-direction: column;

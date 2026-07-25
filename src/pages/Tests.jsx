@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   ResponsiveContainer, ScatterChart, Scatter, XAxis, YAxis, ZAxis,
-  CartesianGrid, Tooltip, ReferenceLine, Cell,
+  CartesianGrid, Tooltip, ReferenceLine, Cell, LineChart, Line, BarChart, Bar,
 } from 'recharts'
 import { supabase } from '../lib/supabaseClient'
 import { valorRelativo, indiceFatiga, tiposTest, traducirTipoTest, ultimosTestsPorTipo } from '../lib/testsFisicos'
@@ -14,6 +14,17 @@ const formularioVacio = {
   valor_kg: '', valor_cm: '', rsi_modificado: '', dri: '',
   pp1: '', mp1: '', pp2: '', mp2: '', notas: '',
 }
+
+// Métricas que alimentan tanto la evolución individual como la comparativa entre jugadores.
+const metricasInforme = [
+  { clave: 'sentadilla', etiqueta: 'Sentadilla (kg/peso corporal)', tipoTest: 'sentadilla', extraer: (t, peso) => valorRelativo(t.valor_kg, t.peso_corporal_kg || peso), decimales: 2 },
+  { clave: 'iso_sq', etiqueta: 'ISO SQ (kg/peso corporal)', tipoTest: 'iso_sq', extraer: (t, peso) => valorRelativo(t.valor_kg, t.peso_corporal_kg || peso), decimales: 2 },
+  { clave: 'cmj', etiqueta: 'CMJ (cm)', tipoTest: 'cmj', extraer: (t) => t.valor_cm, decimales: 1 },
+  { clave: 'sj', etiqueta: 'SJ (cm)', tipoTest: 'sj', extraer: (t) => t.valor_cm, decimales: 1 },
+  { clave: 'drop_jump', etiqueta: 'Drop Jump (DRI)', tipoTest: 'drop_jump', extraer: (t) => t.dri, decimales: 2 },
+  { clave: 'wingate_potencia', etiqueta: 'Potencia Wingate (PP1, W/kg)', tipoTest: 'wingate', extraer: (t, peso) => valorRelativo(t.pp1, t.peso_corporal_kg || peso), decimales: 2 },
+  { clave: 'wingate_fatiga', etiqueta: 'Índice de fatiga Wingate (%)', tipoTest: 'wingate', extraer: (t) => t.indice_fatiga ?? indiceFatiga(t.mp1, t.mp2), decimales: 1 },
+]
 
 export default function Tests({ equipoActivo = 'todos' }) {
   const [jugadores, setJugadores] = useState([])
@@ -128,11 +139,79 @@ export default function Tests({ equipoActivo = 'todos' }) {
   const maxX2 = Math.max(35, ...datosCuadrante2.map((d) => d.x), 22)
   const maxY2 = Math.max(20, ...datosCuadrante2.map((d) => d.y), 11)
 
+  // --- Informe de perfil físico (individual o comparativo) ---
+  const [modoInforme, setModoInforme] = useState('individual')
+  const [seleccionInforme, setSeleccionInforme] = useState(new Set())
+
+  useEffect(() => {
+    setSeleccionInforme(new Set(jugadoresFiltrados.map((j) => j.id)))
+  }, [equipoActivo, jugadores])
+
+  function alternarSeleccionInforme(id) {
+    setSeleccionInforme((prev) => {
+      const siguiente = new Set(prev)
+      if (siguiente.has(id)) siguiente.delete(id)
+      else siguiente.add(id)
+      return siguiente
+    })
+  }
+
+  const jugadorIndividual = jugadores.find((j) => j.id === form.jugador_id)
+
+  const jugadoresInforme = modoInforme === 'individual'
+    ? (jugadorIndividual ? [jugadorIndividual] : [])
+    : jugadoresFiltrados.filter((j) => seleccionInforme.has(j.id))
+
+  function construirSerieEvolucion(jugadorId, metrica, peso) {
+    return tests
+      .filter((t) => t.jugador_id === jugadorId && t.tipo_test === metrica.tipoTest)
+      .sort((a, b) => a.fecha.localeCompare(b.fecha))
+      .map((t) => ({ fecha: t.fecha.slice(5), valor: metrica.extraer(t, peso) }))
+      .filter((d) => d.valor !== null && d.valor !== undefined)
+  }
+
+  function construirComparativa(metrica) {
+    return jugadoresInforme.map((j) => {
+      const suyos = tests.filter((t) => t.jugador_id === j.id)
+      const porTipo = ultimosTestsPorTipo(suyos)
+      const test = porTipo[metrica.tipoTest]
+      if (!test) return null
+      const valor = metrica.extraer(test, j.peso_corporal_kg)
+      if (valor === null || valor === undefined) return null
+      return { nombre: j.nombre, valor: Number(valor.toFixed(metrica.decimales)), color: j.equipos?.color || '#c8ff4d' }
+    }).filter(Boolean)
+  }
+
+  function exportarInformeCSV() {
+    const cabeceras = ['Jugador', 'Equipo', 'Peso', 'Altura', ...metricasInforme.map((m) => m.etiqueta)]
+    const filas = jugadoresInforme.map((j) => {
+      const suyos = tests.filter((t) => t.jugador_id === j.id)
+      const porTipo = ultimosTestsPorTipo(suyos)
+      const valores = metricasInforme.map((m) => {
+        const t = porTipo[m.tipoTest]
+        if (!t) return ''
+        const v = m.extraer(t, j.peso_corporal_kg)
+        return v !== null && v !== undefined ? v.toFixed(m.decimales) : ''
+      })
+      return [j.nombre, j.equipos?.nombre || '—', j.peso_corporal_kg ?? '', j.altura_m ?? '', ...valores]
+    })
+    const csv = [cabeceras, ...filas]
+      .map((fila) => fila.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(','))
+      .join('\n')
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `perfil_fisico_${modoInforme}_${hoyISO()}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   if (cargando) return <p className="mono texto-dim">Cargando tests…</p>
 
   return (
     <div className="tests-layout">
-      <section className="test-form-card">
+      <section className="test-form-card no-imprimir">
         <h2>Registrar test</h2>
         <form onSubmit={guardarTest}>
           <label className="campo-test">
@@ -255,7 +334,7 @@ export default function Tests({ equipoActivo = 'todos' }) {
         </form>
       </section>
 
-      <div className="tests-columna-derecha">
+      <div className="tests-columna-derecha no-imprimir">
         <section className="cuadrante-card">
           <h3>Fuerza-salto: CMJ vs. Sentadilla relativa</h3>
           <p className="cuadrante-sub">Eje Y: CMJ (cm), dividido en 40 cm · Eje X: Sentadilla (kg/peso corporal), dividido en 2.0×</p>
@@ -300,7 +379,118 @@ export default function Tests({ equipoActivo = 'todos' }) {
         </section>
       </div>
 
-      <section className="tests-historial-card">
+      <section className="informe-fisico-card">
+        <div className="informe-controles no-imprimir">
+          <div className="informe-modo">
+            <button
+              className={`periodo-btn ${modoInforme === 'individual' ? 'periodo-activo' : ''}`}
+              onClick={() => setModoInforme('individual')}
+            >
+              Perfil individual
+            </button>
+            <button
+              className={`periodo-btn ${modoInforme === 'varios' ? 'periodo-activo' : ''}`}
+              onClick={() => setModoInforme('varios')}
+            >
+              Varios jugadores
+            </button>
+          </div>
+
+          {modoInforme === 'individual' ? (
+            <p className="informe-nota">
+              {jugadorIndividual
+                ? <>Mostrando el perfil de <strong>{jugadorIndividual.nombre}</strong> (el jugador seleccionado arriba en "Registrar test").</>
+                : 'Selecciona un jugador en el formulario de "Registrar test" de arriba para ver su perfil individual.'}
+            </p>
+          ) : (
+            <div className="perfil-chips">
+              {jugadoresFiltrados.map((j) => (
+                <button
+                  key={j.id}
+                  className={`perfil-chip ${seleccionInforme.has(j.id) ? 'perfil-chip-activo' : ''}`}
+                  onClick={() => alternarSeleccionInforme(j.id)}
+                >
+                  {j.nombre}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="informe-acciones">
+            <button className="btn-exportar" onClick={exportarInformeCSV}>Exportar CSV</button>
+            <button className="btn-exportar" onClick={() => window.print()}>Imprimir / Guardar PDF</button>
+          </div>
+        </div>
+
+        <div className="informe-imprimible">
+          <h2 className="informe-titulo-impresion">
+            Perfil físico {modoInforme === 'individual' ? '— ' + (jugadorIndividual?.nombre || '') : 'del equipo'}
+          </h2>
+
+          {jugadoresInforme.length === 0 ? (
+            <p className="texto-dim">
+              {modoInforme === 'individual' ? 'Selecciona un jugador arriba.' : 'Selecciona al menos un jugador.'}
+            </p>
+          ) : modoInforme === 'individual' ? (
+            <>
+              <div className="informe-datos-jugador">
+                <span><strong>{jugadorIndividual.nombre}</strong></span>
+                <span>{jugadorIndividual.equipos?.nombre || 'Sin equipo'}</span>
+                <span>{jugadorIndividual.peso_corporal_kg ? `${jugadorIndividual.peso_corporal_kg} kg` : '—'}</span>
+                <span>{jugadorIndividual.altura_m ? `${jugadorIndividual.altura_m} m` : '—'}</span>
+              </div>
+              <div className="informe-graficos-grid">
+                {metricasInforme.map((m) => {
+                  const serie = construirSerieEvolucion(jugadorIndividual.id, m, jugadorIndividual.peso_corporal_kg)
+                  if (serie.length === 0) return null
+                  return (
+                    <div className="mini-grafico-card" key={m.clave}>
+                      <h4>{m.etiqueta}</h4>
+                      <ResponsiveContainer width="100%" height={160}>
+                        <LineChart data={serie} margin={{ top: 5, right: 10, bottom: 0, left: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
+                          <XAxis dataKey="fecha" stroke="var(--text-faint)" fontSize={11} />
+                          <YAxis stroke="var(--text-faint)" fontSize={11} width={32} />
+                          <Tooltip contentStyle={{ background: 'var(--bg-elevated)', border: '1px solid var(--line-strong)', borderRadius: 8, fontSize: 12 }} />
+                          <Line type="monotone" dataKey="valor" stroke="var(--accent)" strokeWidth={2} dot={{ r: 3 }} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )
+                })}
+              </div>
+              {metricasInforme.every((m) => construirSerieEvolucion(jugadorIndividual.id, m, jugadorIndividual.peso_corporal_kg).length === 0) && (
+                <p className="texto-dim">Este jugador todavía no tiene tests registrados.</p>
+              )}
+            </>
+          ) : (
+            <div className="informe-graficos-grid">
+              {metricasInforme.map((m) => {
+                const datos = construirComparativa(m)
+                if (datos.length === 0) return null
+                return (
+                  <div className="mini-grafico-card" key={m.clave}>
+                    <h4>{m.etiqueta}</h4>
+                    <ResponsiveContainer width="100%" height={Math.max(160, datos.length * 28)}>
+                      <BarChart data={datos} layout="vertical" margin={{ top: 5, right: 20, bottom: 0, left: 10 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
+                        <XAxis type="number" stroke="var(--text-faint)" fontSize={11} />
+                        <YAxis type="category" dataKey="nombre" stroke="var(--text-faint)" fontSize={11} width={90} />
+                        <Tooltip contentStyle={{ background: 'var(--bg-elevated)', border: '1px solid var(--line-strong)', borderRadius: 8, fontSize: 12 }} />
+                        <Bar dataKey="valor" radius={[0, 4, 4, 0]}>
+                          {datos.map((d, i) => <Cell key={i} fill={d.color} />)}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className="tests-historial-card no-imprimir">
         <h3>Historial de tests</h3>
         {testsFiltrados.length === 0 ? (
           <p className="texto-dim">Todavía no hay tests registrados.</p>

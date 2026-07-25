@@ -111,14 +111,10 @@
 }
 
 /* Impresión / Guardar como PDF: solo se ve el informe, sin barra ni pestañas */
+/* Impresión / Guardar como PDF: se conserva el diseño oscuro de la app.
+   Requiere tener activado "Gráficos de fondo" / "Background graphics" en
+   el diálogo de impresión del navegador para que se vean los colores. */
 @media print {
   .no-imprimir { display: none !important; }
-  body, .app-shell { background: white !important; color: black !important; }
-  .informe-card {
-    background: white !important;
-    border: none !important;
-    color: black !important;
-  }
-  .informe-tabla th, .informe-tabla td { border-color: #ccc !important; color: black !important; }
-  .bienestar-badge, .texto-dim { color: black !important; }
+  .informe-card { border: none !important; padding: 0 !important; }
 }
