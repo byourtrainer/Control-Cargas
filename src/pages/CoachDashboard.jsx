@@ -4,7 +4,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts'
 import { supabase } from '../lib/supabaseClient'
-import { calcularMetricas, clasificarRiesgoACWR, clasificarMonotonia, construirSerieDiaria } from '../lib/cargaMetrics'
+import { calcularMetricas, clasificarRiesgoACWR, clasificarMonotonia } from '../lib/cargaMetrics'
 import { calcularMalestar, clasificarBienestar } from '../lib/bienestar'
 import './CoachDashboard.css'
 
@@ -12,6 +12,83 @@ const diasAtras = (n) => {
   const d = new Date()
   d.setDate(d.getDate() - n)
   return d.toISOString().slice(0, 10)
+}
+
+const tiposVistaGrafico = [
+  { valor: 'diario', etiqueta: 'Diaria' },
+  { valor: 'semanal', etiqueta: 'Semanal' },
+  { valor: 'mensual', etiqueta: 'Mensual' },
+]
+
+/** Construye los "cubos" (rangos de fechas) que se mostrarán en el gráfico, terminando en fechaReferencia. */
+function construirBuckets(tipoVista, fechaReferencia) {
+  const ref = new Date(fechaReferencia + 'T00:00:00')
+  const buckets = []
+  if (tipoVista === 'diario') {
+    for (let i = 20; i >= 0; i--) {
+      const f = new Date(ref); f.setDate(f.getDate() - i)
+      buckets.push({ inicio: f, fin: f, etiqueta: f.toISOString().slice(5, 10) })
+    }
+  } else if (tipoVista === 'semanal') {
+    for (let i = 11; i >= 0; i--) {
+      const fin = new Date(ref); fin.setDate(fin.getDate() - i * 7)
+      const inicio = new Date(fin); inicio.setDate(inicio.getDate() - 6)
+      buckets.push({ inicio, fin, etiqueta: inicio.toISOString().slice(5, 10) })
+    }
+  } else {
+    for (let i = 5; i >= 0; i--) {
+      const finMes = new Date(ref.getFullYear(), ref.getMonth() - i + 1, 0)
+      const inicioMes = new Date(finMes.getFullYear(), finMes.getMonth(), 1)
+      buckets.push({
+        inicio: inicioMes, fin: finMes,
+        etiqueta: finMes.toLocaleDateString('es-ES', { month: 'short', year: '2-digit' }),
+      })
+    }
+  }
+  return buckets
+}
+
+/** Calcula el valor de la variable seleccionada para un cubo de fechas concreto. */
+function calcularValorBucket(bucket, jugadoresGrafico, registros, variableGrafico, metodoACWR) {
+  const inicioISO = bucket.inicio.toISOString().slice(0, 10)
+  const finISO = bucket.fin.toISOString().slice(0, 10)
+
+  if (variableGrafico === 'carga') {
+    let suma = 0
+    jugadoresGrafico.forEach((j) => {
+      registros
+        .filter((r) => r.jugador_id === j.id && r.fecha >= inicioISO && r.fecha <= finISO)
+        .forEach((r) => { suma += r.carga || 0 })
+    })
+    return suma
+  }
+
+  if (variableGrafico === 'malestar') {
+    const valores = []
+    jugadoresGrafico.forEach((j) => {
+      registros
+        .filter((r) => r.jugador_id === j.id && r.fecha >= inicioISO && r.fecha <= finISO)
+        .forEach((r) => {
+          const m = calcularMalestar(r)
+          if (m !== null && m !== undefined) valores.push(m)
+        })
+    })
+    if (valores.length === 0) return null
+    return valores.reduce((a, b) => a + b, 0) / valores.length
+  }
+
+  // acwr / monotonia / fatiga: se evalúan al final del cubo (con todo su histórico
+  // previo) para cada jugador, y se promedian entre jugadores del grupo.
+  const valores = jugadoresGrafico.map((j) => {
+    const suyos = registros.filter((r) => r.jugador_id === j.id)
+    const metricas = calcularMetricas(suyos, metodoACWR, bucket.fin)
+    if (variableGrafico === 'acwr') return metricas.acwrPost
+    if (variableGrafico === 'monotonia') return metricas.monotonia
+    if (variableGrafico === 'fatiga') return metricas.fatiga
+    return null
+  }).filter((v) => v !== null && v !== undefined)
+  if (valores.length === 0) return null
+  return valores.reduce((a, b) => a + b, 0) / valores.length
 }
 
 const metodosACWR = [
@@ -58,6 +135,8 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
   const [registros, setRegistros] = useState([])
   const [jugadorSeleccionado, setJugadorSeleccionado] = useState('equipo')
   const [variableGrafico, setVariableGrafico] = useState('carga')
+  const [tipoVistaGrafico, setTipoVistaGrafico] = useState('diario')
+  const [fechaReferenciaGrafico, setFechaReferenciaGrafico] = useState(diasAtras(0))
   const [metodoACWR, setMetodoACWR] = useState('clasico')
   const [cargando, setCargando] = useState(true)
 
@@ -65,11 +144,11 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
 
   async function cargarDatos() {
     setCargando(true)
-    // Se piden 70 días de histórico: suficiente para la carga crónica clásica
-    // (28 días), el cambio semanal, y para que el EWMA tenga tiempo de estabilizarse.
+    // Se piden ~13 meses de histórico: cubre la vista mensual (6 meses hacia
+    // atrás desde la fecha de referencia elegida) más margen para ACWR/EWMA.
     const [{ data: perfiles }, { data: regs }] = await Promise.all([
       supabase.from('perfiles').select('*, equipos(id, nombre)').eq('rol', 'jugador').order('nombre'),
-      supabase.from('registros_diarios').select('*').gte('fecha', diasAtras(70)).order('fecha'),
+      supabase.from('registros_diarios').select('*').gte('fecha', diasAtras(400)).order('fecha'),
     ])
     setJugadores(perfiles || [])
     setRegistros(regs || [])
@@ -104,45 +183,16 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
   }, [jugadoresFiltrados, registros, metodoACWR])
 
   const datosGrafico = useMemo(() => {
-    const dias = 21
     const jugadoresGrafico = jugadorSeleccionado === 'equipo'
       ? jugadoresFiltrados
       : jugadoresFiltrados.filter((j) => j.id === jugadorSeleccionado)
 
-    const fechas = []
-    for (let i = dias - 1; i >= 0; i--) {
-      const d = new Date()
-      d.setDate(d.getDate() - i)
-      fechas.push(d)
-    }
-
-    return fechas.map((fecha) => {
-      const fechaISO = fecha.toISOString().slice(0, 10)
-      const valoresDelDia = jugadoresGrafico.map((j) => {
-        const suyos = registros.filter((r) => r.jugador_id === j.id)
-        if (variableGrafico === 'carga') {
-          return construirSerieDiaria(suyos, 1, fecha)[0].carga
-        }
-        if (variableGrafico === 'malestar') {
-          const registroDia = suyos.find((r) => r.fecha === fechaISO)
-          return registroDia ? calcularMalestar(registroDia) : null
-        }
-        const metricas = calcularMetricas(suyos, metodoACWR, fecha)
-        if (variableGrafico === 'acwr') return metricas.acwrPost
-        if (variableGrafico === 'monotonia') return metricas.monotonia
-        if (variableGrafico === 'fatiga') return metricas.fatiga
-        return null
-      }).filter((v) => v !== null && v !== undefined)
-
-      let valor = null
-      if (valoresDelDia.length > 0) {
-        valor = variableGrafico === 'carga'
-          ? valoresDelDia.reduce((a, b) => a + b, 0)               // suma total del grupo
-          : valoresDelDia.reduce((a, b) => a + b, 0) / valoresDelDia.length // media del grupo
-      }
-      return { fecha: fechaISO.slice(5), valor: valor !== null ? Number(valor.toFixed(2)) : null }
+    const buckets = construirBuckets(tipoVistaGrafico, fechaReferenciaGrafico)
+    return buckets.map((b) => {
+      const valor = calcularValorBucket(b, jugadoresGrafico, registros, variableGrafico, metodoACWR)
+      return { fecha: b.etiqueta, valor: valor !== null ? Number(valor.toFixed(2)) : null }
     })
-  }, [registros, jugadorSeleccionado, jugadoresFiltrados, variableGrafico, metodoACWR])
+  }, [registros, jugadorSeleccionado, jugadoresFiltrados, variableGrafico, metodoACWR, tipoVistaGrafico, fechaReferenciaGrafico])
 
   if (cargando) return <p className="mono texto-dim">Cargando datos del equipo…</p>
 
@@ -184,8 +234,27 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
 
       <section className="grafico-card">
         <div className="grafico-cabecera">
-          <h3>{variablesGrafico.find((v) => v.valor === variableGrafico).etiqueta} (últimos 21 días)</h3>
+          <h3>
+            {variablesGrafico.find((v) => v.valor === variableGrafico).etiqueta}
+            {' '}({tiposVistaGrafico.find((t) => t.valor === tipoVistaGrafico).etiqueta.toLowerCase()})
+          </h3>
           <div className="grafico-selectores">
+            <input
+              type="date"
+              value={fechaReferenciaGrafico}
+              max={diasAtras(0)}
+              onChange={(e) => setFechaReferenciaGrafico(e.target.value)}
+              className="selector-jugador"
+            />
+            <select
+              value={tipoVistaGrafico}
+              onChange={(e) => setTipoVistaGrafico(e.target.value)}
+              className="selector-jugador"
+            >
+              {tiposVistaGrafico.map((t) => (
+                <option key={t.valor} value={t.valor}>{t.etiqueta}</option>
+              ))}
+            </select>
             <select
               value={variableGrafico}
               onChange={(e) => setVariableGrafico(e.target.value)}
@@ -225,6 +294,12 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
             <Line type="monotone" dataKey="valor" stroke="var(--accent)" strokeWidth={2} dot={false} connectNulls />
           </LineChart>
         </ResponsiveContainer>
+        <p className="grafico-nota texto-dim">
+          {tipoVistaGrafico === 'diario' && 'Últimos 21 días'}
+          {tipoVistaGrafico === 'semanal' && 'Últimas 12 semanas'}
+          {tipoVistaGrafico === 'mensual' && 'Últimos 6 meses'}
+          {' '}hasta el {new Date(fechaReferenciaGrafico + 'T00:00:00').toLocaleDateString('es-ES')}.
+        </p>
         {bandasPorVariable[variableGrafico] && (
           <p className="grafico-nota texto-dim">
             Bandas de color según umbrales de riesgo de la literatura (Gabbett/Hulin para ACWR, Foster para

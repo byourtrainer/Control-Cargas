@@ -403,6 +403,22 @@ Nueva pestaña **"Tests"** para el entrenador:
 - Se retiró la lista de "Últimas sesiones", sustituida por el propio
   calendario.
 
+## Fecha de referencia y vista diaria/semanal/mensual en el gráfico del Resumen
+
+- El gráfico principal de la pestaña "Resumen" ahora tiene un **selector de
+  fecha** (hasta qué día quieres ver) y un **selector de vista**: Diaria
+  (últimos 21 días), Semanal (últimas 12 semanas) o Mensual (últimos 6
+  meses) — combinable con los selectores de variable y jugador/equipo que
+  ya había.
+- **Carga**: en semanal/mensual se suma toda la carga del grupo durante ese
+  periodo (no solo un día).
+- **Bienestar**: se promedia entre todos los registros del periodo, no solo
+  el último día.
+- **ACWR, Monotonía y Fatiga**: se calculan tal y como estarían al final de
+  cada semana/mes (con todo su histórico previo en cuenta), y se promedian
+  entre los jugadores del grupo — así cada punto refleja fielmente el
+  estado real a cierre de esa semana o mes.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.
