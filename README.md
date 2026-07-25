@@ -204,6 +204,22 @@ Excel (0 = Ningún esfuerzo … 10 = Máximo).
   Equipos), que se muestra como un punto de color junto al nombre del equipo
   en Jugadores, Resumen e Informes.
 
+## Instalación como app (PWA)
+
+La app ahora tiene icono propio y se abre a pantalla completa (sin barra de
+navegador) al añadirla a la pantalla de inicio:
+
+**iPhone**: abrir la URL en **Safari** → icono de compartir → "Añadir a
+pantalla de inicio".
+
+**Android**: abrir la URL en **Chrome** → menú de tres puntos → "Añadir a
+pantalla de inicio" o "Instalar aplicación".
+
+No lleva service worker (caché offline) a propósito, para evitar que los
+jugadores vean una versión desactualizada mientras seguimos haciendo cambios
+frecuentes en la app. Se puede añadir más adelante, cuando el desarrollo se
+estabilice, para que funcione incluso sin conexión.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.
