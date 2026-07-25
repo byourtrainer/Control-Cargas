@@ -1,45 +1,50 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import CalendarioEntrenador from './CalendarioEntrenador'
 import './SesionDia.css'
 
 const hoyISO = () => new Date().toISOString().slice(0, 10)
 
 const opcionesMDx = ['MD', 'MD+1', 'MD+2', 'MD+/-3', 'MD-2', 'MD-1']
 
-export default function SesionDia() {
+function formatearFechaLarga(fechaISO) {
+  const d = new Date(fechaISO + 'T00:00:00')
+  return d.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+}
+
+export default function SesionDia({ equipoActivo = 'todos' }) {
   const [fecha, setFecha] = useState(hoyISO())
   const [duracion, setDuracion] = useState(60)
   const [microciclo, setMicrociclo] = useState('')
   const [mdx, setMdx] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [mensaje, setMensaje] = useState(null)
-  const [sesiones, setSesiones] = useState([])
-  const [cargando, setCargando] = useState(true)
+  const [sesionExistente, setSesionExistente] = useState(null)
+  const [cargandoSesion, setCargandoSesion] = useState(true)
+  const [recargarCalendario, setRecargarCalendario] = useState(0)
 
-  useEffect(() => { cargarSesiones() }, [])
+  useEffect(() => { cargarSesionDelDia() }, [fecha])
 
-  useEffect(() => {
-    // Si ya existe una sesión guardada para la fecha elegida, precarga sus valores.
-    const existente = sesiones.find((s) => s.fecha === fecha)
-    if (existente) {
-      setDuracion(existente.duracion_min)
-      setMicrociclo(existente.microciclo || '')
-      setMdx(existente.mdx || '')
+  async function cargarSesionDelDia() {
+    setCargandoSesion(true)
+    setMensaje(null)
+    const { data } = await supabase.from('sesiones').select('*').eq('fecha', fecha).maybeSingle()
+    if (data) {
+      setSesionExistente(data)
+      setDuracion(data.duracion_min)
+      setMicrociclo(data.microciclo || '')
+      setMdx(data.mdx || '')
     } else {
+      setSesionExistente(null)
+      setDuracion(60)
       setMicrociclo('')
       setMdx('')
     }
-  }, [fecha, sesiones])
+    setCargandoSesion(false)
+  }
 
-  async function cargarSesiones() {
-    setCargando(true)
-    const { data } = await supabase
-      .from('sesiones')
-      .select('*')
-      .order('fecha', { ascending: false })
-      .limit(14)
-    setSesiones(data || [])
-    setCargando(false)
+  function seleccionarDiaCalendario(nuevaFecha) {
+    setFecha(nuevaFecha)
   }
 
   async function manejarEnvio(e) {
@@ -57,87 +62,78 @@ export default function SesionDia() {
     if (error) {
       setMensaje({ tipo: 'error', texto: 'No se pudo guardar la sesión.' })
     } else {
-      setMensaje({ tipo: 'ok', texto: 'Duración guardada. Se ha aplicado a todos los registros de esa fecha.' })
-      cargarSesiones()
+      setMensaje({ tipo: 'ok', texto: 'Sesión guardada. Se ha aplicado a todos los jugadores de esa fecha.' })
+      cargarSesionDelDia()
+      setRecargarCalendario((n) => n + 1)
     }
     setGuardando(false)
   }
 
   return (
     <div className="sesion-layout">
+      <div className="sesion-columna-calendario">
+        <CalendarioEntrenador
+          key={recargarCalendario}
+          equipoActivo={equipoActivo}
+          onSeleccionarDia={seleccionarDiaCalendario}
+          fechaActiva={fecha}
+        />
+      </div>
+
       <section className="sesion-form-card">
-        <h2>Duración de la sesión</h2>
+        <h2 className="capitalizada">{formatearFechaLarga(fecha)}</h2>
         <p className="sesion-sub">
-          Esta duración se aplica automáticamente a todos los jugadores que registren
-          su RPE ese día — no hace falta que la introduzcan ellos.
+          {sesionExistente
+            ? 'Ya hay una sesión guardada para este día — puedes modificarla.'
+            : 'Todavía no hay ninguna sesión guardada para este día.'}
+          {' '}Se aplica automáticamente a todos los jugadores que registren su RPE esta fecha.
         </p>
 
-        <form onSubmit={manejarEnvio}>
-          <label className="campo-sesion">
-            <span>Fecha</span>
-            <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} required />
-          </label>
-
-          <label className="campo-sesion">
-            <span>Duración (minutos)</span>
-            <input
-              type="number" min="0" max="300" value={duracion}
-              onChange={(e) => setDuracion(Number(e.target.value))}
-              required
-            />
-          </label>
-
-          <div className="fila-doble">
+        {cargandoSesion ? (
+          <p className="mono texto-dim">Cargando…</p>
+        ) : (
+          <form onSubmit={manejarEnvio}>
             <label className="campo-sesion">
-              <span>Microciclo (opcional)</span>
+              <span>Fecha</span>
+              <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} required />
+            </label>
+
+            <label className="campo-sesion">
+              <span>Duración (minutos)</span>
               <input
-                type="text" value={microciclo} onChange={(e) => setMicrociclo(e.target.value)}
-                placeholder="Ej. Largo 7, Corto 2"
+                type="number" min="0" max="300" value={duracion}
+                onChange={(e) => setDuracion(Number(e.target.value))}
+                required
               />
             </label>
-            <label className="campo-sesion">
-              <span>Tipo de sesión (MDx)</span>
-              <select value={mdx} onChange={(e) => setMdx(e.target.value)}>
-                <option value="">Sin especificar</option>
-                {opcionesMDx.map((op) => (
-                  <option key={op} value={op}>{op}</option>
-                ))}
-              </select>
-            </label>
-          </div>
 
-          {mensaje && (
-            <div className={mensaje.tipo === 'ok' ? 'aviso-ok' : 'aviso-error'}>{mensaje.texto}</div>
-          )}
+            <div className="fila-doble">
+              <label className="campo-sesion">
+                <span>Microciclo (opcional)</span>
+                <input
+                  type="text" value={microciclo} onChange={(e) => setMicrociclo(e.target.value)}
+                  placeholder="Ej. Largo 7, Corto 2"
+                />
+              </label>
+              <label className="campo-sesion">
+                <span>Tipo de sesión (MDx)</span>
+                <select value={mdx} onChange={(e) => setMdx(e.target.value)}>
+                  <option value="">Sin especificar</option>
+                  {opcionesMDx.map((op) => (
+                    <option key={op} value={op}>{op}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
 
-          <button type="submit" className="btn-principal" disabled={guardando}>
-            {guardando ? 'Guardando…' : 'Guardar duración'}
-          </button>
-        </form>
-      </section>
+            {mensaje && (
+              <div className={mensaje.tipo === 'ok' ? 'aviso-ok' : 'aviso-error'}>{mensaje.texto}</div>
+            )}
 
-      <section className="sesion-historial-card">
-        <h3>Últimas sesiones</h3>
-        {cargando ? (
-          <p className="mono texto-dim">Cargando…</p>
-        ) : sesiones.length === 0 ? (
-          <p className="texto-dim">Todavía no has fijado ninguna duración.</p>
-        ) : (
-          <table className="sesion-tabla">
-            <thead>
-              <tr><th>Fecha</th><th>Duración</th><th>Microciclo</th><th>MDx</th></tr>
-            </thead>
-            <tbody>
-              {sesiones.map((s) => (
-                <tr key={s.id}>
-                  <td className="mono">{s.fecha}</td>
-                  <td className="mono">{s.duracion_min} min</td>
-                  <td>{s.microciclo || '—'}</td>
-                  <td>{s.mdx || '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+            <button type="submit" className="btn-principal" disabled={guardando}>
+              {guardando ? 'Guardando…' : sesionExistente ? 'Actualizar sesión' : 'Guardar sesión'}
+            </button>
+          </form>
         )}
       </section>
     </div>

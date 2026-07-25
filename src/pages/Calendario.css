@@ -69,6 +69,23 @@
   padding: 4px;
   cursor: pointer;
   transition: border-color 0.15s;
+  position: relative;
+}
+
+.calendario-sesion-punto {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 4px var(--accent);
+}
+
+.calendario-sesion-punto-leyenda {
+  position: static;
+  box-shadow: none;
 }
 
 .calendario-celda:hover:not(:disabled) { border-color: var(--accent); }
@@ -82,6 +99,11 @@
 .calendario-celda-hoy {
   border-color: var(--accent);
   border-width: 2px;
+}
+
+.calendario-celda-activa {
+  background: rgba(200,255,77,0.1);
+  border-color: var(--accent);
 }
 
 .calendario-celda-futura {

@@ -384,6 +384,25 @@ Nueva pestaña **"Tests"** para el entrenador:
   esa función de forma más visual y con más alcance (todo el mes, no solo 7
   días).
 
+## Calendario de equipo en "Sesión del día"
+
+- La pestaña "Sesión del día" ahora muestra un **calendario mensual**, igual
+  en estilo al del jugador, pero con las **medias del equipo activo**: cada
+  celda muestra la media de bienestar y la media de RPE de todos los
+  jugadores del grupo filtrado ese día, con los mismos colores.
+- Un **punto de color** en la esquina de cada celda indica si ya hay una
+  sesión (duración) guardada ese día.
+- Al hacer clic en cualquier día del calendario (pasado, hoy o futuro, para
+  poder planificar por adelantado), el formulario de la derecha se actualiza
+  con los datos de esa fecha — si ya existe una sesión, aparece precargada
+  para editarla; si no, aparece en blanco para crearla.
+- En cuanto el entrenador guarda una sesión, el **punto indicador aparece
+  automáticamente en el calendario de todos los jugadores** ese mismo día
+  (el jugador ve que hay sesión programada aunque todavía no haya rellenado
+  su RPE).
+- Se retiró la lista de "Últimas sesiones", sustituida por el propio
+  calendario.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

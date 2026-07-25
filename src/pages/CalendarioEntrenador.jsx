@@ -12,37 +12,57 @@ const MESES = [
 
 const hoyISO = () => new Date().toISOString().slice(0, 10)
 
-function colorBienestarDia(registro) {
-  if (!registro || registro.sueno === null || registro.sueno === undefined) return null
-  const nivel = clasificarBienestar(calcularMalestar(registro))
+function colorBienestarPromedio(registrosDia) {
+  const malestares = registrosDia
+    .filter((r) => r.sueno !== null && r.sueno !== undefined)
+    .map((r) => calcularMalestar(r))
+  if (malestares.length === 0) return null
+  const media = malestares.reduce((a, b) => a + b, 0) / malestares.length
+  const nivel = clasificarBienestar(media)
   return { optimo: 'var(--risk-low)', bueno: 'var(--risk-mid)', malo: 'var(--risk-high)' }[nivel] || null
 }
 
-function colorRpeDia(registro) {
-  if (!registro || registro.rpe === null || registro.rpe === undefined) return null
-  return colorParaValor(registro.rpe, 10)
+function colorRpePromedio(registrosDia) {
+  const rpes = registrosDia.filter((r) => r.rpe !== null && r.rpe !== undefined).map((r) => r.rpe)
+  if (rpes.length === 0) return null
+  const media = rpes.reduce((a, b) => a + b, 0) / rpes.length
+  return colorParaValor(media, 10)
 }
 
-export default function Calendario({ jugadorId, onSeleccionarDia }) {
+export default function CalendarioEntrenador({ equipoActivo = 'todos', onSeleccionarDia, fechaActiva }) {
   const [mesVisible, setMesVisible] = useState(() => {
     const d = new Date()
     d.setDate(1)
     return d
   })
+  const [jugadores, setJugadores] = useState([])
   const [registros, setRegistros] = useState([])
   const [sesiones, setSesiones] = useState([])
   const [cargando, setCargando] = useState(true)
 
-  useEffect(() => { cargarMes() }, [mesVisible, jugadorId])
+  useEffect(() => { cargarMes() }, [mesVisible, equipoActivo])
 
   async function cargarMes() {
     setCargando(true)
     const inicio = new Date(mesVisible.getFullYear(), mesVisible.getMonth(), 1).toISOString().slice(0, 10)
     const fin = new Date(mesVisible.getFullYear(), mesVisible.getMonth() + 1, 0).toISOString().slice(0, 10)
+
+    const { data: perfiles } = await supabase
+      .from('perfiles').select('id, equipo_id').eq('rol', 'jugador')
+
+    const jugadoresFiltrados = (perfiles || []).filter((j) => {
+      if (equipoActivo === 'todos') return true
+      if (equipoActivo === 'sin_asignar') return !j.equipo_id
+      return j.equipo_id === equipoActivo
+    })
+    setJugadores(jugadoresFiltrados)
+
+    const ids = jugadoresFiltrados.map((j) => j.id)
     const [{ data: regs }, { data: sess }] = await Promise.all([
-      supabase.from('registros_diarios').select('*')
-        .eq('jugador_id', jugadorId).gte('fecha', inicio).lte('fecha', fin),
-      supabase.from('sesiones').select('fecha').gte('fecha', inicio).lte('fecha', fin),
+      ids.length > 0
+        ? supabase.from('registros_diarios').select('*').in('jugador_id', ids).gte('fecha', inicio).lte('fecha', fin)
+        : Promise.resolve({ data: [] }),
+      supabase.from('sesiones').select('*').gte('fecha', inicio).lte('fecha', fin),
     ])
     setRegistros(regs || [])
     setSesiones(sess || [])
@@ -94,18 +114,17 @@ export default function Calendario({ jugadorId, onSeleccionarDia }) {
         {celdas.map((d, i) => {
           if (d === null) return <div key={i} className="calendario-celda calendario-celda-vacia" />
           const fecha = fechaDe(d)
-          const registro = registros.find((r) => r.fecha === fecha)
+          const registrosDia = registros.filter((r) => r.fecha === fecha)
           const esHoy = fecha === hoy
-          const esFuturo = fecha > hoy
-          const cBienestar = colorBienestarDia(registro)
-          const cRpe = colorRpeDia(registro)
+          const esActiva = fecha === fechaActiva
+          const cBienestar = colorBienestarPromedio(registrosDia)
+          const cRpe = colorRpePromedio(registrosDia)
           const haySesion = sesiones.some((s) => s.fecha === fecha)
           return (
             <button
               key={i}
-              className={`calendario-celda ${esHoy ? 'calendario-celda-hoy' : ''} ${esFuturo ? 'calendario-celda-futura' : ''}`}
-              onClick={() => !esFuturo && onSeleccionarDia(fecha)}
-              disabled={esFuturo}
+              className={`calendario-celda ${esHoy ? 'calendario-celda-hoy' : ''} ${esActiva ? 'calendario-celda-activa' : ''}`}
+              onClick={() => onSeleccionarDia(fecha)}
             >
               {haySesion && <span className="calendario-sesion-punto" title="Sesión programada" />}
               <span className="calendario-numero">{d}</span>
@@ -119,10 +138,10 @@ export default function Calendario({ jugadorId, onSeleccionarDia }) {
       </div>
 
       <div className="calendario-leyenda">
-        <span><span className="calendario-leyenda-barra" style={{ background: 'var(--risk-low)' }} /> Bienestar (barra sup.)</span>
-        <span><span className="calendario-leyenda-barra" style={{ background: 'var(--accent)' }} /> RPE (barra inf.)</span>
+        <span><span className="calendario-leyenda-barra" style={{ background: 'var(--risk-low)' }} /> Bienestar medio del equipo</span>
+        <span><span className="calendario-leyenda-barra" style={{ background: 'var(--accent)' }} /> RPE medio del equipo</span>
         <span><span className="calendario-sesion-punto calendario-sesion-punto-leyenda" /> Sesión programada</span>
-        <span className="texto-dim">Gris = sin registrar</span>
+        <span className="texto-dim">{jugadores.length} jugadores en el grupo activo</span>
       </div>
     </section>
   )
