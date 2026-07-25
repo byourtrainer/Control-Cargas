@@ -168,6 +168,23 @@ Excel (0 = Ningún esfuerzo … 10 = Máximo).
   Carga, ACWR Post, Monotonía, Fatiga o Bienestar (malestar) — se puede
   combinar con el selector de jugador/equipo de al lado.
 
+## MDx fijo, bandas de riesgo en gráficos y molestias localizadas
+
+- El campo **MDx** en "Sesión del día" ahora es un desplegable con las
+  opciones fijas del club: MD, MD+1, MD+2, MD+/-3, MD-2, MD-1 (antes era
+  texto libre).
+- El gráfico del Resumen muestra **bandas de color de fondo** con los
+  umbrales de riesgo de la literatura científica cuando la variable
+  seleccionada es **ACWR** (Gabbett/Hulin), **Monotonía** (Foster, umbral
+  >2.0) o **Bienestar**. Carga y Fatiga (Strain) no llevan bandas porque no
+  tienen un umbral absoluto universal — dependen del contexto de cada
+  deportista, así lo indican también los propios estudios de Foster.
+- Los jugadores ahora pueden marcar **"Tengo alguna molestia o dolor
+  localizado"** y elegir la zona exacta del cuerpo entre 19 opciones (cuello,
+  hombro, isquiotibiales, tobillo, etc.). El entrenador lo ve directamente en
+  una columna "Molestia" en el Resumen, útil como aviso temprano antes de
+  que se convierta en una lesión registrada.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

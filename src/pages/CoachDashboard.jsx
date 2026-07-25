@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
-  ResponsiveContainer, LineChart, Line,
+  ResponsiveContainer, LineChart, Line, ReferenceArea,
   XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts'
 import { supabase } from '../lib/supabaseClient'
@@ -26,6 +26,32 @@ const variablesGrafico = [
   { valor: 'fatiga', etiqueta: 'Fatiga (Strain)' },
   { valor: 'malestar', etiqueta: 'Bienestar (malestar)' },
 ]
+
+// Bandas de referencia según los umbrales de riesgo estándar en ciencias del
+// deporte (Gabbett/Hulin para ACWR, Foster para Monotonía). "Carga" y
+// "Fatiga (Strain)" no tienen un umbral absoluto universal en la literatura
+// — dependen del contexto de cada deportista — así que no llevan bandas.
+const bandasPorVariable = {
+  acwr: [
+    { y1: 0, y2: 0.5, color: 'var(--risk-mid)' },
+    { y1: 0.5, y2: 0.8, color: 'var(--risk-low)' },
+    { y1: 0.8, y2: 1.1, color: 'var(--accent)' },
+    { y1: 1.1, y2: 1.5, color: 'var(--risk-mid)' },
+    { y1: 1.5, y2: 2.0, color: 'var(--risk-high-mid)' },
+    { y1: 2.0, y2: 3.5, color: 'var(--risk-high)' },
+  ],
+  monotonia: [
+    { y1: 0, y2: 1, color: 'var(--text-faint)' },
+    { y1: 1, y2: 2, color: 'var(--risk-low)' },
+    { y1: 2, y2: 2.5, color: 'var(--risk-high-mid)' },
+    { y1: 2.5, y2: 5, color: 'var(--risk-high)' },
+  ],
+  malestar: [
+    { y1: 1, y2: 2, color: 'var(--risk-low)' },
+    { y1: 2, y2: 3, color: 'var(--risk-mid)' },
+    { y1: 3, y2: 5, color: 'var(--risk-high)' },
+  ],
+}
 
 export default function CoachDashboard({ equipoActivo = 'todos' }) {
   const [jugadores, setJugadores] = useState([])
@@ -69,6 +95,9 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
         nivelMonotonia: clasificarMonotonia(metricas.monotonia),
         malestar,
         nivelBienestar: clasificarBienestar(malestar),
+        molestiaHoy: ultimoRegistro?.fecha === diasAtras(0) && ultimoRegistro?.tiene_molestia
+          ? ultimoRegistro.zona_molestia
+          : null,
         registroHoy: suyos.some((r) => r.fecha === diasAtras(0)),
       }
     })
@@ -187,9 +216,21 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
               contentStyle={{ background: 'var(--bg-elevated)', border: '1px solid var(--line-strong)', borderRadius: 8 }}
               labelStyle={{ color: 'var(--text)' }}
             />
+            {(bandasPorVariable[variableGrafico] || []).map((b, i) => (
+              <ReferenceArea
+                key={i} y1={b.y1} y2={b.y2} fill={b.color} fillOpacity={0.12}
+                strokeOpacity={0} ifOverflow="extendDomain"
+              />
+            ))}
             <Line type="monotone" dataKey="valor" stroke="var(--accent)" strokeWidth={2} dot={false} connectNulls />
           </LineChart>
         </ResponsiveContainer>
+        {bandasPorVariable[variableGrafico] && (
+          <p className="grafico-nota texto-dim">
+            Bandas de color según umbrales de riesgo de la literatura (Gabbett/Hulin para ACWR, Foster para
+            Monotonía y Bienestar) — no se aplican a Carga ni Fatiga por no tener un umbral absoluto universal.
+          </p>
+        )}
       </section>
 
       <section className="tabla-card tabla-card-ancha">
@@ -200,6 +241,7 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
               <tr>
                 <th>Jugador</th>
                 <th>Bienestar</th>
+                <th>Molestia</th>
                 <th>Equipo</th>
                 <th>Hoy</th>
                 <th title="Suma de carga de los últimos 7 días">Carga Aguda</th>
@@ -222,6 +264,11 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
                       <span className={`bienestar-badge bienestar-${j.nivelBienestar}`}>
                         {traducirBienestar(j.nivelBienestar)}
                       </span>
+                    ) : '—'}
+                  </td>
+                  <td>
+                    {j.molestiaHoy ? (
+                      <span className="molestia-badge">{j.molestiaHoy}</span>
                     ) : '—'}
                   </td>
                   <td className="texto-dim">{j.equipos?.nombre || '—'}</td>

@@ -4,6 +4,8 @@ import './SesionDia.css'
 
 const hoyISO = () => new Date().toISOString().slice(0, 10)
 
+const opcionesMDx = ['MD', 'MD+1', 'MD+2', 'MD+/-3', 'MD-2', 'MD-1']
+
 export default function SesionDia() {
   const [fecha, setFecha] = useState(hoyISO())
   const [duracion, setDuracion] = useState(60)
@@ -94,11 +96,13 @@ export default function SesionDia() {
               />
             </label>
             <label className="campo-sesion">
-              <span>MDx (opcional)</span>
-              <input
-                type="text" value={mdx} onChange={(e) => setMdx(e.target.value)}
-                placeholder="Ej. MD-3, MD, MD+1"
-              />
+              <span>Tipo de sesión (MDx)</span>
+              <select value={mdx} onChange={(e) => setMdx(e.target.value)}>
+                <option value="">Sin especificar</option>
+                {opcionesMDx.map((op) => (
+                  <option key={op} value={op}>{op}</option>
+                ))}
+              </select>
             </label>
           </div>
 

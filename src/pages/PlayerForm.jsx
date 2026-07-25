@@ -21,9 +21,18 @@ const escalas = [
   { clave: 'animo', etiqueta: 'Estado de ánimo', bajo: 'Muy bajo', alto: 'Muy alto', invertido: true },
 ]
 
+const zonasCuerpo = [
+  'Cuello/cervicales', 'Zona dorsal (espalda alta)', 'Hombro', 'Brazo', 'Codo',
+  'Antebrazo', 'Muñeca', 'Zona lumbar', 'Cadera', 'Glúteos',
+  'Psoas (flexores cadera)', 'Rodilla', 'Isquiotibiales', 'Cuádriceps', 'Aductores',
+  'Gemelos', 'Tibiales', 'Tobillo', 'Pie',
+]
+
 export default function PlayerForm({ perfil }) {
   const [rpe, setRpe] = useState(5)
   const [valores, setValores] = useState({ sueno: 3, fatiga: 3, dolor_muscular: 3, estres: 3, animo: 3 })
+  const [tieneMolestia, setTieneMolestia] = useState(false)
+  const [zonaMolestia, setZonaMolestia] = useState('')
   const [notas, setNotas] = useState('')
   const [enviando, setEnviando] = useState(false)
   const [mensaje, setMensaje] = useState(null)
@@ -77,6 +86,10 @@ export default function PlayerForm({ perfil }) {
 
   async function manejarEnvio(e) {
     e.preventDefault()
+    if (tieneMolestia && !zonaMolestia) {
+      setMensaje({ tipo: 'error', texto: 'Indica en qué parte del cuerpo tienes la molestia.' })
+      return
+    }
     setEnviando(true)
     setMensaje(null)
 
@@ -85,6 +98,8 @@ export default function PlayerForm({ perfil }) {
       fecha: hoyISO(),
       rpe,
       ...valores,
+      tiene_molestia: tieneMolestia,
+      zona_molestia: tieneMolestia ? zonaMolestia : null,
       notas: notas || null,
     }, { onConflict: 'jugador_id,fecha' })
 
@@ -158,6 +173,24 @@ export default function PlayerForm({ perfil }) {
                 </div>
               )
             })}
+
+            <label className="campo-checkbox">
+              <input
+                type="checkbox" checked={tieneMolestia}
+                onChange={(e) => { setTieneMolestia(e.target.checked); if (!e.target.checked) setZonaMolestia('') }}
+              />
+              <span>Tengo alguna molestia o dolor localizado</span>
+            </label>
+
+            {tieneMolestia && (
+              <label className="campo-notas">
+                <span>¿En qué parte del cuerpo?</span>
+                <select value={zonaMolestia} onChange={(e) => setZonaMolestia(e.target.value)} required>
+                  <option value="" disabled>Selecciona una zona</option>
+                  {zonasCuerpo.map((z) => <option key={z} value={z}>{z}</option>)}
+                </select>
+              </label>
+            )}
 
             <h3 className="bienestar-titulo">
               RPE de la sesión <span className="momento-dia">— después de entrenar</span>
