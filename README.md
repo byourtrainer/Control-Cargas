@@ -309,6 +309,25 @@ Nueva pestaña **"Tests"** para el entrenador:
   sexo) ahora son **editables** desde su propia tarjeta "Mis datos", no solo
   de lectura.
 
+## Interpretaciones, cuadrantes en el informe y ranking comparativo
+
+- **Interpretación en directo**: al registrar un test de Sentadilla, CMJ o
+  Doble Wingate, aparece de inmediato si el resultado es "Fuerte/Poco
+  fuerte", "Explosivo/Poco explosivo", "Potente/Poco potente" o la capacidad
+  de repetir esfuerzo, según los umbrales exactos que definiste.
+- **Los dos cuadrantes ahora aparecen también dentro del informe físico**
+  (tanto en modo individual como en la comparativa de varios jugadores), con
+  una leyenda explicando el significado de cada zona — y se incluyen al
+  exportar/imprimir.
+- **Interpretación automática + comentario del entrenador**: en el perfil
+  individual se genera un resumen automático a partir de los últimos tests
+  (ej. "Sentadilla: Fuerte (2.3×) · CMJ: Explosivo (44cm)…"), y debajo hay un
+  cuadro de texto para que el entrenador escriba y guarde su propia
+  valoración, que queda asociada a ese jugador para futuras consultas.
+- **Ranking comparativo**: en el perfil individual, debajo de cada
+  mini-gráfica aparece el puesto del jugador dentro del equipo activo (ej.
+  "Puesto 3 de 12, percentil 82") para esa métrica en concreto.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

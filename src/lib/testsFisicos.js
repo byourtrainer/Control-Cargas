@@ -36,3 +36,25 @@ export function ultimosTestsPorTipo(tests) {
   }
   return resultado
 }
+
+// --- Interpretaciones según los umbrales de los cuadrantes ---
+
+export function interpretarCMJ(cm) {
+  if (cm === null || cm === undefined) return null
+  return cm >= 40 ? 'Explosivo' : 'Poco explosivo'
+}
+
+export function interpretarSentadilla(relativo) {
+  if (relativo === null || relativo === undefined) return null
+  return relativo >= 2 ? 'Fuerte' : 'Poco fuerte'
+}
+
+export function interpretarPotencia(wKg) {
+  if (wKg === null || wKg === undefined) return null
+  return wKg >= 10 ? 'Potente' : 'Poco potente'
+}
+
+export function interpretarFatigaWingate(pct) {
+  if (pct === null || pct === undefined) return null
+  return pct < 20 ? 'Buena capacidad de repetir esfuerzo' : 'Poca capacidad de repetir esfuerzo'
+}

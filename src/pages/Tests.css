@@ -208,6 +208,85 @@
   margin: 0 0 8px;
 }
 
+.interpretacion-chip {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.cuadrante-leyenda {
+  font-size: 11px;
+  color: var(--text-faint);
+  margin: 10px 0 0;
+  line-height: 1.6;
+}
+
+.cuadrante-leyenda strong { color: var(--text-dim); }
+
+.ranking-nota {
+  font-size: 11px;
+  color: var(--text-faint);
+  margin: 8px 0 0;
+}
+
+.ranking-nota strong { color: var(--accent); }
+
+.informe-cuadrantes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.cuadrante-card-informe {
+  background: var(--bg-elevated);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.interpretacion-card {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.interpretacion-card h4 {
+  font-size: 13px;
+  color: var(--text-dim);
+  margin: 0 0 10px;
+}
+
+.interpretacion-automatica {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.interpretacion-textarea {
+  width: 100%;
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 13px;
+  resize: vertical;
+  margin-bottom: 10px;
+}
+
+.interpretacion-comentario {
+  font-size: 13px;
+  color: var(--text-dim);
+  font-style: italic;
+  margin-top: 10px;
+}
+
 /* Impresión / Guardar como PDF: se mantiene el diseño oscuro de la app,
    solo se ocultan los controles interactivos. Requiere tener activado
    "Gráficos de fondo" / "Background graphics" en el diálogo de impresión
@@ -219,7 +298,8 @@
   .informe-fisico-card { border: none !important; padding: 0 !important; }
   .informe-titulo-impresion { display: block !important; }
   .informe-graficos-grid { grid-template-columns: repeat(2, 1fr) !important; }
-  .mini-grafico-card { break-inside: avoid; }
+  .mini-grafico-card, .cuadrante-card-informe, .interpretacion-card { break-inside: avoid; }
+  .informe-cuadrantes-grid { grid-template-columns: repeat(2, 1fr) !important; margin-top: 24px; }
 }
 
 .tests-tabla {
