@@ -82,6 +82,29 @@
   margin-bottom: 16px;
 }
 
+.volver-calendario {
+  background: none;
+  border: 1px solid var(--line-strong);
+  color: var(--text-dim);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.volver-calendario:hover { border-color: var(--accent); color: var(--accent); }
+
+.fecha-dia-titulo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.fecha-dia-titulo h2 { font-size: 19px; }
+
+.capitalizada::first-letter { text-transform: uppercase; }
+
 .mis-datos-header h3 { margin: 0; }
 
 .mis-datos-botones {

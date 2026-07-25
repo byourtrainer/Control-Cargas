@@ -366,6 +366,24 @@ Nueva pestaña **"Tests"** para el entrenador:
   ahora bajo el título "Comentarios individuales guardados", para
   diferenciarlo del comentario de grupo.
 
+## Vista del jugador: calendario como pantalla inicial
+
+- El jugador ahora ve primero un **calendario mensual** en vez de ir directo
+  al formulario de hoy. El día actual aparece resaltado con un borde.
+- Cada celda de día muestra **dos barritas de color**: la de arriba refleja
+  el bienestar de ese día (verde/amarillo/rojo, estilo Hooper) y la de abajo
+  el RPE (la misma escala de 4 colores de los deslizadores). Si no hay
+  registro ese día, aparecen en gris.
+- Al pulsar un día (hoy o cualquier día pasado — los días futuros están
+  deshabilitados) se abren los formularios de Bienestar y RPE **de esa fecha
+  concreta**, con un botón "← Volver al calendario" para regresar. Esto
+  también permite corregir un registro de un día anterior si hace falta.
+- Se puede navegar entre meses con las flechas, y pulsar el nombre del mes
+  vuelve directamente al mes actual.
+- La tabla "Últimos 7 registros" se ha retirado, ya que el calendario cumple
+  esa función de forma más visual y con más alcance (todo el mes, no solo 7
+  días).
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.
