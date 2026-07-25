@@ -46,16 +46,8 @@
 
 .tarjetas-resumen {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 16px;
-}
-
-@media (max-width: 900px) {
-  .tarjetas-resumen { grid-template-columns: repeat(2, 1fr); }
-}
-
-@media (max-width: 480px) {
-  .tarjetas-resumen { grid-template-columns: 1fr; }
 }
 
 .tarjeta-resumen {
@@ -97,6 +89,15 @@
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.rango-fecha-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--text-faint);
 }
 
 .grafico-nota {
@@ -243,7 +244,7 @@
   .informe-resumen-card { border: none !important; padding: 0 !important; }
   .mini-grafico-card { break-inside: avoid; }
   .informe-graficos-grid { grid-template-columns: repeat(2, 1fr) !important; }
-  .tarjetas-resumen { grid-template-columns: repeat(4, 1fr) !important; margin-bottom: 20px; }
+  .tarjetas-resumen { grid-template-columns: repeat(4, minmax(0,1fr)) !important; margin-bottom: 20px; }
 }
 
 .equipo-etiqueta {

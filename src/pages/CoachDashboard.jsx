@@ -20,32 +20,43 @@ const tiposVistaGrafico = [
   { valor: 'mensual', etiqueta: 'Mensual' },
 ]
 
-/** Construye los "cubos" (rangos de fechas) que se mostrarán en el gráfico, terminando en fechaReferencia. */
-function construirBuckets(tipoVista, fechaReferencia) {
-  const ref = new Date(fechaReferencia + 'T00:00:00')
+/** Construye los "cubos" (rangos de fechas) que cubren exactamente el rango elegido (desde/hasta). */
+function construirBuckets(tipoVista, fechaDesde, fechaHasta) {
+  const inicio = new Date(fechaDesde + 'T00:00:00')
+  const fin = new Date(fechaHasta + 'T00:00:00')
   const buckets = []
+
+  if (fin < inicio) return buckets
+
   if (tipoVista === 'diario') {
-    for (let i = 20; i >= 0; i--) {
-      const f = new Date(ref); f.setDate(f.getDate() - i)
-      buckets.push({ inicio: f, fin: f, etiqueta: f.toISOString().slice(5, 10) })
+    const cursor = new Date(inicio)
+    while (cursor <= fin) {
+      buckets.push({ inicio: new Date(cursor), fin: new Date(cursor), etiqueta: cursor.toISOString().slice(5, 10) })
+      cursor.setDate(cursor.getDate() + 1)
     }
   } else if (tipoVista === 'semanal') {
-    for (let i = 11; i >= 0; i--) {
-      const fin = new Date(ref); fin.setDate(fin.getDate() - i * 7)
-      const inicio = new Date(fin); inicio.setDate(inicio.getDate() - 6)
-      buckets.push({ inicio, fin, etiqueta: inicio.toISOString().slice(5, 10) })
+    const cursor = new Date(inicio)
+    while (cursor <= fin) {
+      const finBucket = new Date(cursor); finBucket.setDate(finBucket.getDate() + 6)
+      const finReal = finBucket > fin ? new Date(fin) : finBucket
+      buckets.push({ inicio: new Date(cursor), fin: finReal, etiqueta: cursor.toISOString().slice(5, 10) })
+      cursor.setDate(cursor.getDate() + 7)
     }
   } else {
-    for (let i = 5; i >= 0; i--) {
-      const finMes = new Date(ref.getFullYear(), ref.getMonth() - i + 1, 0)
-      const inicioMes = new Date(finMes.getFullYear(), finMes.getMonth(), 1)
+    let cursor = new Date(inicio.getFullYear(), inicio.getMonth(), 1)
+    while (cursor <= fin) {
+      const finMes = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0)
+      const inicioReal = cursor < inicio ? inicio : cursor
+      const finReal = finMes > fin ? fin : finMes
       buckets.push({
-        inicio: inicioMes, fin: finMes,
+        inicio: inicioReal, fin: finReal,
         etiqueta: finMes.toLocaleDateString('es-ES', { month: 'short', year: '2-digit' }),
       })
+      cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1)
     }
   }
-  return buckets
+  // Límite de seguridad: como mucho 60 puntos, por si se elige un rango muy amplio en vista diaria.
+  return buckets.slice(-60)
 }
 
 /** Calcula el valor de la variable seleccionada para un cubo de fechas concreto. */
@@ -136,7 +147,8 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
   const [jugadorSeleccionado, setJugadorSeleccionado] = useState('equipo')
   const [variableGrafico, setVariableGrafico] = useState('carga')
   const [tipoVistaGrafico, setTipoVistaGrafico] = useState('diario')
-  const [fechaReferenciaGrafico, setFechaReferenciaGrafico] = useState(diasAtras(0))
+  const [fechaDesdeGrafico, setFechaDesdeGrafico] = useState(diasAtras(20))
+  const [fechaHastaGrafico, setFechaHastaGrafico] = useState(diasAtras(0))
   const [metodoACWR, setMetodoACWR] = useState('clasico')
   const [cargando, setCargando] = useState(true)
 
@@ -189,8 +201,8 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
   ), [jugadorSeleccionado, jugadoresFiltrados])
 
   const buckets = useMemo(
-    () => construirBuckets(tipoVistaGrafico, fechaReferenciaGrafico),
-    [tipoVistaGrafico, fechaReferenciaGrafico]
+    () => construirBuckets(tipoVistaGrafico, fechaDesdeGrafico, fechaHastaGrafico),
+    [tipoVistaGrafico, fechaDesdeGrafico, fechaHastaGrafico]
   )
 
   function construirDatosVariable(variable) {
@@ -224,6 +236,7 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
       const nivelBienestar = clasificarBienestar(malestarMedio)
       const metricasFin = calcularMetricas(suyos, metodoACWR, periodoFinDate)
       const riesgo = clasificarRiesgoACWR(metricasFin.acwrPost)
+      const nivelMonot = clasificarMonotonia(metricasFin.monotonia)
 
       return {
         modo: 'individual',
@@ -239,6 +252,15 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
             valor: metricasFin.acwrPost !== null ? `${metricasFin.acwrPost.toFixed(2)} · ${traducirRiesgo(riesgo)}` : '—',
             tono: (riesgo === 'alta' || riesgo === 'muy_alta') ? 'alto' : null,
           },
+          {
+            etiqueta: 'Monotonía al final del periodo',
+            valor: metricasFin.monotonia !== null ? `${metricasFin.monotonia.toFixed(2)} · ${traducirMonotonia(nivelMonot)}` : '—',
+            tono: nivelMonot === 'riesgo_elevado' ? 'alto' : null,
+          },
+          {
+            etiqueta: 'Fatiga (Strain) al final del periodo',
+            valor: metricasFin.fatiga !== null && metricasFin.fatiga !== undefined ? Math.round(metricasFin.fatiga) : '—',
+          },
         ],
       }
     }
@@ -252,21 +274,46 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
     const malestares = registrosPeriodo.map((r) => calcularMalestar(r)).filter((v) => v !== null && v !== undefined)
     const malestarMedio = malestares.length ? malestares.reduce((a, b) => a + b, 0) / malestares.length : null
     const nivelBienestar = clasificarBienestar(malestarMedio)
-    const enRiesgo = jugadoresGrafico.filter((j) => {
+
+    const metricasPorJugador = jugadoresGrafico.map((j) => {
       const suyos = registros.filter((r) => r.jugador_id === j.id)
-      const m = calcularMetricas(suyos, metodoACWR, periodoFinDate)
+      return calcularMetricas(suyos, metodoACWR, periodoFinDate)
+    })
+    const enRiesgo = metricasPorJugador.filter((m) => {
       const r = clasificarRiesgoACWR(m.acwrPost)
       return r === 'alta' || r === 'muy_alta'
     }).length
+
+    const media = (arr) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null)
+    const cargaTotalGrupo = jugadoresGrafico.reduce((acc, j) => (
+      acc + registrosPeriodo.filter((r) => r.jugador_id === j.id).reduce((a, r) => a + (r.carga || 0), 0)
+    ), 0)
+    const cargaMediaJugador = jugadoresGrafico.length ? cargaTotalGrupo / jugadoresGrafico.length : null
+    const acwrMedio = media(metricasPorJugador.map((m) => m.acwrPost).filter((v) => v !== null && v !== undefined))
+    const monotoniaMedia = media(metricasPorJugador.map((m) => m.monotonia).filter((v) => v !== null && v !== undefined))
+    const fatigaMedia = media(metricasPorJugador.map((m) => m.fatiga).filter((v) => v !== null && v !== undefined))
 
     return {
       modo: 'grupo',
       tarjetas: [
         { etiqueta: 'Jugadores en el grupo', valor: jugadoresGrafico.length },
         { etiqueta: 'Registraron en el periodo', valor: `${jugadoresConRegistro} / ${jugadoresGrafico.length}` },
+        { etiqueta: 'Carga media por jugador', valor: cargaMediaJugador !== null ? Math.round(cargaMediaJugador) : '—' },
         {
           etiqueta: 'Bienestar medio del grupo', valor: traducirBienestar(nivelBienestar),
           tono: nivelBienestar === 'malo' ? 'alto' : null,
+        },
+        {
+          etiqueta: 'ACWR medio del grupo',
+          valor: acwrMedio !== null ? acwrMedio.toFixed(2) : '—',
+        },
+        {
+          etiqueta: 'Monotonía media del grupo',
+          valor: monotoniaMedia !== null ? monotoniaMedia.toFixed(2) : '—',
+        },
+        {
+          etiqueta: 'Fatiga (Strain) media del grupo',
+          valor: fatigaMedia !== null ? Math.round(fatigaMedia) : '—',
         },
         { etiqueta: 'En riesgo (ACWR alto/muy alto)', valor: enRiesgo, tono: enRiesgo > 0 ? 'alto' : null },
       ],
@@ -286,7 +333,7 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `resumen_${tipoVistaGrafico}_${fechaReferenciaGrafico}.csv`
+    a.download = `resumen_${tipoVistaGrafico}_${fechaDesdeGrafico}_a_${fechaHastaGrafico}.csv`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -326,13 +373,27 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
             {' '}({tiposVistaGrafico.find((t) => t.valor === tipoVistaGrafico).etiqueta.toLowerCase()})
           </h3>
           <div className="grafico-selectores">
-            <input
-              type="date"
-              value={fechaReferenciaGrafico}
-              max={diasAtras(0)}
-              onChange={(e) => setFechaReferenciaGrafico(e.target.value)}
-              className="selector-jugador"
-            />
+            <label className="rango-fecha-campo">
+              <span>Desde</span>
+              <input
+                type="date"
+                value={fechaDesdeGrafico}
+                max={fechaHastaGrafico}
+                onChange={(e) => setFechaDesdeGrafico(e.target.value)}
+                className="selector-jugador"
+              />
+            </label>
+            <label className="rango-fecha-campo">
+              <span>Hasta</span>
+              <input
+                type="date"
+                value={fechaHastaGrafico}
+                min={fechaDesdeGrafico}
+                max={diasAtras(0)}
+                onChange={(e) => setFechaHastaGrafico(e.target.value)}
+                className="selector-jugador"
+              />
+            </label>
             <select
               value={tipoVistaGrafico}
               onChange={(e) => setTipoVistaGrafico(e.target.value)}
@@ -382,10 +443,9 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
           </LineChart>
         </ResponsiveContainer>
         <p className="grafico-nota texto-dim">
-          {tipoVistaGrafico === 'diario' && 'Últimos 21 días'}
-          {tipoVistaGrafico === 'semanal' && 'Últimas 12 semanas'}
-          {tipoVistaGrafico === 'mensual' && 'Últimos 6 meses'}
-          {' '}hasta el {new Date(fechaReferenciaGrafico + 'T00:00:00').toLocaleDateString('es-ES')}.
+          Del {new Date(fechaDesdeGrafico + 'T00:00:00').toLocaleDateString('es-ES')} al{' '}
+          {new Date(fechaHastaGrafico + 'T00:00:00').toLocaleDateString('es-ES')}
+          {' '}({buckets.length} {tipoVistaGrafico === 'diario' ? 'días' : tipoVistaGrafico === 'semanal' ? 'semanas' : 'meses'}).
         </p>
         {bandasPorVariable[variableGrafico] && (
           <p className="grafico-nota texto-dim">
@@ -493,7 +553,8 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
         </h2>
         <p className="texto-dim">
           Vista {tiposVistaGrafico.find((t) => t.valor === tipoVistaGrafico).etiqueta.toLowerCase()},
-          {' '}hasta el {new Date(fechaReferenciaGrafico + 'T00:00:00').toLocaleDateString('es-ES')}
+          {' '}del {new Date(fechaDesdeGrafico + 'T00:00:00').toLocaleDateString('es-ES')} al{' '}
+          {new Date(fechaHastaGrafico + 'T00:00:00').toLocaleDateString('es-ES')}
         </p>
 
         <div className="informe-graficos-grid">

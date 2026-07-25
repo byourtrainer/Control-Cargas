@@ -440,6 +440,21 @@ Nueva pestaña **"Tests"** para el entrenador:
   jugador individual en el desplegable del gráfico — el título del informe
   cambia en consecuencia.
 
+## Rango de fechas (desde/hasta) y todas las variables de carga en las tarjetas
+
+- El gráfico del Resumen ahora tiene dos selectores de fecha (**Desde** /
+  **Hasta**) en vez de una sola fecha de referencia — puedes ver desde un
+  único día hasta periodos tan largos como quieras, combinado con la vista
+  Diaria/Semanal/Mensual (que decide cómo se agrupan los puntos dentro de
+  ese rango).
+- Las tarjetas de resumen ahora muestran **todas las variables de carga**,
+  no solo 4:
+  - **Jugador individual**: Carga total, Días con RPE registrado, Bienestar
+    medio, ACWR, Monotonía y Fatiga (Strain) al final del periodo.
+  - **Grupo/equipo**: Jugadores en el grupo, Registraron en el periodo,
+    Carga media por jugador, Bienestar medio, ACWR medio, Monotonía media,
+    Fatiga media y Nº en riesgo.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.
