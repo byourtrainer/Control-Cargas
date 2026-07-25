@@ -182,17 +182,114 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
     })
   }, [jugadoresFiltrados, registros, metodoACWR])
 
-  const datosGrafico = useMemo(() => {
-    const jugadoresGrafico = jugadorSeleccionado === 'equipo'
+  const jugadoresGrafico = useMemo(() => (
+    jugadorSeleccionado === 'equipo'
       ? jugadoresFiltrados
       : jugadoresFiltrados.filter((j) => j.id === jugadorSeleccionado)
+  ), [jugadorSeleccionado, jugadoresFiltrados])
 
-    const buckets = construirBuckets(tipoVistaGrafico, fechaReferenciaGrafico)
+  const buckets = useMemo(
+    () => construirBuckets(tipoVistaGrafico, fechaReferenciaGrafico),
+    [tipoVistaGrafico, fechaReferenciaGrafico]
+  )
+
+  function construirDatosVariable(variable) {
     return buckets.map((b) => {
-      const valor = calcularValorBucket(b, jugadoresGrafico, registros, variableGrafico, metodoACWR)
+      const valor = calcularValorBucket(b, jugadoresGrafico, registros, variable, metodoACWR)
       return { fecha: b.etiqueta, valor: valor !== null ? Number(valor.toFixed(2)) : null }
     })
-  }, [registros, jugadorSeleccionado, jugadoresFiltrados, variableGrafico, metodoACWR, tipoVistaGrafico, fechaReferenciaGrafico])
+  }
+
+  const datosGrafico = useMemo(
+    () => construirDatosVariable(variableGrafico),
+    [registros, jugadoresGrafico, variableGrafico, metodoACWR, buckets]
+  )
+
+  // --- Tarjetas de resumen: se adaptan a la vista/fecha/jugador seleccionados ---
+  const resumenTarjetas = useMemo(() => {
+    const periodoInicio = buckets[0].inicio.toISOString().slice(0, 10)
+    const periodoFinDate = buckets[buckets.length - 1].fin
+    const periodoFin = periodoFinDate.toISOString().slice(0, 10)
+
+    if (jugadorSeleccionado !== 'equipo') {
+      const jugador = jugadoresGrafico[0]
+      if (!jugador) return null
+      const suyos = registros.filter((r) => r.jugador_id === jugador.id)
+      const registrosPeriodo = suyos.filter((r) => r.fecha >= periodoInicio && r.fecha <= periodoFin)
+      const cargaTotal = registrosPeriodo.reduce((acc, r) => acc + (r.carga || 0), 0)
+      const diasConRpe = registrosPeriodo.filter((r) => r.rpe !== null && r.rpe !== undefined).length
+      const diasPeriodo = Math.round((periodoFinDate - buckets[0].inicio) / 86400000) + 1
+      const malestares = registrosPeriodo.map((r) => calcularMalestar(r)).filter((v) => v !== null && v !== undefined)
+      const malestarMedio = malestares.length ? malestares.reduce((a, b) => a + b, 0) / malestares.length : null
+      const nivelBienestar = clasificarBienestar(malestarMedio)
+      const metricasFin = calcularMetricas(suyos, metodoACWR, periodoFinDate)
+      const riesgo = clasificarRiesgoACWR(metricasFin.acwrPost)
+
+      return {
+        modo: 'individual',
+        tarjetas: [
+          { etiqueta: 'Carga total del periodo', valor: cargaTotal },
+          { etiqueta: 'Días con RPE registrado', valor: `${diasConRpe} / ${diasPeriodo}` },
+          {
+            etiqueta: 'Bienestar medio', valor: traducirBienestar(nivelBienestar),
+            tono: nivelBienestar === 'malo' ? 'alto' : null,
+          },
+          {
+            etiqueta: 'ACWR al final del periodo',
+            valor: metricasFin.acwrPost !== null ? `${metricasFin.acwrPost.toFixed(2)} · ${traducirRiesgo(riesgo)}` : '—',
+            tono: (riesgo === 'alta' || riesgo === 'muy_alta') ? 'alto' : null,
+          },
+        ],
+      }
+    }
+
+    const registrosPeriodo = registros.filter((r) =>
+      jugadoresGrafico.some((j) => j.id === r.jugador_id) && r.fecha >= periodoInicio && r.fecha <= periodoFin
+    )
+    const jugadoresConRegistro = jugadoresGrafico.filter((j) =>
+      registrosPeriodo.some((r) => r.jugador_id === j.id && r.rpe !== null && r.rpe !== undefined)
+    ).length
+    const malestares = registrosPeriodo.map((r) => calcularMalestar(r)).filter((v) => v !== null && v !== undefined)
+    const malestarMedio = malestares.length ? malestares.reduce((a, b) => a + b, 0) / malestares.length : null
+    const nivelBienestar = clasificarBienestar(malestarMedio)
+    const enRiesgo = jugadoresGrafico.filter((j) => {
+      const suyos = registros.filter((r) => r.jugador_id === j.id)
+      const m = calcularMetricas(suyos, metodoACWR, periodoFinDate)
+      const r = clasificarRiesgoACWR(m.acwrPost)
+      return r === 'alta' || r === 'muy_alta'
+    }).length
+
+    return {
+      modo: 'grupo',
+      tarjetas: [
+        { etiqueta: 'Jugadores en el grupo', valor: jugadoresGrafico.length },
+        { etiqueta: 'Registraron en el periodo', valor: `${jugadoresConRegistro} / ${jugadoresGrafico.length}` },
+        {
+          etiqueta: 'Bienestar medio del grupo', valor: traducirBienestar(nivelBienestar),
+          tono: nivelBienestar === 'malo' ? 'alto' : null,
+        },
+        { etiqueta: 'En riesgo (ACWR alto/muy alto)', valor: enRiesgo, tono: enRiesgo > 0 ? 'alto' : null },
+      ],
+    }
+  }, [jugadorSeleccionado, jugadoresGrafico, registros, metodoACWR, buckets])
+
+  function exportarInformeCSV() {
+    const cabeceras = ['Periodo', ...variablesGrafico.map((v) => v.etiqueta)]
+    const columnas = variablesGrafico.map((v) => construirDatosVariable(v.valor))
+    const filas = buckets.map((b, i) => [
+      b.etiqueta, ...columnas.map((col) => col[i].valor ?? ''),
+    ])
+    const csv = [cabeceras, ...filas]
+      .map((fila) => fila.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(','))
+      .join('\n')
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `resumen_${tipoVistaGrafico}_${fechaReferenciaGrafico}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
 
   if (cargando) return <p className="mono texto-dim">Cargando datos del equipo…</p>
 
@@ -211,28 +308,18 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
               <option key={m.valor} value={m.valor}>{m.etiqueta}</option>
             ))}
           </select>
+          <button className="btn-exportar" onClick={exportarInformeCSV}>Exportar CSV</button>
+          <button className="btn-exportar" onClick={() => window.print()}>Imprimir / Guardar PDF</button>
         </div>
       </div>
 
       <section className="tarjetas-resumen">
-        <TarjetaResumen etiqueta="Jugadores activos" valor={jugadoresFiltrados.length} />
-        <TarjetaResumen
-          etiqueta="Registraron hoy"
-          valor={`${resumenPorJugador.filter((j) => j.registroHoy).length} / ${jugadoresFiltrados.length}`}
-        />
-        <TarjetaResumen
-          etiqueta="Bienestar bajo (Malo)"
-          valor={resumenPorJugador.filter((j) => j.nivelBienestar === 'malo').length}
-          tono="alto"
-        />
-        <TarjetaResumen
-          etiqueta="En riesgo (ACWR alto o muy alto)"
-          valor={resumenPorJugador.filter((j) => j.riesgo === 'alta' || j.riesgo === 'muy_alta').length}
-          tono="alto"
-        />
+        {resumenTarjetas?.tarjetas.map((t, i) => (
+          <TarjetaResumen key={i} etiqueta={t.etiqueta} valor={t.valor} tono={t.tono} />
+        ))}
       </section>
 
-      <section className="grafico-card">
+      <section className="grafico-card no-imprimir">
         <div className="grafico-cabecera">
           <h3>
             {variablesGrafico.find((v) => v.valor === variableGrafico).etiqueta}
@@ -308,7 +395,7 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
         )}
       </section>
 
-      <section className="tabla-card tabla-card-ancha">
+      <section className="tabla-card tabla-card-ancha no-imprimir">
         <h3>Estado por jugador</h3>
         <div className="tabla-scroll">
           <table className="jugadores-tabla">
@@ -380,7 +467,7 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
         )}
       </section>
 
-      <p className="leyenda-riesgo texto-dim">
+      <p className="leyenda-riesgo texto-dim no-imprimir">
         ACWR — <span className="riesgo-badge riesgo-muy_baja">Muy baja</span> &lt;0.5 ·{' '}
         <span className="riesgo-badge riesgo-baja">Baja</span> 0.5–0.8 ·{' '}
         <span className="riesgo-badge riesgo-optima">Óptima</span> 0.8–1.1 ·{' '}
@@ -397,6 +484,38 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
         <span className="bienestar-badge bienestar-bueno">Bueno</span> ·{' '}
         <span className="bienestar-badge bienestar-malo">Malo</span>
       </p>
+
+      <section className="informe-resumen-card">
+        <h2 className="informe-resumen-titulo">
+          {resumenTarjetas?.modo === 'individual'
+            ? `Informe individual — ${jugadoresGrafico[0]?.nombre || ''}`
+            : `Informe de equipo — ${equipoActivo === 'todos' ? 'Todos los equipos' : equipoActivo === 'sin_asignar' ? 'Sin asignar' : jugadoresFiltrados[0]?.equipos?.nombre || 'Grupo seleccionado'}`}
+        </h2>
+        <p className="texto-dim">
+          Vista {tiposVistaGrafico.find((t) => t.valor === tipoVistaGrafico).etiqueta.toLowerCase()},
+          {' '}hasta el {new Date(fechaReferenciaGrafico + 'T00:00:00').toLocaleDateString('es-ES')}
+        </p>
+
+        <div className="informe-graficos-grid">
+          {variablesGrafico.map((v) => (
+            <div className="mini-grafico-card" key={v.valor}>
+              <h4>{v.etiqueta}</h4>
+              <ResponsiveContainer width="100%" height={170}>
+                <LineChart data={construirDatosVariable(v.valor)} margin={{ top: 5, right: 10, bottom: 0, left: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
+                  <XAxis dataKey="fecha" stroke="var(--text-faint)" fontSize={11} />
+                  <YAxis stroke="var(--text-faint)" fontSize={11} width={32} />
+                  <Tooltip contentStyle={{ background: 'var(--bg-elevated)', border: '1px solid var(--line-strong)', borderRadius: 8, fontSize: 12 }} />
+                  {(bandasPorVariable[v.valor] || []).map((b, i) => (
+                    <ReferenceArea key={i} y1={b.y1} y2={b.y2} fill={b.color} fillOpacity={0.1} strokeOpacity={0} ifOverflow="extendDomain" />
+                  ))}
+                  <Line type="monotone" dataKey="valor" stroke="var(--accent)" strokeWidth={2} dot={false} connectNulls />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   )
 }

@@ -192,6 +192,60 @@
   white-space: nowrap;
 }
 
+.btn-exportar {
+  background: none;
+  border: 1px solid var(--line-strong);
+  color: var(--text-dim);
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.btn-exportar:hover { border-color: var(--accent); color: var(--accent); }
+
+.informe-resumen-card {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 24px;
+}
+
+.informe-resumen-titulo { font-size: 19px; margin-bottom: 4px; }
+
+.informe-graficos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.mini-grafico-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.mini-grafico-card h4 {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-dim);
+  margin: 0 0 8px;
+}
+
+/* Impresión / Guardar como PDF: se conserva el diseño oscuro de la app,
+   solo se ocultan los controles interactivos. Requiere tener activado
+   "Gráficos de fondo" / "Background graphics" en el diálogo de impresión. */
+@media print {
+  .no-imprimir { display: none !important; }
+  .coach-layout { display: block !important; }
+  .informe-resumen-card { border: none !important; padding: 0 !important; }
+  .mini-grafico-card { break-inside: avoid; }
+  .informe-graficos-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  .tarjetas-resumen { grid-template-columns: repeat(4, 1fr) !important; margin-bottom: 20px; }
+}
+
 .equipo-etiqueta {
   display: inline-flex;
   align-items: center;

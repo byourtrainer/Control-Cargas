@@ -419,6 +419,27 @@ Nueva pestaña **"Tests"** para el entrenador:
   entre los jugadores del grupo — así cada punto refleja fielmente el
   estado real a cierre de esa semana o mes.
 
+## Tarjetas adaptativas e informe exportable en el Resumen
+
+- Las 4 tarjetas de la parte superior del Resumen ahora se **adaptan** a la
+  vista, fecha y jugador/grupo seleccionados en el gráfico:
+  - **Jugador individual**: Carga total del periodo, Días con RPE
+    registrado, Bienestar medio, y ACWR al final del periodo (con su nivel
+    de riesgo).
+  - **Grupo/equipo**: Jugadores en el grupo, Cuántos registraron en el
+    periodo, Bienestar medio del grupo, y Nº en riesgo (ACWR alto/muy alto).
+- Nuevos botones **"Exportar CSV"** e **"Imprimir / Guardar PDF"** en la
+  cabecera del panel.
+- Nueva tarjeta de **informe** al final del Resumen con las 5 variables
+  (Carga, ACWR, Monotonía, Fatiga, Bienestar) en mini-gráficos separados —
+  visible tanto en pantalla como al exportar, con el mismo diseño oscuro de
+  la app (recuerda activar "Gráficos de fondo" al imprimir). Al exportar,
+  solo se ven las tarjetas de resumen y estos gráficos — el resto de
+  controles y la tabla detallada se ocultan para un documento limpio.
+- Funciona igual tanto si tienes seleccionado "Todo el equipo" como un
+  jugador individual en el desplegable del gráfico — el título del informe
+  cambia en consecuencia.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.
