@@ -271,7 +271,14 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
                       <span className="molestia-badge">{j.molestiaHoy}</span>
                     ) : '—'}
                   </td>
-                  <td className="texto-dim">{j.equipos?.nombre || '—'}</td>
+                  <td className="texto-dim">
+                    {j.equipos ? (
+                      <span className="equipo-etiqueta">
+                        <span className="equipo-punto-mini" style={{ background: j.equipos.color || '#c8ff4d' }} />
+                        {j.equipos.nombre}
+                      </span>
+                    ) : '—'}
+                  </td>
                   <td>{j.registroHoy ? <span className="punto-ok" /> : <span className="punto-pendiente" />}</td>
                   <td className="mono">{j.cargaSemanal}</td>
                   <td className="mono">{j.cargaCronica ? Math.round(j.cargaCronica) : '—'}</td>

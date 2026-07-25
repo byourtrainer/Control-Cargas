@@ -7,10 +7,12 @@ import SesionDia from './pages/SesionDia'
 import Lesiones from './pages/Lesiones'
 import Equipos from './pages/Equipos'
 import Informes from './pages/Informes'
+import Jugadores from './pages/Jugadores'
 import './App.css'
 
 const pestanasEntrenador = [
   { clave: 'resumen', etiqueta: 'Resumen' },
+  { clave: 'jugadores', etiqueta: 'Jugadores' },
   { clave: 'equipos', etiqueta: 'Equipos' },
   { clave: 'sesion', etiqueta: 'Sesión del día' },
   { clave: 'lesiones', etiqueta: 'Lesiones' },
@@ -133,6 +135,7 @@ export default function App() {
           pestana === 'sesion' ? <SesionDia />
           : pestana === 'lesiones' ? <Lesiones equipos={equipos} equipoActivo={equipoActivo} />
           : pestana === 'informes' ? <Informes equipoActivo={equipoActivo} />
+          : pestana === 'jugadores' ? <Jugadores equipoActivo={equipoActivo} />
           : pestana === 'equipos' ? (
             <Equipos
               equipos={equipos}

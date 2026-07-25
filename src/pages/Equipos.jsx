@@ -2,8 +2,11 @@ import { useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import './Equipos.css'
 
+const coloresSugeridos = ['#c8ff4d', '#4dc8ff', '#ff4d8f', '#ffb84d', '#a24dff', '#4dffb8', '#ff6b4d', '#4d6bff']
+
 export default function Equipos({ equipos, equipoActivo, onCambiarEquipoActivo, onEquiposActualizados }) {
   const [nuevoEquipo, setNuevoEquipo] = useState('')
+  const [colorNuevo, setColorNuevo] = useState(coloresSugeridos[equipos.length % coloresSugeridos.length])
   const [guardando, setGuardando] = useState(false)
   const [mensaje, setMensaje] = useState(null)
 
@@ -12,14 +15,20 @@ export default function Equipos({ equipos, equipoActivo, onCambiarEquipoActivo, 
     if (!nuevoEquipo.trim()) return
     setGuardando(true)
     setMensaje(null)
-    const { error } = await supabase.from('equipos').insert({ nombre: nuevoEquipo.trim() })
+    const { error } = await supabase.from('equipos').insert({ nombre: nuevoEquipo.trim(), color: colorNuevo })
     if (error) {
       setMensaje({ tipo: 'error', texto: 'No se pudo crear el equipo (¿ya existe ese nombre?).' })
     } else {
       setNuevoEquipo('')
+      setColorNuevo(coloresSugeridos[(equipos.length + 1) % coloresSugeridos.length])
       onEquiposActualizados()
     }
     setGuardando(false)
+  }
+
+  async function cambiarColorEquipo(id, color) {
+    await supabase.from('equipos').update({ color }).eq('id', id)
+    onEquiposActualizados()
   }
 
   return (
@@ -27,7 +36,7 @@ export default function Equipos({ equipos, equipoActivo, onCambiarEquipoActivo, 
       <section className="equipos-lista-card">
         <h2>¿Qué equipo quieres ver?</h2>
         <p className="equipos-sub">
-          Esta selección se aplica a todo el panel (resumen, gráfico y tabla de jugadores).
+          Esta selección se aplica a todo el panel (resumen, gráfico, jugadores e informes).
         </p>
 
         <div className="equipos-opciones">
@@ -40,14 +49,19 @@ export default function Equipos({ equipos, equipoActivo, onCambiarEquipoActivo, 
           </button>
 
           {equipos.map((eq) => (
-            <button
-              key={eq.id}
-              className={`equipo-opcion ${equipoActivo === eq.id ? 'equipo-opcion-activa' : ''}`}
-              onClick={() => onCambiarEquipoActivo(eq.id)}
-            >
-              <span>{eq.nombre}</span>
+            <div key={eq.id} className={`equipo-opcion-fila ${equipoActivo === eq.id ? 'equipo-opcion-activa' : ''}`}>
+              <button className="equipo-opcion-boton" onClick={() => onCambiarEquipoActivo(eq.id)}>
+                <span className="equipo-punto" style={{ background: eq.color || '#c8ff4d' }} />
+                <span>{eq.nombre}</span>
+              </button>
+              <input
+                type="color" value={eq.color || '#c8ff4d'}
+                onChange={(e) => cambiarColorEquipo(eq.id, e.target.value)}
+                className="equipo-color-input"
+                title="Cambiar color del equipo"
+              />
               {equipoActivo === eq.id && <span className="check-activo">✓</span>}
-            </button>
+            </div>
           ))}
 
           <button
@@ -68,6 +82,10 @@ export default function Equipos({ equipos, equipoActivo, onCambiarEquipoActivo, 
             onChange={(e) => setNuevoEquipo(e.target.value)}
             placeholder="Ej. Juvenil A, Filial, Primer equipo…"
           />
+          <label className="equipos-color-selector">
+            <span>Color identificativo</span>
+            <input type="color" value={colorNuevo} onChange={(e) => setColorNuevo(e.target.value)} />
+          </label>
           <button type="submit" className="btn-principal" disabled={guardando}>
             {guardando ? 'Creando…' : '+ Crear equipo'}
           </button>
@@ -75,7 +93,8 @@ export default function Equipos({ equipos, equipoActivo, onCambiarEquipoActivo, 
         {mensaje && <div className="aviso-error">{mensaje.texto}</div>}
         <p className="equipos-nota">
           Los jugadores eligen su equipo desde su propio formulario, entre los
-          equipos que crees aquí.
+          equipos que crees aquí. Puedes cambiar el color de un equipo en
+          cualquier momento con la muestra de color de la izquierda.
         </p>
       </section>
     </div>

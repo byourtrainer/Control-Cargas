@@ -185,6 +185,25 @@ Excel (0 = Ningún esfuerzo … 10 = Máximo).
   una columna "Molestia" en el Resumen, útil como aviso temprano antes de
   que se convierta en una lesión registrada.
 
+## Deslizadores con degradado, cuestionarios independientes y plantilla con colores
+
+- Los deslizadores de RPE y bienestar ahora tienen una **barra de fondo con
+  degradado de color** (verde → amarillo → naranja → rojo, o invertido en
+  sueño/ánimo) en vez de solo cambiar de color el punto — se ve la escala
+  completa de un vistazo, como un velocímetro.
+- **Bienestar** y **RPE** son ahora dos formularios totalmente
+  independientes, cada uno con su propio botón de guardar y su propia
+  confirmación ("✓ Guardado hoy"). El jugador puede rellenar el bienestar
+  nada más despertar y el RPE horas después, sin que uno dependa del otro ni
+  se pisen los datos.
+- Nueva pestaña **"Jugadores"**: tabla con todos los jugadores dados de alta
+  en la app (nombre, equipo, fecha de alta), filtrable por el equipo activo
+  igual que el resto de pestañas.
+- Los **equipos** ahora tienen un **color identificativo** (elegible al
+  crearlos o cambiable después con una muestra de color en la pestaña
+  Equipos), que se muestra como un punto de color junto al nombre del equipo
+  en Jugadores, Resumen e Informes.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

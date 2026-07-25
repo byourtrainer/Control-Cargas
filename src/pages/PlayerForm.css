@@ -63,6 +63,12 @@
   .player-layout { grid-template-columns: 1fr; }
 }
 
+.player-columna-principal {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
 .player-form-card, .historial-card {
   background: var(--bg-card);
   border: 1px solid var(--line);
@@ -73,8 +79,21 @@
 .player-form-header {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
   margin-bottom: 20px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.player-form-header h2 { font-size: 18px; }
+
+.ya-guardado-badge {
+  font-size: 12px;
+  color: var(--risk-low);
+  background: rgba(111,207,125,0.12);
+  border-radius: 6px;
+  padding: 4px 10px;
+  white-space: nowrap;
 }
 
 .fecha-hoy { color: var(--text-faint); font-size: 13px; }
@@ -95,8 +114,55 @@
 
 .slider {
   width: 100%;
-  accent-color: var(--accent);
-  height: 4px;
+  height: 10px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.slider-gradiente {
+  background: linear-gradient(to right, var(--risk-low), var(--risk-mid), var(--risk-high-mid), var(--risk-high));
+  border-radius: 5px;
+}
+
+.slider-gradiente-invertido {
+  background: linear-gradient(to right, var(--risk-high), var(--risk-high-mid), var(--risk-mid), var(--risk-low));
+  border-radius: 5px;
+}
+
+.slider::-webkit-slider-runnable-track {
+  height: 10px;
+  border-radius: 5px;
+  background: transparent;
+}
+
+.slider::-moz-range-track {
+  height: 10px;
+  border-radius: 5px;
+  background: transparent;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 5px;
+  height: 26px;
+  margin-top: -8px;
+  border-radius: 3px;
+  background: #ffffff;
+  border: none;
+  box-shadow: 0 0 5px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,0,0,0.15);
+  cursor: pointer;
+}
+
+.slider::-moz-range-thumb {
+  width: 5px;
+  height: 26px;
+  border-radius: 3px;
+  background: #ffffff;
+  border: none;
+  box-shadow: 0 0 5px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,0,0,0.15);
+  cursor: pointer;
 }
 
 .rpe-escala {
