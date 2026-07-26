@@ -505,6 +505,23 @@ Nueva pestaña **"Tests"** para el entrenador:
   tarjetas adaptativas y gráficos multi-variable, y la tabla "Estado por
   jugador" pasó a respetar también la fecha seleccionada.
 
+## Nueva pestaña "Referencias"
+
+Consulta rápida para el entrenador con la definición científica, la
+interpretación práctica (con las mismas tablas de colores que usa el resto
+de la app) y la cita bibliográfica completa de:
+
+1. Carga de entrenamiento (Foster et al., 2001)
+2. Carga Aguda y Carga Crónica
+3. ACWR — Clásico y EWMA, unificado en una sola sección (Gabbett 2016; Hulin
+   et al. 2016; Williams et al. 2017; Murray et al. 2017)
+4. Monotonía y Fatiga/Strain (Foster, 1998)
+5. Bienestar, estilo Índice de Hooper (Hooper & Mackinnon, 1995)
+
+Pensada para que puedas consultarla tú mismo o remitir a otros técnicos del
+club cuando les envíes un informe y necesiten entender qué significa cada
+dato de un vistazo.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

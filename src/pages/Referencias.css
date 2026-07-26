@@ -1,0 +1,82 @@
+.referencias-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 780px;
+}
+
+.referencias-intro {
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.referencia-card {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 24px;
+}
+
+.referencia-card h2 {
+  font-size: 17px;
+  margin-bottom: 14px;
+}
+
+.referencia-card p {
+  font-size: 14px;
+  color: var(--text-dim);
+  line-height: 1.6;
+  margin: 0 0 12px;
+}
+
+.referencia-card p strong { color: var(--text); }
+
+.referencia-lista {
+  margin: 0 0 12px;
+  padding-left: 20px;
+  font-size: 14px;
+  color: var(--text-dim);
+  line-height: 1.6;
+}
+
+.referencia-lista strong { color: var(--text); }
+
+.referencia-nota {
+  font-size: 12px;
+  color: var(--text-faint);
+  margin-bottom: 14px;
+}
+
+.referencia-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.referencia-tabla th {
+  text-align: left;
+  color: var(--text-faint);
+  font-weight: 500;
+  padding-bottom: 8px;
+  padding-right: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.referencia-tabla td {
+  padding: 10px 12px 10px 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--text-dim);
+  vertical-align: top;
+}
+
+.referencia-cita {
+  font-size: 12px;
+  color: var(--text-faint);
+  border-left: 2px solid var(--line-strong);
+  padding-left: 12px;
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+
+.referencia-cita em { font-style: italic; }
