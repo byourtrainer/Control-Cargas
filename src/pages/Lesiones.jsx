@@ -1,9 +1,15 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { calcularMetricas } from '../lib/cargaMetrics'
+import CuerpoLesiones from './CuerpoLesiones'
 import './Lesiones.css'
 
 const hoyISO = () => new Date().toISOString().slice(0, 10)
+const diasAtras = (n) => {
+  const d = new Date()
+  d.setDate(d.getDate() - n)
+  return d.toISOString().slice(0, 10)
+}
 
 const tipologias = ['Muscular', 'Osteo-articular', 'Ligamentosa', 'Tendinosa', 'Otro']
 const momentos = ['Entrenamiento', 'Partido']
@@ -34,6 +40,54 @@ export default function Lesiones({ equipoActivo = 'todos' }) {
   useEffect(() => { cargarTodo() }, [])
 
   useEffect(() => { calcularPrevisualizacion() }, [form.jugador_id, form.fecha_lesion])
+
+  // --- Mapa corporal de molestias ---
+  const [modoMapa, setModoMapa] = useState('individual')
+  const [jugadorMapaId, setJugadorMapaId] = useState('')
+  const [seleccionMapa, setSeleccionMapa] = useState(new Set())
+  const [fechaDesdeMapa, setFechaDesdeMapa] = useState(diasAtras(90))
+  const [fechaHastaMapa, setFechaHastaMapa] = useState(hoyISO())
+  const [registrosMapa, setRegistrosMapa] = useState([])
+  const [cargandoMapa, setCargandoMapa] = useState(false)
+
+  useEffect(() => {
+    setSeleccionMapa(new Set(jugadoresFiltrados.map((j) => j.id)))
+    if (!jugadorMapaId && jugadoresFiltrados.length > 0) setJugadorMapaId(jugadoresFiltrados[0].id)
+  }, [equipoActivo, jugadores])
+
+  useEffect(() => { cargarRegistrosMapa() }, [modoMapa, jugadorMapaId, seleccionMapa, fechaDesdeMapa, fechaHastaMapa])
+
+  async function cargarRegistrosMapa() {
+    const ids = modoMapa === 'individual'
+      ? (jugadorMapaId ? [jugadorMapaId] : [])
+      : jugadoresFiltrados.filter((j) => seleccionMapa.has(j.id)).map((j) => j.id)
+    if (ids.length === 0) { setRegistrosMapa([]); return }
+    setCargandoMapa(true)
+    const { data } = await supabase
+      .from('registros_diarios')
+      .select('jugador_id, fecha, tiene_molestia, zona_molestia')
+      .in('jugador_id', ids)
+      .eq('tiene_molestia', true)
+      .gte('fecha', fechaDesdeMapa)
+      .lte('fecha', fechaHastaMapa)
+    setRegistrosMapa(data || [])
+    setCargandoMapa(false)
+  }
+
+  function alternarSeleccionMapa(id) {
+    setSeleccionMapa((prev) => {
+      const siguiente = new Set(prev)
+      if (siguiente.has(id)) siguiente.delete(id)
+      else siguiente.add(id)
+      return siguiente
+    })
+  }
+
+  const frecuenciasMapa = registrosMapa.reduce((acc, r) => {
+    if (r.zona_molestia) acc[r.zona_molestia] = (acc[r.zona_molestia] || 0) + 1
+    return acc
+  }, {})
+  const zonasOrdenadas = Object.entries(frecuenciasMapa).sort((a, b) => b[1] - a[1])
 
   async function cargarTodo() {
     setCargando(true)
@@ -256,6 +310,84 @@ export default function Lesiones({ equipoActivo = 'todos' }) {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+      </section>
+
+      <section className="cuerpo-mapa-card">
+        <h2>Mapa corporal de molestias</h2>
+        <p className="cuerpo-mapa-sub">
+          Basado en las molestias que los jugadores reportan en su registro diario de bienestar
+          (no en las lesiones formales de arriba).
+        </p>
+
+        <div className="cuerpo-mapa-controles">
+          <div className="informe-modo">
+            <button
+              className={`periodo-btn ${modoMapa === 'individual' ? 'periodo-activo' : ''}`}
+              onClick={() => setModoMapa('individual')}
+            >
+              Jugador individual
+            </button>
+            <button
+              className={`periodo-btn ${modoMapa === 'grupo' ? 'periodo-activo' : ''}`}
+              onClick={() => setModoMapa('grupo')}
+            >
+              Equipo / varios jugadores
+            </button>
+          </div>
+
+          {modoMapa === 'individual' ? (
+            <select
+              value={jugadorMapaId}
+              onChange={(e) => setJugadorMapaId(e.target.value)}
+              className="selector-jugador"
+            >
+              {jugadoresFiltrados.map((j) => <option key={j.id} value={j.id}>{j.nombre}</option>)}
+            </select>
+          ) : (
+            <div className="perfil-chips">
+              {jugadoresFiltrados.map((j) => (
+                <button
+                  key={j.id}
+                  className={`perfil-chip ${seleccionMapa.has(j.id) ? 'perfil-chip-activo' : ''}`}
+                  onClick={() => alternarSeleccionMapa(j.id)}
+                >
+                  {j.nombre}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="fila-doble cuerpo-mapa-fechas">
+            <label className="campo-lesion">
+              <span>Desde</span>
+              <input type="date" value={fechaDesdeMapa} max={fechaHastaMapa} onChange={(e) => setFechaDesdeMapa(e.target.value)} />
+            </label>
+            <label className="campo-lesion">
+              <span>Hasta</span>
+              <input type="date" value={fechaHastaMapa} min={fechaDesdeMapa} max={hoyISO()} onChange={(e) => setFechaHastaMapa(e.target.value)} />
+            </label>
+          </div>
+        </div>
+
+        {cargandoMapa ? (
+          <p className="mono texto-dim">Cargando…</p>
+        ) : (
+          <div className="cuerpo-mapa-contenido">
+            <CuerpoLesiones frecuencias={frecuenciasMapa} />
+            <div className="cuerpo-mapa-lista">
+              <h4>Zonas más reportadas</h4>
+              {zonasOrdenadas.length === 0 ? (
+                <p className="texto-dim">Sin molestias reportadas en este periodo.</p>
+              ) : (
+                <ul className="cuerpo-mapa-ul">
+                  {zonasOrdenadas.map(([zona, veces]) => (
+                    <li key={zona}><span>{zona}</span><span className="mono">{veces}×</span></li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
         )}
       </section>

@@ -468,6 +468,25 @@ Nueva pestaña **"Tests"** para el entrenador:
   con el mismo periodo/fecha, sin importar si estás mirando datos actuales
   o de un mes pasado como junio.
 
+## Iniciales en los cuadrantes y mapa corporal de molestias
+
+- Los puntos de los dos cuadrantes (Tests) ahora muestran las **iniciales
+  del jugador** encima, para saber quién es quién de un vistazo.
+- Nueva sección **"Mapa corporal de molestias"** dentro de la pestaña
+  "Lesiones": dos siluetas (frontal y posterior) que colorean cada zona del
+  cuerpo en una escala de rojos según cuántas veces se ha reportado
+  molestia/dolor ahí — más oscuro = más veces reportada.
+  - Se puede ver de un **jugador individual** o de un **equipo/selección de
+    varios jugadores** (mismo patrón de chips que en Tests).
+  - Tiene su propio selector de **fechas (Desde/Hasta)** — cuenta solo las
+    molestias reportadas en ese rango, no todo el historial.
+  - Se basa en las molestias que el propio jugador marca en su registro
+    diario de bienestar (campo "Tengo alguna molestia..."), no en las
+    lesiones formales que registra el entrenador — son dos fuentes de datos
+    distintas, mostradas una debajo de la otra en la misma pestaña.
+  - Al lado del cuerpo hay una lista con las zonas más reportadas y cuántas
+    veces cada una.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

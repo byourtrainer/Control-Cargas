@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   ResponsiveContainer, ScatterChart, Scatter, XAxis, YAxis, ZAxis,
-  CartesianGrid, Tooltip, ReferenceLine, ReferenceArea, Cell, LineChart, Line, BarChart, Bar,
+  CartesianGrid, Tooltip, ReferenceLine, ReferenceArea, Cell, LabelList, LineChart, Line, BarChart, Bar,
 } from 'recharts'
 import { supabase } from '../lib/supabaseClient'
 import { valorRelativo, indiceFatiga, tiposTest, traducirTipoTest, ultimosTestsPorTipo, interpretarCMJ, interpretarSentadilla, interpretarPotencia, interpretarFatigaWingate } from '../lib/testsFisicos'
@@ -21,6 +21,16 @@ function calcularEdad(fechaNacimiento) {
 }
 
 const traducirSexo = (s) => ({ masculino: 'Masculino', femenino: 'Femenino', neutro: 'Neutro' }[s] || '—')
+
+function iniciales(nombre) {
+  return (nombre || '')
+    .split(' ')
+    .filter(Boolean)
+    .map((p) => p[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 3)
+}
 
 const formularioVacio = {
   jugador_id: '', tipo_test: 'sentadilla', fecha: hoyISO(), peso_corporal_kg: '',
@@ -49,7 +59,8 @@ function calcularDatosCuadrante1(jugadoresLista, testsLista) {
     const sentadillaRelativa = sentadilla ? valorRelativo(sentadilla.valor_kg, pesoSentadilla) : null
     if (cmj === undefined || cmj === null || sentadillaRelativa === null) return null
     return {
-      nombre: j.nombre, x: Number(sentadillaRelativa.toFixed(2)), y: Number(cmj),
+      nombre: j.nombre, iniciales: iniciales(j.nombre),
+      x: Number(sentadillaRelativa.toFixed(2)), y: Number(cmj),
       color: j.equipos?.color || '#c8ff4d',
     }
   }).filter(Boolean)
@@ -66,7 +77,8 @@ function calcularDatosCuadrante2(jugadoresLista, testsLista) {
     const fatiga = wingate.indice_fatiga ?? indiceFatiga(wingate.mp1, wingate.mp2)
     if (potencia === null || fatiga === null || fatiga === undefined) return null
     return {
-      nombre: j.nombre, x: Number(fatiga.toFixed(1)), y: Number(potencia.toFixed(2)),
+      nombre: j.nombre, iniciales: iniciales(j.nombre),
+      x: Number(fatiga.toFixed(1)), y: Number(potencia.toFixed(2)),
       color: j.equipos?.color || '#c8ff4d',
     }
   }).filter(Boolean)
@@ -108,6 +120,7 @@ function GraficoCuadrante1({ datos, maxX, maxY }) {
           <Tooltip content={<TooltipCuadrante etiquetaX="Sentadilla rel." etiquetaY="CMJ (cm)" />} cursor={{ strokeDasharray: '3 3' }} />
           <Scatter data={datos}>
             {datos.map((d, i) => <Cell key={i} fill={d.color} />)}
+            <LabelList dataKey="iniciales" position="top" offset={6} style={{ fill: 'var(--text)', fontSize: 10, fontWeight: 700 }} />
           </Scatter>
         </ScatterChart>
       </ResponsiveContainer>
@@ -147,6 +160,7 @@ function GraficoCuadrante2({ datos, maxX, maxY }) {
           <Tooltip content={<TooltipCuadrante etiquetaX="Índice fatiga (%)" etiquetaY="Potencia (W/kg)" />} cursor={{ strokeDasharray: '3 3' }} />
           <Scatter data={datos}>
             {datos.map((d, i) => <Cell key={i} fill={d.color} />)}
+            <LabelList dataKey="iniciales" position="top" offset={6} style={{ fill: 'var(--text)', fontSize: 10, fontWeight: 700 }} />
           </Scatter>
         </ScatterChart>
       </ResponsiveContainer>

@@ -1,0 +1,25 @@
+.cuerpo-lesiones-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+.cuerpo-columna { text-align: center; }
+
+.cuerpo-columna h4 {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-dim);
+  margin: 0 0 8px;
+}
+
+.cuerpo-svg {
+  width: 100%;
+  max-width: 180px;
+}
+
+.cuerpo-svg rect, .cuerpo-svg circle, .cuerpo-svg ellipse {
+  transition: fill 0.2s;
+}
