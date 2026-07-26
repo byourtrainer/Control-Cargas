@@ -6,7 +6,6 @@ import CoachDashboard from './pages/CoachDashboard'
 import SesionDia from './pages/SesionDia'
 import Lesiones from './pages/Lesiones'
 import Equipos from './pages/Equipos'
-import Informes from './pages/Informes'
 import Jugadores from './pages/Jugadores'
 import Tests from './pages/Tests'
 import './App.css'
@@ -18,7 +17,6 @@ const pestanasEntrenador = [
   { clave: 'equipos', etiqueta: 'Equipos' },
   { clave: 'sesion', etiqueta: 'Sesión del día' },
   { clave: 'lesiones', etiqueta: 'Lesiones' },
-  { clave: 'informes', etiqueta: 'Informes' },
 ]
 
 export default function App() {
@@ -154,7 +152,6 @@ export default function App() {
         {perfil.rol === 'entrenador' ? (
           pestana === 'sesion' ? <SesionDia equipoActivo={equipoActivo} />
           : pestana === 'lesiones' ? <Lesiones equipos={equipos} equipoActivo={equipoActivo} />
-          : pestana === 'informes' ? <Informes equipoActivo={equipoActivo} />
           : pestana === 'jugadores' ? <Jugadores equipoActivo={equipoActivo} />
           : pestana === 'tests' ? <Tests equipoActivo={equipoActivo} />
           : pestana === 'equipos' ? (

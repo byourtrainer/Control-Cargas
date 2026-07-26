@@ -487,6 +487,24 @@ Nueva pestaña **"Tests"** para el entrenador:
   - Al lado del cuerpo hay una lista con las zonas más reportadas y cuántas
     veces cada una.
 
+## Cuerpo interactivo y eliminación de "Informes"
+
+- Nuevo componente de cuerpo mejorado (silueta continua de fondo + zonas
+  superpuestas, dos modos):
+  - **El jugador** ahora toca directamente la zona en el propio dibujo del
+    cuerpo al marcar una molestia, en vez de elegir de una lista
+    desplegable — la zona seleccionada se resalta en verde lima.
+  - **El entrenador** sigue viendo el mapa de calor en rojo en la pestaña
+    Lesiones, con el mismo dibujo.
+  - No es una ilustración anatómica de detalle profesional (no hay
+    herramienta de trazado de imágenes en este entorno), pero mejora la
+    silueta y las formas respecto a la versión anterior con rectángulos y
+    círculos sueltos.
+- Se eliminó la pestaña **"Informes"** — quedó redundante desde que el
+  Resumen incorporó su propio informe exportable con rango de fechas,
+  tarjetas adaptativas y gráficos multi-variable, y la tabla "Estado por
+  jugador" pasó a respetar también la fecha seleccionada.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

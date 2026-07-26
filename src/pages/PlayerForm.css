@@ -52,6 +52,11 @@
   font-size: 12px;
 }
 
+.zona-elegida {
+  color: var(--accent);
+  font-weight: 600;
+}
+
 .player-layout {
   display: grid;
   grid-template-columns: 1.4fr 1fr;

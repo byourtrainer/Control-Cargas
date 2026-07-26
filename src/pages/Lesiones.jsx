@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { calcularMetricas } from '../lib/cargaMetrics'
-import CuerpoLesiones from './CuerpoLesiones'
+import SelectorCuerpo from './SelectorCuerpo'
 import './Lesiones.css'
 
 const hoyISO = () => new Date().toISOString().slice(0, 10)
@@ -375,7 +375,7 @@ export default function Lesiones({ equipoActivo = 'todos' }) {
           <p className="mono texto-dim">Cargando…</p>
         ) : (
           <div className="cuerpo-mapa-contenido">
-            <CuerpoLesiones frecuencias={frecuenciasMapa} />
+            <SelectorCuerpo modo="mapa" frecuencias={frecuenciasMapa} />
             <div className="cuerpo-mapa-lista">
               <h4>Zonas más reportadas</h4>
               {zonasOrdenadas.length === 0 ? (

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { colorParaValor } from '../lib/colorEscalas'
 import Calendario from './Calendario'
+import SelectorCuerpo from './SelectorCuerpo'
 import './PlayerForm.css'
 
 const hoyISO = () => new Date().toISOString().slice(0, 10)
@@ -38,13 +39,6 @@ const escalas = [
   { clave: 'dolor_muscular', etiqueta: 'Dolor muscular', bajo: 'Nada', alto: 'Extremo', invertido: false },
   { clave: 'estres', etiqueta: 'Estrés', bajo: 'Nada', alto: 'Extremo', invertido: false },
   { clave: 'animo', etiqueta: 'Estado de ánimo', bajo: 'Muy bajo', alto: 'Muy alto', invertido: true },
-]
-
-const zonasCuerpo = [
-  'Cuello/cervicales', 'Zona dorsal (espalda alta)', 'Hombro', 'Brazo', 'Codo',
-  'Antebrazo', 'Muñeca', 'Zona lumbar', 'Cadera', 'Glúteos',
-  'Psoas (flexores cadera)', 'Rodilla', 'Isquiotibiales', 'Cuádriceps', 'Aductores',
-  'Gemelos', 'Tibiales', 'Tobillo', 'Pie',
 ]
 
 export default function PlayerForm({ perfil }) {
@@ -402,13 +396,10 @@ export default function PlayerForm({ perfil }) {
                 </label>
 
                 {tieneMolestia && (
-                  <label className="campo-notas">
-                    <span>¿En qué parte del cuerpo?</span>
-                    <select value={zonaMolestia} onChange={(e) => setZonaMolestia(e.target.value)} required>
-                      <option value="" disabled>Selecciona una zona</option>
-                      {zonasCuerpo.map((z) => <option key={z} value={z}>{z}</option>)}
-                    </select>
-                  </label>
+                  <div className="campo-notas">
+                    <span>¿En qué parte del cuerpo? {zonaMolestia && <strong className="zona-elegida">— {zonaMolestia}</strong>}</span>
+                    <SelectorCuerpo modo="seleccion" zonaSeleccionada={zonaMolestia} onSeleccionarZona={setZonaMolestia} />
+                  </div>
                 )}
 
                 {mensajeBienestar && (
