@@ -56,6 +56,10 @@
   gap: 12px;
 }
 
+@media (max-width: 360px) {
+  .fila-doble { grid-template-columns: 1fr; }
+}
+
 .preview-test {
   background: rgba(200,255,77,0.06);
   border: 1px dashed rgba(200,255,77,0.3);

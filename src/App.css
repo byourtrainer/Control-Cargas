@@ -26,6 +26,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
   padding: 18px 24px;
   border-bottom: 1px solid var(--line);
   background: var(--bg-elevated);
@@ -38,6 +39,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
 }
 
 .marca-punto {
@@ -52,12 +54,16 @@
 .marca h1 {
   font-size: 16px;
   letter-spacing: 0.06em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .usuario-actual {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-shrink: 0;
 }
 
 .usuario-nombre {
@@ -279,4 +285,14 @@
 @media (max-width: 640px) {
   .contenido { padding: 20px 16px; }
   .usuario-nombre { display: none; }
+}
+
+@media (max-width: 400px) {
+  .topbar { padding: 14px 14px; }
+  .marca h1 { font-size: 13px; }
+  .rol-badge { display: none; }
+}
+
+.contexto-panel, .menu-desplegable-lista {
+  max-width: calc(100vw - 48px);
 }

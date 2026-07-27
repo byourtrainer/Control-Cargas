@@ -46,6 +46,10 @@
   gap: 12px;
 }
 
+@media (max-width: 360px) {
+  .fila-doble { grid-template-columns: 1fr; }
+}
+
 .campo-checkbox {
   display: flex;
   align-items: center;

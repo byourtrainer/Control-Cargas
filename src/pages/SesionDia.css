@@ -76,6 +76,10 @@
   gap: 12px;
 }
 
+@media (max-width: 360px) {
+  .fila-doble { grid-template-columns: 1fr; }
+}
+
 .sesion-historial-card h3 { font-size: 15px; margin-bottom: 16px; color: var(--text-dim); }
 
 .sesion-tabla {

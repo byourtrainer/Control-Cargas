@@ -549,6 +549,24 @@ Pendiente para una próxima sesión: vista de tarjeta apilada para tablas
 anchas en pantallas pequeñas, y revisión del modo de impresión para que no
 dependa de activar "Gráficos de fondo" en el navegador.
 
+## Corrección de encaje en pantallas de móvil pequeñas
+
+Se ha corregido un problema por el que la app no encajaba bien el ancho en
+algunos teléfonos (obligando a hacer zoom manualmente):
+
+- Bloqueo global de desbordamiento horizontal (`overflow-x: hidden` en
+  `html`/`body`), como red de seguridad.
+- La cabecera (título + usuario) ahora se ajusta en pantallas muy estrechas:
+  el título se recorta con "…" en vez de desbordar, y la etiqueta de rol se
+  oculta por debajo de 400px de ancho.
+- El formulario de registro (fecha de nacimiento, altura y peso) pasa a una
+  sola columna en pantallas muy pequeñas, en vez de intentar encajar dos
+  columnas donde los campos de fecha/número no cabían bien.
+- Los menús desplegables (equipo/jugador/fecha, pestañas) ya no pueden ser
+  más anchos que la pantalla.
+- Mismo ajuste de una sola columna aplicado a los formularios de dos
+  columnas en Tests, Lesiones y Planificación.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.
