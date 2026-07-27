@@ -589,6 +589,25 @@ objetivo de control diario:
   sobre la línea, para poder distinguir a simple vista un pico de RPE en
   partido (normal) de uno en un entreno suave (señal de alarma).
 
+## Respuesta atípica y huecos de datos
+
+Los dos últimos puntos de la revisión crítica, añadidos al bloque de
+Alertas de hoy y al mapa de calor:
+
+- **Respuesta atípica hoy**: compara el RPE de cada jugador con la media
+  del RPE del equipo ese mismo día. Si la diferencia es de 2 puntos o más
+  (en cualquier dirección), aparece en la alerta — es la forma más directa
+  de detectar quién está respondiendo "raro" a una carga que para el resto
+  fue normal, que es justo lo que se quería medir con "cómo responden los
+  jugadores a las cargas propuestas".
+- **Huecos de RPE (últimos 7 días)**: cuenta, para cada jugador, cuántas de
+  las sesiones reales de la semana (solo días con sesión guardada, no
+  descansos) se quedaron sin su RPE correspondiente. Evita que el ACWR se
+  calcule silenciosamente con datos incompletos sin que nadie se dé cuenta.
+- El **mapa de calor** ahora tiene una tercera variable seleccionable:
+  "Desviación RPE vs equipo", con la misma escala de 4 colores, para ver el
+  patrón de respuestas atípicas a lo largo de varios días, no solo hoy.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

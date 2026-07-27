@@ -156,6 +156,23 @@ function PuntoPartido({ cx, cy, payload }) {
   return <circle cx={cx} cy={cy} r={5} fill="var(--risk-mid)" stroke="var(--bg-card)" strokeWidth={1.5} />
 }
 
+/** Media de RPE del equipo (grupo filtrado) en una fecha concreta. Necesita al menos 2 jugadores con dato. */
+function mediaEquipoRPE(fechaISO, jugadoresFiltrados, registros) {
+  const valores = jugadoresFiltrados
+    .map((j) => registros.find((r) => r.jugador_id === j.id && r.fecha === fechaISO && r.rpe !== null && r.rpe !== undefined))
+    .filter(Boolean)
+    .map((r) => r.rpe)
+  if (valores.length < 2) return null
+  return valores.reduce((a, b) => a + b, 0) / valores.length
+}
+
+function colorDesviacion(abs) {
+  if (abs < 1) return 'var(--risk-low)'
+  if (abs < 2) return 'var(--risk-mid)'
+  if (abs < 3) return 'var(--risk-high-mid)'
+  return 'var(--risk-high)'
+}
+
 export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo = 'equipo', fechaDesde, fechaHasta }) {
   const [jugadores, setJugadores] = useState([])
   const [registros, setRegistros] = useState([])
@@ -322,23 +339,45 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
     const sinRpeAyer = []
     const enRiesgo = []
     const conMolestiaHoy = []
+    const respuestaAtipica = []
+    const huecosDatos = []
+
+    // Sesiones de los últimos 7 días (para saber qué días hubo entreno/partido de verdad)
+    const inicioSemana = diasAtras(6)
+    const sesionesSemana = sesiones.filter((s) => s.fecha >= inicioSemana && s.fecha <= hoy)
+
+    const mediaHoy = mediaEquipoRPE(hoy, jugadoresFiltrados, registros)
 
     jugadoresFiltrados.forEach((j) => {
       const suyos = registros.filter((r) => r.jugador_id === j.id)
+
       const registroAyer = suyos.find((r) => r.fecha === ayer)
       if (!registroAyer || registroAyer.rpe === null || registroAyer.rpe === undefined) {
         sinRpeAyer.push(j.nombre)
       }
+
       const metricas = calcularMetricas(suyos, metodoACWR, new Date(hoy + 'T00:00:00'))
       const riesgo = clasificarRiesgoACWR(metricas.acwrPost)
       if (riesgo === 'alta' || riesgo === 'muy_alta') enRiesgo.push(j.nombre)
 
       const registroHoy = suyos.find((r) => r.fecha === hoy)
       if (registroHoy?.tiene_molestia) conMolestiaHoy.push(`${j.nombre} (${registroHoy.zona_molestia})`)
+
+      if (mediaHoy !== null && registroHoy?.rpe !== null && registroHoy?.rpe !== undefined) {
+        const desviacion = registroHoy.rpe - mediaHoy
+        if (Math.abs(desviacion) >= 2) {
+          respuestaAtipica.push(`${j.nombre} (RPE ${registroHoy.rpe} vs ${mediaHoy.toFixed(1)} del equipo)`)
+        }
+      }
+
+      const huecos = sesionesSemana.filter((s) => !suyos.some((r) => r.fecha === s.fecha && r.rpe !== null && r.rpe !== undefined)).length
+      if (huecos > 0 && sesionesSemana.length > 0) {
+        huecosDatos.push(`${j.nombre} (${huecos}/${sesionesSemana.length})`)
+      }
     })
 
-    return { sinRpeAyer, enRiesgo, conMolestiaHoy }
-  }, [jugadoresFiltrados, registros, metodoACWR])
+    return { sinRpeAyer, enRiesgo, conMolestiaHoy, respuestaAtipica, huecosDatos }
+  }, [jugadoresFiltrados, registros, sesiones, metodoACWR])
 
   // --- Mapa de calor jugador × día ---
   const diasMapaCalor = useMemo(() => {
@@ -362,6 +401,18 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
           const nivel = clasificarRiesgoACWR(metricas.acwrPost)
           return { fechaISO, color: colorRiesgoAcwr[nivel], valor: metricas.acwrPost !== null ? metricas.acwrPost.toFixed(2) : 'sin datos' }
         }
+        if (variableMapaCalor === 'desviacion') {
+          const registro = suyos.find((r) => r.fecha === fechaISO)
+          const mediaEquipo = mediaEquipoRPE(fechaISO, jugadoresFiltrados, registros)
+          if (!registro || registro.rpe === null || registro.rpe === undefined || mediaEquipo === null) {
+            return { fechaISO, color: 'var(--line)', valor: 'sin datos' }
+          }
+          const desviacion = registro.rpe - mediaEquipo
+          return {
+            fechaISO, color: colorDesviacion(Math.abs(desviacion)),
+            valor: `RPE ${registro.rpe} · equipo ${mediaEquipo.toFixed(1)} (${desviacion > 0 ? '+' : ''}${desviacion.toFixed(1)})`,
+          }
+        }
         const registro = suyos.find((r) => r.fecha === fechaISO)
         const malestar = registro ? calcularMalestar(registro) : null
         const nivel = clasificarBienestar(malestar)
@@ -369,7 +420,7 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
       })
       return { nombre: j.nombre, celdas }
     })
-  }, [jugadoresGrafico, registros, diasMapaCalor, variableMapaCalor, metodoACWR])
+  }, [jugadoresGrafico, jugadoresFiltrados, registros, diasMapaCalor, variableMapaCalor, metodoACWR])
 
   function exportarInformeCSV() {
     const cabeceras = ['Periodo', ...variablesGrafico.map((v) => v.etiqueta)]
@@ -442,6 +493,26 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
               <span className="alerta-lista">{alertasHoy.conMolestiaHoy.join(', ')}</span>
             )}
           </div>
+          <div className={`alerta-bloque ${alertasHoy.respuestaAtipica.length ? 'alerta-activa' : ''}`}>
+            <span className="alerta-titulo" title="RPE de hoy con una diferencia de 2 puntos o más respecto a la media del equipo">
+              Respuesta atípica hoy
+            </span>
+            {alertasHoy.respuestaAtipica.length === 0 ? (
+              <span className="alerta-ok">✓ Respuestas homogéneas</span>
+            ) : (
+              <span className="alerta-lista">{alertasHoy.respuestaAtipica.join(', ')}</span>
+            )}
+          </div>
+          <div className={`alerta-bloque ${alertasHoy.huecosDatos.length ? 'alerta-activa' : ''}`}>
+            <span className="alerta-titulo" title="Sesiones de los últimos 7 días sin RPE registrado">
+              Huecos de RPE (últimos 7 días)
+            </span>
+            {alertasHoy.huecosDatos.length === 0 ? (
+              <span className="alerta-ok">✓ Sin huecos</span>
+            ) : (
+              <span className="alerta-lista">{alertasHoy.huecosDatos.join(', ')}</span>
+            )}
+          </div>
         </div>
       </section>
 
@@ -461,6 +532,7 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
           >
             <option value="acwr">ACWR</option>
             <option value="bienestar">Bienestar</option>
+            <option value="desviacion">Desviación RPE vs equipo</option>
           </select>
         </div>
         <div className="mapa-calor-scroll">
