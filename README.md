@@ -567,6 +567,28 @@ algunos teléfonos (obligando a hacer zoom manualmente):
 - Mismo ajuste de una sola columna aplicado a los formularios de dos
   columnas en Tests, Lesiones y Planificación.
 
+## Control diario real: alertas, mapa de calor y partidos marcados
+
+Los tres cambios prioritarios de la revisión crítica, centrados en el
+objetivo de control diario:
+
+- **Alertas de hoy**: nueva tarjeta al principio de Resumen (siempre sobre
+  "hoy/ayer", independiente del rango de fechas que tengas seleccionado en
+  el gráfico) con tres bloques: quién no registró RPE ayer, quién está en
+  ACWR alto/muy alto hoy, y quién ha reportado una molestia nueva hoy. Cada
+  bloque se resalta en rojo solo si hay algo que revisar; si no, muestra un
+  "✓ todo en orden".
+- **Mapa de calor jugador × día**: rejilla con los jugadores del grupo
+  activo en filas y los últimos días (hasta 21, dentro del rango elegido)
+  en columnas, coloreada por ACWR o Bienestar (selector arriba). Las
+  columnas de días de partido se resaltan en la cabecera. Pensado para leer
+  el estado de todo el equipo de un vistazo, sin tener que ir jugador a
+  jugador.
+- **Días de partido marcados en el gráfico principal**: en la vista Diaria,
+  los días con sesión de tipo MD (partido) aparecen con un punto naranja
+  sobre la línea, para poder distinguir a simple vista un pico de RPE en
+  partido (normal) de uno en un entreno suave (señal de alarma).
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

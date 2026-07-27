@@ -230,6 +230,114 @@
 
 .informe-toggle:hover { border-color: var(--accent); color: var(--accent); }
 
+/* --- Alertas de hoy --- */
+.alertas-card {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 20px 24px;
+}
+
+.alertas-card h3 { font-size: 14px; color: var(--text-dim); font-weight: 500; margin-bottom: 14px; }
+
+.alertas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.alerta-bloque {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.alerta-bloque.alerta-activa {
+  border-color: rgba(234,92,74,0.4);
+  background: rgba(234,92,74,0.06);
+}
+
+.alerta-titulo {
+  font-size: 12px;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.alerta-ok { font-size: 13px; color: var(--risk-low); }
+.alerta-lista { font-size: 13px; color: var(--risk-high); line-height: 1.5; }
+
+/* --- Mapa de calor --- */
+.mapa-calor-card {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 24px;
+}
+
+.mapa-calor-cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.mapa-calor-cabecera h3 { font-size: 15px; color: var(--text-dim); font-weight: 500; }
+
+.mapa-calor-scroll { overflow-x: auto; }
+
+.mapa-calor-tabla {
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.mapa-calor-tabla th, .mapa-calor-tabla td {
+  padding: 3px;
+  text-align: center;
+}
+
+.mapa-calor-th-jugador, .mapa-calor-td-jugador {
+  text-align: left;
+  padding-right: 12px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  position: sticky;
+  left: 0;
+  background: var(--bg-card);
+}
+
+.mapa-calor-tabla th {
+  color: var(--text-faint);
+  font-weight: 400;
+}
+
+.mapa-calor-th-partido {
+  background: rgba(242,193,78,0.15);
+  border-radius: 4px;
+}
+
+.mapa-calor-punto {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+}
+
+.punto-leyenda-partido {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--risk-mid);
+  margin: 0 2px;
+}
+
 .informe-resumen-card {
   background: var(--bg-card);
   border: 1px solid var(--line);

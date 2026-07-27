@@ -134,27 +134,58 @@ const bandasPorVariable = {
   ],
 }
 
+const colorRiesgoAcwr = {
+  sin_datos: 'var(--line)',
+  muy_baja: 'rgba(111,207,125,0.5)',
+  baja: 'var(--risk-low)',
+  optima: 'var(--accent)',
+  moderada_alta: 'var(--risk-mid)',
+  alta: 'var(--risk-high-mid)',
+  muy_alta: 'var(--risk-high)',
+}
+
+const colorNivelBienestar = {
+  sin_datos: 'var(--line)',
+  optimo: 'var(--risk-low)',
+  bueno: 'var(--risk-mid)',
+  malo: 'var(--risk-high)',
+}
+
+function PuntoPartido({ cx, cy, payload }) {
+  if (!payload?.esPartido) return null
+  return <circle cx={cx} cy={cy} r={5} fill="var(--risk-mid)" stroke="var(--bg-card)" strokeWidth={1.5} />
+}
+
 export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo = 'equipo', fechaDesde, fechaHasta }) {
   const [jugadores, setJugadores] = useState([])
   const [registros, setRegistros] = useState([])
+  const [sesiones, setSesiones] = useState([])
   const [variableGrafico, setVariableGrafico] = useState('carga')
   const [tipoVistaGrafico, setTipoVistaGrafico] = useState('diario')
   const [metodoACWR, setMetodoACWR] = useState('clasico')
   const [informeAbierto, setInformeAbierto] = useState(false)
+  const [variableMapaCalor, setVariableMapaCalor] = useState('acwr')
   const [cargando, setCargando] = useState(true)
 
   useEffect(() => { cargarDatos() }, [])
 
   async function cargarDatos() {
     setCargando(true)
-    const [{ data: perfiles }, { data: regs }] = await Promise.all([
+    const [{ data: perfiles }, { data: regs }, { data: sess }] = await Promise.all([
       supabase.from('perfiles').select('*, equipos(id, nombre)').eq('rol', 'jugador').order('nombre'),
       supabase.from('registros_diarios').select('*').gte('fecha', diasAtras(400)).order('fecha'),
+      supabase.from('sesiones').select('fecha, mdx').gte('fecha', diasAtras(400)),
     ])
     setJugadores(perfiles || [])
     setRegistros(regs || [])
+    setSesiones(sess || [])
     setCargando(false)
   }
+
+  const diasPartido = useMemo(
+    () => new Set(sesiones.filter((s) => s.mdx === 'MD').map((s) => s.fecha)),
+    [sesiones]
+  )
 
   const jugadoresFiltrados = useMemo(() => {
     if (equipoActivo === 'todos') return jugadores
@@ -176,13 +207,18 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
   function construirDatosVariable(variable) {
     return buckets.map((b) => {
       const valor = calcularValorBucket(b, jugadoresGrafico, registros, variable, metodoACWR)
-      return { fecha: b.etiqueta, valor: valor !== null ? Number(valor.toFixed(2)) : null }
+      const fechaISO = b.fin.toISOString().slice(0, 10)
+      return {
+        fecha: b.etiqueta,
+        valor: valor !== null ? Number(valor.toFixed(2)) : null,
+        esPartido: tipoVistaGrafico === 'diario' && diasPartido.has(fechaISO),
+      }
     })
   }
 
   const datosGrafico = useMemo(
     () => construirDatosVariable(variableGrafico),
-    [registros, jugadoresGrafico, variableGrafico, metodoACWR, buckets]
+    [registros, jugadoresGrafico, variableGrafico, metodoACWR, buckets, tipoVistaGrafico, diasPartido]
   )
 
   const resumenTarjetas = useMemo(() => {
@@ -279,6 +315,62 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
     }
   }, [jugadorActivo, jugadoresGrafico, registros, metodoACWR, buckets])
 
+  // --- Alertas de hoy: control diario, independiente del rango/vista elegidos ---
+  const alertasHoy = useMemo(() => {
+    const hoy = diasAtras(0)
+    const ayer = diasAtras(1)
+    const sinRpeAyer = []
+    const enRiesgo = []
+    const conMolestiaHoy = []
+
+    jugadoresFiltrados.forEach((j) => {
+      const suyos = registros.filter((r) => r.jugador_id === j.id)
+      const registroAyer = suyos.find((r) => r.fecha === ayer)
+      if (!registroAyer || registroAyer.rpe === null || registroAyer.rpe === undefined) {
+        sinRpeAyer.push(j.nombre)
+      }
+      const metricas = calcularMetricas(suyos, metodoACWR, new Date(hoy + 'T00:00:00'))
+      const riesgo = clasificarRiesgoACWR(metricas.acwrPost)
+      if (riesgo === 'alta' || riesgo === 'muy_alta') enRiesgo.push(j.nombre)
+
+      const registroHoy = suyos.find((r) => r.fecha === hoy)
+      if (registroHoy?.tiene_molestia) conMolestiaHoy.push(`${j.nombre} (${registroHoy.zona_molestia})`)
+    })
+
+    return { sinRpeAyer, enRiesgo, conMolestiaHoy }
+  }, [jugadoresFiltrados, registros, metodoACWR])
+
+  // --- Mapa de calor jugador × día ---
+  const diasMapaCalor = useMemo(() => {
+    const dias = []
+    const finRef = new Date(fechaHasta + 'T00:00:00')
+    const totalDias = Math.min(21, Math.round((finRef - new Date(fechaDesde + 'T00:00:00')) / 86400000) + 1)
+    for (let i = totalDias - 1; i >= 0; i--) {
+      const d = new Date(finRef); d.setDate(d.getDate() - i)
+      dias.push(d)
+    }
+    return dias
+  }, [fechaDesde, fechaHasta])
+
+  const mapaCalor = useMemo(() => {
+    return jugadoresGrafico.map((j) => {
+      const suyos = registros.filter((r) => r.jugador_id === j.id)
+      const celdas = diasMapaCalor.map((fecha) => {
+        const fechaISO = fecha.toISOString().slice(0, 10)
+        if (variableMapaCalor === 'acwr') {
+          const metricas = calcularMetricas(suyos, metodoACWR, fecha)
+          const nivel = clasificarRiesgoACWR(metricas.acwrPost)
+          return { fechaISO, color: colorRiesgoAcwr[nivel], valor: metricas.acwrPost !== null ? metricas.acwrPost.toFixed(2) : 'sin datos' }
+        }
+        const registro = suyos.find((r) => r.fecha === fechaISO)
+        const malestar = registro ? calcularMalestar(registro) : null
+        const nivel = clasificarBienestar(malestar)
+        return { fechaISO, color: colorNivelBienestar[nivel], valor: malestar !== null ? traducirBienestar(nivel) : 'sin datos' }
+      })
+      return { nombre: j.nombre, celdas }
+    })
+  }, [jugadoresGrafico, registros, diasMapaCalor, variableMapaCalor, metodoACWR])
+
   function exportarInformeCSV() {
     const cabeceras = ['Periodo', ...variablesGrafico.map((v) => v.etiqueta)]
     const columnas = variablesGrafico.map((v) => construirDatosVariable(v.valor))
@@ -323,10 +415,84 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
         Usa el selector <strong>◎</strong> de arriba para cambiar el equipo, jugador o rango de fechas.
       </p>
 
+      <section className="alertas-card no-imprimir">
+        <h3>Alertas de hoy</h3>
+        <div className="alertas-grid">
+          <div className={`alerta-bloque ${alertasHoy.sinRpeAyer.length ? 'alerta-activa' : ''}`}>
+            <span className="alerta-titulo">Sin RPE de ayer</span>
+            {alertasHoy.sinRpeAyer.length === 0 ? (
+              <span className="alerta-ok">✓ Todos registraron</span>
+            ) : (
+              <span className="alerta-lista">{alertasHoy.sinRpeAyer.join(', ')}</span>
+            )}
+          </div>
+          <div className={`alerta-bloque ${alertasHoy.enRiesgo.length ? 'alerta-activa' : ''}`}>
+            <span className="alerta-titulo">En riesgo (ACWR alto/muy alto)</span>
+            {alertasHoy.enRiesgo.length === 0 ? (
+              <span className="alerta-ok">✓ Nadie en riesgo</span>
+            ) : (
+              <span className="alerta-lista">{alertasHoy.enRiesgo.join(', ')}</span>
+            )}
+          </div>
+          <div className={`alerta-bloque ${alertasHoy.conMolestiaHoy.length ? 'alerta-activa' : ''}`}>
+            <span className="alerta-titulo">Molestia reportada hoy</span>
+            {alertasHoy.conMolestiaHoy.length === 0 ? (
+              <span className="alerta-ok">✓ Sin molestias nuevas</span>
+            ) : (
+              <span className="alerta-lista">{alertasHoy.conMolestiaHoy.join(', ')}</span>
+            )}
+          </div>
+        </div>
+      </section>
+
       <section className="tarjetas-resumen">
         {resumenTarjetas?.tarjetas.map((t, i) => (
           <TarjetaResumen key={i} etiqueta={t.etiqueta} valor={t.valor} tono={t.tono} />
         ))}
+      </section>
+
+      <section className="mapa-calor-card">
+        <div className="mapa-calor-cabecera">
+          <h3>Mapa de calor — jugador × día</h3>
+          <select
+            value={variableMapaCalor}
+            onChange={(e) => setVariableMapaCalor(e.target.value)}
+            className="selector-jugador"
+          >
+            <option value="acwr">ACWR</option>
+            <option value="bienestar">Bienestar</option>
+          </select>
+        </div>
+        <div className="mapa-calor-scroll">
+          <table className="mapa-calor-tabla">
+            <thead>
+              <tr>
+                <th className="mapa-calor-th-jugador">Jugador</th>
+                {diasMapaCalor.map((d) => (
+                  <th key={d.toISOString()} className={diasPartido.has(d.toISOString().slice(0, 10)) ? 'mapa-calor-th-partido' : ''}>
+                    {d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' })}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {mapaCalor.map((fila) => (
+                <tr key={fila.nombre}>
+                  <td className="mapa-calor-td-jugador">{fila.nombre}</td>
+                  {fila.celdas.map((c) => (
+                    <td key={c.fechaISO} className="mapa-calor-celda">
+                      <span className="mapa-calor-punto" style={{ background: c.color }} title={`${c.fechaISO}: ${c.valor}`} />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {mapaCalor.length === 0 && <p className="texto-dim">No hay jugadores en este grupo.</p>}
+        <p className="grafico-nota texto-dim">
+          Un cuadrado gris en la cabecera de la fecha indica día de partido (MD).
+        </p>
       </section>
 
       <section className="grafico-card no-imprimir">
@@ -371,13 +537,14 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
                 strokeOpacity={0} ifOverflow="extendDomain"
               />
             ))}
-            <Line type="monotone" dataKey="valor" stroke="var(--accent)" strokeWidth={2} dot={false} connectNulls />
+            <Line type="monotone" dataKey="valor" stroke="var(--accent)" strokeWidth={2} dot={<PuntoPartido />} connectNulls />
           </LineChart>
         </ResponsiveContainer>
         <p className="grafico-nota texto-dim">
           Del {new Date(fechaDesde + 'T00:00:00').toLocaleDateString('es-ES')} al{' '}
           {new Date(fechaHasta + 'T00:00:00').toLocaleDateString('es-ES')}
           {' '}({buckets.length} {tipoVistaGrafico === 'diario' ? 'días' : tipoVistaGrafico === 'semanal' ? 'semanas' : 'meses'}).
+          {tipoVistaGrafico === 'diario' && <> <span className="punto-leyenda-partido" /> = día de partido.</>}
         </p>
         {bandasPorVariable[variableGrafico] && (
           <p className="grafico-nota texto-dim">
