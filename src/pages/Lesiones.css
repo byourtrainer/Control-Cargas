@@ -122,8 +122,28 @@
 .cuerpo-mapa-sub {
   font-size: 13px;
   color: var(--text-dim);
-  margin: 4px 0 20px;
+  margin: 4px 0 12px;
 }
+
+.cuerpo-mapa-contexto {
+  font-size: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.btn-eliminar-fila {
+  background: none;
+  border: 1px solid var(--line-strong);
+  color: var(--text-faint);
+  border-radius: 6px;
+  width: 26px;
+  height: 26px;
+  font-size: 12px;
+}
+
+.btn-eliminar-fila:hover { border-color: var(--risk-high); color: var(--risk-high); }
+.btn-eliminar-fila:disabled { opacity: 0.5; }
 
 .cuerpo-mapa-controles {
   display: flex;

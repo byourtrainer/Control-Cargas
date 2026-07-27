@@ -176,6 +176,7 @@ function GraficoCuadrante2({ datos, maxX, maxY }) {
 export default function Tests({ equipoActivo = 'todos' }) {
   const [jugadores, setJugadores] = useState([])
   const [tests, setTests] = useState([])
+  const [borrandoTestId, setBorrandoTestId] = useState(null)
   const [cargando, setCargando] = useState(true)
   const [form, setForm] = useState(formularioVacio)
   const [guardando, setGuardando] = useState(false)
@@ -239,6 +240,14 @@ export default function Tests({ equipoActivo = 'todos' }) {
       cargarTodo()
     }
     setGuardando(false)
+  }
+
+  async function eliminarTest(id) {
+    if (!window.confirm('¿Eliminar este test? No se puede deshacer.')) return
+    setBorrandoTestId(id)
+    const { error } = await supabase.from('tests_fisicos').delete().eq('id', id)
+    if (!error) setTests((prev) => prev.filter((t) => t.id !== id))
+    setBorrandoTestId(null)
   }
 
   const testsFiltrados = useMemo(() => {
@@ -854,7 +863,7 @@ export default function Tests({ equipoActivo = 'todos' }) {
               <thead>
                 <tr>
                   <th>Fecha</th><th>Jugador</th><th>Test</th><th>Peso (kg)</th>
-                  <th>Valor</th><th>Detalle</th>
+                  <th>Valor</th><th>Detalle</th><th></th>
                 </tr>
               </thead>
               <tbody>
@@ -866,6 +875,14 @@ export default function Tests({ equipoActivo = 'todos' }) {
                     <td className="mono">{t.peso_corporal_kg ?? '—'}</td>
                     <td className="mono">{formatearValorPrincipal(t)}</td>
                     <td className="mono texto-dim">{formatearDetalle(t)}</td>
+                    <td>
+                      <button
+                        className="btn-eliminar-fila" onClick={() => eliminarTest(t.id)}
+                        disabled={borrandoTestId === t.id} title="Eliminar test"
+                      >
+                        {borrandoTestId === t.id ? '…' : '✕'}
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>

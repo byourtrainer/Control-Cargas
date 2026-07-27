@@ -55,7 +55,6 @@ function construirBuckets(tipoVista, fechaDesde, fechaHasta) {
       cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1)
     }
   }
-  // Límite de seguridad: como mucho 60 puntos, por si se elige un rango muy amplio en vista diaria.
   return buckets.slice(-60)
 }
 
@@ -88,8 +87,6 @@ function calcularValorBucket(bucket, jugadoresGrafico, registros, variableGrafic
     return valores.reduce((a, b) => a + b, 0) / valores.length
   }
 
-  // acwr / monotonia / fatiga: se evalúan al final del cubo (con todo su histórico
-  // previo) para cada jugador, y se promedian entre jugadores del grupo.
   const valores = jugadoresGrafico.map((j) => {
     const suyos = registros.filter((r) => r.jugador_id === j.id)
     const metricas = calcularMetricas(suyos, metodoACWR, bucket.fin)
@@ -115,10 +112,6 @@ const variablesGrafico = [
   { valor: 'malestar', etiqueta: 'Bienestar (malestar)' },
 ]
 
-// Bandas de referencia según los umbrales de riesgo estándar en ciencias del
-// deporte (Gabbett/Hulin para ACWR, Foster para Monotonía). "Carga" y
-// "Fatiga (Strain)" no tienen un umbral absoluto universal en la literatura
-// — dependen del contexto de cada deportista — así que no llevan bandas.
 const bandasPorVariable = {
   acwr: [
     { y1: 0, y2: 0.5, color: 'var(--risk-mid)' },
@@ -141,23 +134,19 @@ const bandasPorVariable = {
   ],
 }
 
-export default function CoachDashboard({ equipoActivo = 'todos' }) {
+export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo = 'equipo', fechaDesde, fechaHasta }) {
   const [jugadores, setJugadores] = useState([])
   const [registros, setRegistros] = useState([])
-  const [jugadorSeleccionado, setJugadorSeleccionado] = useState('equipo')
   const [variableGrafico, setVariableGrafico] = useState('carga')
   const [tipoVistaGrafico, setTipoVistaGrafico] = useState('diario')
-  const [fechaDesdeGrafico, setFechaDesdeGrafico] = useState(diasAtras(20))
-  const [fechaHastaGrafico, setFechaHastaGrafico] = useState(diasAtras(0))
   const [metodoACWR, setMetodoACWR] = useState('clasico')
+  const [informeAbierto, setInformeAbierto] = useState(false)
   const [cargando, setCargando] = useState(true)
 
   useEffect(() => { cargarDatos() }, [])
 
   async function cargarDatos() {
     setCargando(true)
-    // Se piden ~13 meses de histórico: cubre la vista mensual (6 meses hacia
-    // atrás desde la fecha de referencia elegida) más margen para ACWR/EWMA.
     const [{ data: perfiles }, { data: regs }] = await Promise.all([
       supabase.from('perfiles').select('*, equipos(id, nombre)').eq('rol', 'jugador').order('nombre'),
       supabase.from('registros_diarios').select('*').gte('fecha', diasAtras(400)).order('fecha'),
@@ -173,39 +162,15 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
     return jugadores.filter((j) => j.equipo_id === equipoActivo)
   }, [jugadores, equipoActivo])
 
-  const resumenPorJugador = useMemo(() => {
-    const fechaRef = new Date(fechaHastaGrafico + 'T00:00:00')
-    return jugadoresFiltrados.map((j) => {
-      const suyos = registros.filter((r) => r.jugador_id === j.id)
-      const metricas = calcularMetricas(suyos, metodoACWR, fechaRef)
-      const ultimoRegistro = [...suyos]
-        .filter((r) => r.fecha <= fechaHastaGrafico)
-        .sort((a, b) => b.fecha.localeCompare(a.fecha))[0]
-      const malestar = ultimoRegistro ? calcularMalestar(ultimoRegistro) : null
-      return {
-        ...j,
-        ...metricas,
-        riesgo: clasificarRiesgoACWR(metricas.acwrPost),
-        nivelMonotonia: clasificarMonotonia(metricas.monotonia),
-        malestar,
-        nivelBienestar: clasificarBienestar(malestar),
-        molestiaFecha: ultimoRegistro?.fecha === fechaHastaGrafico && ultimoRegistro?.tiene_molestia
-          ? ultimoRegistro.zona_molestia
-          : null,
-        registroFecha: suyos.some((r) => r.fecha === fechaHastaGrafico),
-      }
-    })
-  }, [jugadoresFiltrados, registros, metodoACWR, fechaHastaGrafico])
-
   const jugadoresGrafico = useMemo(() => (
-    jugadorSeleccionado === 'equipo'
+    jugadorActivo === 'equipo'
       ? jugadoresFiltrados
-      : jugadoresFiltrados.filter((j) => j.id === jugadorSeleccionado)
-  ), [jugadorSeleccionado, jugadoresFiltrados])
+      : jugadoresFiltrados.filter((j) => j.id === jugadorActivo)
+  ), [jugadorActivo, jugadoresFiltrados])
 
   const buckets = useMemo(
-    () => construirBuckets(tipoVistaGrafico, fechaDesdeGrafico, fechaHastaGrafico),
-    [tipoVistaGrafico, fechaDesdeGrafico, fechaHastaGrafico]
+    () => construirBuckets(tipoVistaGrafico, fechaDesde, fechaHasta),
+    [tipoVistaGrafico, fechaDesde, fechaHasta]
   )
 
   function construirDatosVariable(variable) {
@@ -220,13 +185,13 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
     [registros, jugadoresGrafico, variableGrafico, metodoACWR, buckets]
   )
 
-  // --- Tarjetas de resumen: se adaptan a la vista/fecha/jugador seleccionados ---
   const resumenTarjetas = useMemo(() => {
+    if (buckets.length === 0) return null
     const periodoInicio = buckets[0].inicio.toISOString().slice(0, 10)
     const periodoFinDate = buckets[buckets.length - 1].fin
     const periodoFin = periodoFinDate.toISOString().slice(0, 10)
 
-    if (jugadorSeleccionado !== 'equipo') {
+    if (jugadorActivo !== 'equipo') {
       const jugador = jugadoresGrafico[0]
       if (!jugador) return null
       const suyos = registros.filter((r) => r.jugador_id === jugador.id)
@@ -306,22 +271,13 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
           etiqueta: 'Bienestar medio del grupo', valor: traducirBienestar(nivelBienestar),
           tono: nivelBienestar === 'malo' ? 'alto' : null,
         },
-        {
-          etiqueta: 'ACWR medio del grupo',
-          valor: acwrMedio !== null ? acwrMedio.toFixed(2) : '—',
-        },
-        {
-          etiqueta: 'Monotonía media del grupo',
-          valor: monotoniaMedia !== null ? monotoniaMedia.toFixed(2) : '—',
-        },
-        {
-          etiqueta: 'Fatiga (Strain) media del grupo',
-          valor: fatigaMedia !== null ? Math.round(fatigaMedia) : '—',
-        },
+        { etiqueta: 'ACWR medio del grupo', valor: acwrMedio !== null ? acwrMedio.toFixed(2) : '—' },
+        { etiqueta: 'Monotonía media del grupo', valor: monotoniaMedia !== null ? monotoniaMedia.toFixed(2) : '—' },
+        { etiqueta: 'Fatiga (Strain) media del grupo', valor: fatigaMedia !== null ? Math.round(fatigaMedia) : '—' },
         { etiqueta: 'En riesgo (ACWR alto/muy alto)', valor: enRiesgo, tono: enRiesgo > 0 ? 'alto' : null },
       ],
     }
-  }, [jugadorSeleccionado, jugadoresGrafico, registros, metodoACWR, buckets])
+  }, [jugadorActivo, jugadoresGrafico, registros, metodoACWR, buckets])
 
   function exportarInformeCSV() {
     const cabeceras = ['Periodo', ...variablesGrafico.map((v) => v.etiqueta)]
@@ -336,7 +292,7 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `resumen_${tipoVistaGrafico}_${fechaDesdeGrafico}_a_${fechaHastaGrafico}.csv`
+    a.download = `resumen_${tipoVistaGrafico}_${fechaDesde}_a_${fechaHasta}.csv`
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -363,6 +319,10 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
         </div>
       </div>
 
+      <p className="coach-contexto-nota texto-dim no-imprimir">
+        Usa el selector <strong>◎</strong> de arriba para cambiar el equipo, jugador o rango de fechas.
+      </p>
+
       <section className="tarjetas-resumen">
         {resumenTarjetas?.tarjetas.map((t, i) => (
           <TarjetaResumen key={i} etiqueta={t.etiqueta} valor={t.valor} tono={t.tono} />
@@ -376,27 +336,6 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
             {' '}({tiposVistaGrafico.find((t) => t.valor === tipoVistaGrafico).etiqueta.toLowerCase()})
           </h3>
           <div className="grafico-selectores">
-            <label className="rango-fecha-campo">
-              <span>Desde</span>
-              <input
-                type="date"
-                value={fechaDesdeGrafico}
-                max={fechaHastaGrafico}
-                onChange={(e) => setFechaDesdeGrafico(e.target.value)}
-                className="selector-jugador"
-              />
-            </label>
-            <label className="rango-fecha-campo">
-              <span>Hasta</span>
-              <input
-                type="date"
-                value={fechaHastaGrafico}
-                min={fechaDesdeGrafico}
-                max={diasAtras(0)}
-                onChange={(e) => setFechaHastaGrafico(e.target.value)}
-                className="selector-jugador"
-              />
-            </label>
             <select
               value={tipoVistaGrafico}
               onChange={(e) => setTipoVistaGrafico(e.target.value)}
@@ -413,16 +352,6 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
             >
               {variablesGrafico.map((v) => (
                 <option key={v.valor} value={v.valor}>{v.etiqueta}</option>
-              ))}
-            </select>
-            <select
-              value={jugadorSeleccionado}
-              onChange={(e) => setJugadorSeleccionado(e.target.value)}
-              className="selector-jugador"
-            >
-              <option value="equipo">{equipoActivo === 'todos' ? 'Todo el equipo' : 'Todo el grupo seleccionado'}</option>
-              {jugadoresFiltrados.map((j) => (
-                <option key={j.id} value={j.id}>{j.nombre}</option>
               ))}
             </select>
           </div>
@@ -446,8 +375,8 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
           </LineChart>
         </ResponsiveContainer>
         <p className="grafico-nota texto-dim">
-          Del {new Date(fechaDesdeGrafico + 'T00:00:00').toLocaleDateString('es-ES')} al{' '}
-          {new Date(fechaHastaGrafico + 'T00:00:00').toLocaleDateString('es-ES')}
+          Del {new Date(fechaDesde + 'T00:00:00').toLocaleDateString('es-ES')} al{' '}
+          {new Date(fechaHasta + 'T00:00:00').toLocaleDateString('es-ES')}
           {' '}({buckets.length} {tipoVistaGrafico === 'diario' ? 'días' : tipoVistaGrafico === 'semanal' ? 'semanas' : 'meses'}).
         </p>
         {bandasPorVariable[variableGrafico] && (
@@ -458,133 +387,44 @@ export default function CoachDashboard({ equipoActivo = 'todos' }) {
         )}
       </section>
 
-      <section className="tabla-card tabla-card-ancha no-imprimir">
-        <h3>
-          Estado por jugador
-          <span className="texto-dim mono tabla-fecha-nota">
-            {' '}— a fecha {new Date(fechaHastaGrafico + 'T00:00:00').toLocaleDateString('es-ES')}
-          </span>
-        </h3>
-        <div className="tabla-scroll">
-          <table className="jugadores-tabla">
-            <thead>
-              <tr>
-                <th>Jugador</th>
-                <th>Bienestar</th>
-                <th>Molestia</th>
-                <th>Equipo</th>
-                <th title={`¿Registró RPE el ${fechaHastaGrafico}?`}>Registró</th>
-                <th title="Suma de carga de los últimos 7 días hasta la fecha elegida">Carga Aguda</th>
-                <th title="Media diaria de carga de los últimos 28 días hasta la fecha elegida">Carga Crónica</th>
-                <th title="ACWR sin contar el registro de la fecha elegida: cómo llega el jugador">ACWR Pre</th>
-                <th title="ACWR incluyendo el registro de la fecha elegida">ACWR Post</th>
-                <th>Riesgo</th>
-                <th>Cambio diario</th>
-                <th>Cambio semanal</th>
-                <th>Monotonía</th>
-                <th>Fatiga (Strain)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {resumenPorJugador.map((j) => (
-                <tr key={j.id}>
-                  <td>{j.nombre}</td>
-                  <td>
-                    {j.malestar !== null ? (
-                      <span className={`bienestar-badge bienestar-${j.nivelBienestar}`}>
-                        {traducirBienestar(j.nivelBienestar)}
-                      </span>
-                    ) : '—'}
-                  </td>
-                  <td>
-                    {j.molestiaFecha ? (
-                      <span className="molestia-badge">{j.molestiaFecha}</span>
-                    ) : '—'}
-                  </td>
-                  <td className="texto-dim">
-                    {j.equipos ? (
-                      <span className="equipo-etiqueta">
-                        <span className="equipo-punto-mini" style={{ background: j.equipos.color || '#c8ff4d' }} />
-                        {j.equipos.nombre}
-                      </span>
-                    ) : '—'}
-                  </td>
-                  <td>{j.registroFecha ? <span className="punto-ok" /> : <span className="punto-pendiente" />}</td>
-                  <td className="mono">{j.cargaSemanal}</td>
-                  <td className="mono">{j.cargaCronica ? Math.round(j.cargaCronica) : '—'}</td>
-                  <td className="mono">{j.acwrPre !== null ? j.acwrPre.toFixed(2) : '—'}</td>
-                  <td className="mono">{j.acwrPost !== null ? j.acwrPost.toFixed(2) : '—'}</td>
-                  <td><span className={`riesgo-badge riesgo-${j.riesgo}`}>{traducirRiesgo(j.riesgo)}</span></td>
-                  <td className="mono">{formatearPorcentaje(j.cambioDiario)}</td>
-                  <td className="mono">{formatearPorcentaje(j.cambioSemanal)}</td>
-                  <td className="mono">
-                    {j.monotonia !== null ? (
-                      <span className={`monotonia-badge monotonia-${j.nivelMonotonia}`}>
-                        {j.monotonia.toFixed(2)} · {traducirMonotonia(j.nivelMonotonia)}
-                      </span>
-                    ) : '—'}
-                  </td>
-                  <td className="mono">{j.fatiga ? Math.round(j.fatiga) : '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {jugadoresFiltrados.length === 0 && (
-          <p className="texto-dim">No hay jugadores en este grupo todavía.</p>
-        )}
-      </section>
+      <button className="informe-toggle no-imprimir" onClick={() => setInformeAbierto(!informeAbierto)}>
+        {informeAbierto ? '▾' : '▸'} {informeAbierto ? 'Ocultar' : 'Ver'} informe completo (las 5 variables)
+      </button>
 
-      <p className="leyenda-riesgo texto-dim no-imprimir">
-        ACWR — <span className="riesgo-badge riesgo-muy_baja">Muy baja</span> &lt;0.5 ·{' '}
-        <span className="riesgo-badge riesgo-baja">Baja</span> 0.5–0.8 ·{' '}
-        <span className="riesgo-badge riesgo-optima">Óptima</span> 0.8–1.1 ·{' '}
-        <span className="riesgo-badge riesgo-moderada_alta">Mod. alta</span> 1.1–1.5 ·{' '}
-        <span className="riesgo-badge riesgo-alta">Alta</span> 1.5–2.0 ·{' '}
-        <span className="riesgo-badge riesgo-muy_alta">Muy alta</span> &gt;2.0
-        <br />
-        Monotonía — <span className="monotonia-badge monotonia-muy_variable">Muy variable</span> &lt;1 ·{' '}
-        <span className="monotonia-badge monotonia-correcta">Correcta</span> 1–2 ·{' '}
-        <span className="monotonia-badge monotonia-elevada">Elevada</span> 2–2.5 ·{' '}
-        <span className="monotonia-badge monotonia-riesgo_elevado">Riesgo elevado</span> &gt;2.5
-        <br />
-        Bienestar (estilo Índice de Hooper) — <span className="bienestar-badge bienestar-optimo">Óptimo</span> ·{' '}
-        <span className="bienestar-badge bienestar-bueno">Bueno</span> ·{' '}
-        <span className="bienestar-badge bienestar-malo">Malo</span>
-      </p>
+      {informeAbierto && (
+        <section className="informe-resumen-card">
+          <h2 className="informe-resumen-titulo">
+            {resumenTarjetas?.modo === 'individual'
+              ? `Informe individual — ${jugadoresGrafico[0]?.nombre || ''}`
+              : `Informe de equipo — ${equipoActivo === 'todos' ? 'Todos los equipos' : equipoActivo === 'sin_asignar' ? 'Sin asignar' : jugadoresFiltrados[0]?.equipos?.nombre || 'Grupo seleccionado'}`}
+          </h2>
+          <p className="texto-dim">
+            Vista {tiposVistaGrafico.find((t) => t.valor === tipoVistaGrafico).etiqueta.toLowerCase()},
+            {' '}del {new Date(fechaDesde + 'T00:00:00').toLocaleDateString('es-ES')} al{' '}
+            {new Date(fechaHasta + 'T00:00:00').toLocaleDateString('es-ES')}
+          </p>
 
-      <section className="informe-resumen-card">
-        <h2 className="informe-resumen-titulo">
-          {resumenTarjetas?.modo === 'individual'
-            ? `Informe individual — ${jugadoresGrafico[0]?.nombre || ''}`
-            : `Informe de equipo — ${equipoActivo === 'todos' ? 'Todos los equipos' : equipoActivo === 'sin_asignar' ? 'Sin asignar' : jugadoresFiltrados[0]?.equipos?.nombre || 'Grupo seleccionado'}`}
-        </h2>
-        <p className="texto-dim">
-          Vista {tiposVistaGrafico.find((t) => t.valor === tipoVistaGrafico).etiqueta.toLowerCase()},
-          {' '}del {new Date(fechaDesdeGrafico + 'T00:00:00').toLocaleDateString('es-ES')} al{' '}
-          {new Date(fechaHastaGrafico + 'T00:00:00').toLocaleDateString('es-ES')}
-        </p>
-
-        <div className="informe-graficos-grid">
-          {variablesGrafico.map((v) => (
-            <div className="mini-grafico-card" key={v.valor}>
-              <h4>{v.etiqueta}</h4>
-              <ResponsiveContainer width="100%" height={170}>
-                <LineChart data={construirDatosVariable(v.valor)} margin={{ top: 5, right: 10, bottom: 0, left: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
-                  <XAxis dataKey="fecha" stroke="var(--text-faint)" fontSize={11} />
-                  <YAxis stroke="var(--text-faint)" fontSize={11} width={32} />
-                  <Tooltip contentStyle={{ background: 'var(--bg-elevated)', border: '1px solid var(--line-strong)', borderRadius: 8, fontSize: 12 }} />
-                  {(bandasPorVariable[v.valor] || []).map((b, i) => (
-                    <ReferenceArea key={i} y1={b.y1} y2={b.y2} fill={b.color} fillOpacity={0.1} strokeOpacity={0} ifOverflow="extendDomain" />
-                  ))}
-                  <Line type="monotone" dataKey="valor" stroke="var(--accent)" strokeWidth={2} dot={false} connectNulls />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          ))}
-        </div>
-      </section>
+          <div className="informe-graficos-grid">
+            {variablesGrafico.map((v) => (
+              <div className="mini-grafico-card" key={v.valor}>
+                <h4>{v.etiqueta}</h4>
+                <ResponsiveContainer width="100%" height={170}>
+                  <LineChart data={construirDatosVariable(v.valor)} margin={{ top: 5, right: 10, bottom: 0, left: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
+                    <XAxis dataKey="fecha" stroke="var(--text-faint)" fontSize={11} />
+                    <YAxis stroke="var(--text-faint)" fontSize={11} width={32} />
+                    <Tooltip contentStyle={{ background: 'var(--bg-elevated)', border: '1px solid var(--line-strong)', borderRadius: 8, fontSize: 12 }} />
+                    {(bandasPorVariable[v.valor] || []).map((b, i) => (
+                      <ReferenceArea key={i} y1={b.y1} y2={b.y2} fill={b.color} fillOpacity={0.1} strokeOpacity={0} ifOverflow="extendDomain" />
+                    ))}
+                    <Line type="monotone" dataKey="valor" stroke="var(--accent)" strokeWidth={2} dot={false} connectNulls />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   )
 }
@@ -596,12 +436,6 @@ function TarjetaResumen({ etiqueta, valor, tono }) {
       <span className="tarjeta-etiqueta">{etiqueta}</span>
     </div>
   )
-}
-
-function formatearPorcentaje(valor) {
-  if (valor === null || valor === undefined) return '—'
-  const signo = valor > 0 ? '+' : ''
-  return `${signo}${Math.round(valor * 100)}%`
 }
 
 function traducirRiesgo(r) {

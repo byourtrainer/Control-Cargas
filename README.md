@@ -522,6 +522,33 @@ Pensada para que puedas consultarla tú mismo o remitir a otros técnicos del
 club cuando les envíes un informe y necesiten entender qué significa cada
 dato de un vistazo.
 
+## Repaso general: contexto unificado, orden, densidad y borrado
+
+A raíz de una revisión crítica de la app, se aplicaron varios cambios de
+fondo (todos menos el modo de impresión, que queda pendiente):
+
+- **Contexto único**: nuevo selector "◎" en la cabecera (equipo + jugador +
+  rango de fechas) que se aplica automáticamente en **Resumen** y en el
+  **mapa corporal de Lesiones** — ya no hay que configurar el mismo filtro
+  por separado en cada pestaña. Al cambiar de equipo, el jugador individual
+  se resetea a "todo el grupo" para evitar inconsistencias.
+- **Orden de pestañas** más lógico: Equipos → Resumen → Jugadores →
+  Planificación → Tests → Lesiones → Referencias.
+- **"Sesión del día" pasó a llamarse "Planificación"**, para no confundirla
+  con el registro diario del jugador ni con los tests físicos.
+- **Se eliminó la tabla "Estado por jugador"** de Resumen (poco clara según
+  el propio análisis) — las tarjetas de arriba y el informe multi-variable
+  cubren esa información de forma más legible.
+- **El informe de 5 variables en Resumen ahora está colapsado por
+  defecto** ("Ver informe completo"), para reducir el scroll inicial.
+- **Botones de eliminar** en el historial de Tests, en el historial de
+  Lesiones, y un botón "Eliminar sesión" en Planificación cuando ya existe
+  una guardada — con confirmación antes de borrar en los tres casos.
+
+Pendiente para una próxima sesión: vista de tarjeta apilada para tablas
+anchas en pantallas pequeñas, y revisión del modo de impresión para que no
+dependa de activar "Gráficos de fondo" en el navegador.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

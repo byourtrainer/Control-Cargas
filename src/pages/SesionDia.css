@@ -29,6 +29,19 @@
 
 .capitalizada::first-letter { text-transform: uppercase; }
 
+.btn-eliminar-sesion {
+  background: none;
+  border: 1px solid var(--line-strong);
+  color: var(--risk-high);
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 13px;
+  margin-left: 10px;
+}
+
+.btn-eliminar-sesion:hover { border-color: var(--risk-high); background: rgba(234,92,74,0.1); }
+.btn-eliminar-sesion:disabled { opacity: 0.5; }
+
 .sesion-sub {
   color: var(--text-dim);
   font-size: 13px;

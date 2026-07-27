@@ -69,6 +69,20 @@ export default function SesionDia({ equipoActivo = 'todos' }) {
     setGuardando(false)
   }
 
+  async function eliminarSesion() {
+    if (!window.confirm('¿Eliminar la sesión de este día? Los jugadores que ya hayan registrado RPE mantendrán su valor de duración actual, pero no se actualizará más.')) return
+    setGuardando(true)
+    const { error } = await supabase.from('sesiones').delete().eq('fecha', fecha)
+    if (!error) {
+      setMensaje({ tipo: 'ok', texto: 'Sesión eliminada.' })
+      cargarSesionDelDia()
+      setRecargarCalendario((n) => n + 1)
+    } else {
+      setMensaje({ tipo: 'error', texto: 'No se pudo eliminar la sesión.' })
+    }
+    setGuardando(false)
+  }
+
   return (
     <div className="sesion-layout">
       <div className="sesion-columna-calendario">
@@ -133,6 +147,11 @@ export default function SesionDia({ equipoActivo = 'todos' }) {
             <button type="submit" className="btn-principal" disabled={guardando}>
               {guardando ? 'Guardando…' : sesionExistente ? 'Actualizar sesión' : 'Guardar sesión'}
             </button>
+            {sesionExistente && (
+              <button type="button" className="btn-eliminar-sesion" onClick={eliminarSesion} disabled={guardando}>
+                Eliminar sesión
+              </button>
+            )}
           </form>
         )}
       </section>

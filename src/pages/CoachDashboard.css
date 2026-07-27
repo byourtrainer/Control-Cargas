@@ -210,6 +210,26 @@
 
 .btn-exportar:hover { border-color: var(--accent); color: var(--accent); }
 
+.coach-contexto-nota {
+  font-size: 12px;
+  margin-top: -8px;
+}
+
+.coach-contexto-nota strong { color: var(--accent); }
+
+.informe-toggle {
+  background: none;
+  border: 1px dashed var(--line-strong);
+  color: var(--text-dim);
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 13px;
+  text-align: left;
+  width: fit-content;
+}
+
+.informe-toggle:hover { border-color: var(--accent); color: var(--accent); }
+
 .informe-resumen-card {
   background: var(--bg-card);
   border: 1px solid var(--line);
