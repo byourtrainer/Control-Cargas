@@ -658,6 +658,26 @@ Con esto, el PDF final queda: portada → tarjetas de resumen (individuales o
 medias del grupo, según selección) → mapa de calor (solo en vista de grupo)
 → los 5 gráficos con todas las variables.
 
+## Título del informe, ajuste a página del PDF, y alerta de sesión inusual
+
+- El título del PDF ahora es exactamente **"Informe de equipo"** (con el
+  nombre del equipo como subtítulo) o **"Informe de [nombre del jugador]"**,
+  según lo que tengas seleccionado.
+- Corregido el motivo real por el que el mapa de calor no cabía bien: tenía
+  scroll horizontal en pantalla, y al imprimir eso **recortaba** el
+  contenido que quedaba fuera de la vista en vez de mostrarlo entero. Ahora
+  se desactiva ese scroll solo al imprimir, se reduce el tamaño de fuente y
+  de las celdas, y se ajustan los márgenes de página — todo debería caber
+  ya en el ancho de A4.
+- Nueva alerta **"Sesión inusual hoy"**: compara la carga de la sesión de
+  hoy con la media y desviación estándar de las sesiones reales de las
+  **últimas 3 semanas** de cada jugador (ventana de tiempo, no un número
+  fijo de sesiones — se adapta sola a equipos que entrenan 3 o 4 días por
+  semana), y avisa si se sale de ±1.5 desviaciones estándar. Es un nivel de
+  detalle que no cubrían ni el ACWR ni el Cambio semanal (esos avisan a
+  nivel de semana completa, no de una sesión suelta dentro de ella), así
+  que no se repite información.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

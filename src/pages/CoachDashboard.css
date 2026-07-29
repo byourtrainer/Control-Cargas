@@ -380,6 +380,17 @@
   .tarjetas-resumen { grid-template-columns: repeat(4, minmax(0,1fr)) !important; margin-bottom: 20px; }
   .mapa-calor-card { margin-top: 20px; break-inside: avoid; }
   .informe-titulo-impresion-resumen { display: block !important; margin-bottom: 20px; }
+
+  /* El scroll horizontal recorta el contenido al imprimir si no se anula */
+  .mapa-calor-scroll { overflow: visible !important; }
+  .mapa-calor-tabla { font-size: 8px; }
+  .mapa-calor-punto { width: 10px; height: 10px; }
+  .mapa-calor-th-jugador, .mapa-calor-td-jugador { max-width: 70px; overflow: hidden; text-overflow: ellipsis; }
+}
+
+@page {
+  size: A4;
+  margin: 12mm;
 }
 
 /* El informe de 5 gráficos SIEMPRE está en el DOM (para poder imprimirlo

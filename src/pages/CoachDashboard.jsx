@@ -173,6 +173,49 @@ function colorDesviacion(abs) {
   return 'var(--risk-high)'
 }
 
+/**
+ * Detecta si la carga de hoy es una sesión "inusual" comparada con las
+ * últimas sesiones REALES de entrenamiento del jugador (se ignoran los
+ * días sin carga, para no contaminar la media con descansos).
+ * Umbral: 1.5 desviaciones estándar — convención estadística práctica,
+ * no una cifra fijada por un estudio concreto (a diferencia del ACWR o
+ * la Monotonía, que sí tienen umbrales publicados).
+ */
+/**
+ * Detecta si la carga de hoy es una sesión "inusual" comparada con las
+ * sesiones REALES de entrenamiento del jugador en las últimas 3 semanas
+ * (se ignoran los días sin carga, para no contaminar la media con
+ * descansos). Se usa una ventana de tiempo, no un número fijo de sesiones,
+ * para que se adapte sola a equipos que entrenan 3 o 4 días por semana sin
+ * penalizar a los que entrenan menos días.
+ * Umbral: 1.5 desviaciones estándar — convención estadística práctica,
+ * no una cifra fijada por un estudio concreto (a diferencia del ACWR o
+ * la Monotonía, que sí tienen umbrales publicados).
+ */
+function detectarSesionInusual(suyos, hoyISO) {
+  const registroHoy = suyos.find((r) => r.fecha === hoyISO)
+  if (!registroHoy || !registroHoy.carga) return null
+
+  const inicioVentana = new Date(hoyISO + 'T00:00:00')
+  inicioVentana.setDate(inicioVentana.getDate() - 21) // últimas 3 semanas
+  const inicioVentanaISO = inicioVentana.toISOString().slice(0, 10)
+
+  const recientes = suyos
+    .filter((r) => r.fecha < hoyISO && r.fecha >= inicioVentanaISO && r.carga && r.carga > 0)
+    .map((r) => r.carga)
+
+  if (recientes.length < 4) return null // histórico insuficiente para ser fiable
+
+  const media = recientes.reduce((a, b) => a + b, 0) / recientes.length
+  const varianza = recientes.reduce((a, b) => a + (b - media) ** 2, 0) / recientes.length
+  const sd = Math.sqrt(varianza)
+  if (sd === 0) return null
+
+  const z = (registroHoy.carga - media) / sd
+  if (Math.abs(z) < 1.5) return null
+  return { cargaHoy: registroHoy.carga, media: Math.round(media), alta: z > 0 }
+}
+
 export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo = 'equipo', fechaDesde, fechaHasta }) {
   const [jugadores, setJugadores] = useState([])
   const [registros, setRegistros] = useState([])
@@ -341,6 +384,7 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
     const conMolestiaHoy = []
     const respuestaAtipica = []
     const huecosDatos = []
+    const sesionInusual = []
 
     // Sesiones de los últimos 7 días (para saber qué días hubo entreno/partido de verdad)
     const inicioSemana = diasAtras(6)
@@ -374,9 +418,14 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
       if (huecos > 0 && sesionesSemana.length > 0) {
         huecosDatos.push(`${j.nombre} (${huecos}/${sesionesSemana.length})`)
       }
+
+      const inusual = detectarSesionInusual(suyos, hoy)
+      if (inusual) {
+        sesionInusual.push(`${j.nombre} (${inusual.cargaHoy} vs media ${inusual.media}, ${inusual.alta ? '↑' : '↓'})`)
+      }
     })
 
-    return { sinRpeAyer, enRiesgo, conMolestiaHoy, respuestaAtipica, huecosDatos }
+    return { sinRpeAyer, enRiesgo, conMolestiaHoy, respuestaAtipica, huecosDatos, sesionInusual }
   }, [jugadoresFiltrados, registros, sesiones, metodoACWR])
 
   // --- Mapa de calor jugador × día ---
@@ -468,12 +517,14 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
 
       <div className="informe-titulo-impresion-resumen">
         <h2>
-          Informe {resumenTarjetas?.modo === 'individual' ? 'individual' : 'de equipo'}
-          {' '}— {resumenTarjetas?.modo === 'individual'
-            ? jugadoresGrafico[0]?.nombre
-            : (equipoActivo === 'todos' ? 'Todos los equipos' : equipoActivo === 'sin_asignar' ? 'Sin asignar' : jugadoresFiltrados[0]?.equipos?.nombre || 'Grupo seleccionado')}
+          {resumenTarjetas?.modo === 'individual'
+            ? `Informe de ${jugadoresGrafico[0]?.nombre || 'jugador'}`
+            : 'Informe de equipo'}
         </h2>
         <p className="texto-dim">
+          {resumenTarjetas?.modo === 'individual' ? '' : (
+            <>Equipo: {equipoActivo === 'todos' ? 'Todos los equipos' : equipoActivo === 'sin_asignar' ? 'Sin asignar' : jugadoresFiltrados[0]?.equipos?.nombre || 'Grupo seleccionado'} · </>
+          )}
           Del {new Date(fechaDesde + 'T00:00:00').toLocaleDateString('es-ES')} al{' '}
           {new Date(fechaHasta + 'T00:00:00').toLocaleDateString('es-ES')}
           {' '}· Generado el {new Date().toLocaleDateString('es-ES')}
@@ -525,6 +576,16 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
               <span className="alerta-ok">✓ Sin huecos</span>
             ) : (
               <span className="alerta-lista">{alertasHoy.huecosDatos.join(', ')}</span>
+            )}
+          </div>
+          <div className={`alerta-bloque ${alertasHoy.sesionInusual.length ? 'alerta-activa' : ''}`}>
+            <span className="alerta-titulo" title="Carga de hoy con una diferencia de 1.5 desviaciones estándar o más respecto a sus sesiones reales de las últimas 3 semanas">
+              Sesión inusual hoy (vs su propio histórico)
+            </span>
+            {alertasHoy.sesionInusual.length === 0 ? (
+              <span className="alerta-ok">✓ Cargas dentro de lo habitual</span>
+            ) : (
+              <span className="alerta-lista">{alertasHoy.sesionInusual.join(', ')}</span>
             )}
           </div>
         </div>
@@ -645,12 +706,12 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
       </button>
 
       <section className={`informe-resumen-card ${informeAbierto ? '' : 'informe-colapsado'}`}>
-        <h2 className="informe-resumen-titulo">
+        <h2 className="informe-resumen-titulo no-imprimir">
           {resumenTarjetas?.modo === 'individual'
-            ? `Informe individual — ${jugadoresGrafico[0]?.nombre || ''}`
-            : `Informe de equipo — ${equipoActivo === 'todos' ? 'Todos los equipos' : equipoActivo === 'sin_asignar' ? 'Sin asignar' : jugadoresFiltrados[0]?.equipos?.nombre || 'Grupo seleccionado'}`}
+            ? `Informe de ${jugadoresGrafico[0]?.nombre || 'jugador'}`
+            : 'Informe de equipo'}
         </h2>
-        <p className="texto-dim">
+        <p className="texto-dim no-imprimir">
           Vista {tiposVistaGrafico.find((t) => t.valor === tipoVistaGrafico).etiqueta.toLowerCase()},
           {' '}del {new Date(fechaDesde + 'T00:00:00').toLocaleDateString('es-ES')} al{' '}
           {new Date(fechaHasta + 'T00:00:00').toLocaleDateString('es-ES')}
