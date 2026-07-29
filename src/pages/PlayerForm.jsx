@@ -84,7 +84,7 @@ export default function PlayerForm({ perfil }) {
     if (vista !== 'dia') return
     cargarRegistroDia()
     cargarDuracionDia()
-  }, [vista, fechaSeleccionada])
+  }, [vista, fechaSeleccionada, equipoId])
 
   async function cargarRegistroDia() {
     setCargandoRegistro(true)
@@ -163,11 +163,13 @@ export default function PlayerForm({ perfil }) {
   }
 
   async function cargarDuracionDia() {
+    if (!equipoId) { setDuracionDia(null); return }
     setCargandoDuracion(true)
     const { data } = await supabase
       .from('sesiones')
       .select('duracion_min')
       .eq('fecha', fechaSeleccionada)
+      .eq('equipo_id', equipoId)
       .maybeSingle()
     setDuracionDia(data ? data.duracion_min : null)
     setCargandoDuracion(false)
@@ -261,7 +263,7 @@ export default function PlayerForm({ perfil }) {
       {vista === 'calendario' ? (
         <div className="player-layout">
           <div className="player-columna-principal">
-            <Calendario jugadorId={perfil.id} onSeleccionarDia={abrirDia} />
+            <Calendario jugadorId={perfil.id} equipoId={equipoId} onSeleccionarDia={abrirDia} />
           </div>
 
           <div className="player-columna-lateral">

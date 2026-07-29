@@ -23,7 +23,7 @@ function colorRpeDia(registro) {
   return colorParaValor(registro.rpe, 10)
 }
 
-export default function Calendario({ jugadorId, onSeleccionarDia }) {
+export default function Calendario({ jugadorId, equipoId, onSeleccionarDia }) {
   const [mesVisible, setMesVisible] = useState(() => {
     const d = new Date()
     d.setDate(1)
@@ -33,19 +33,21 @@ export default function Calendario({ jugadorId, onSeleccionarDia }) {
   const [sesiones, setSesiones] = useState([])
   const [cargando, setCargando] = useState(true)
 
-  useEffect(() => { cargarMes() }, [mesVisible, jugadorId])
+  useEffect(() => { cargarMes() }, [mesVisible, jugadorId, equipoId])
 
   async function cargarMes() {
     setCargando(true)
     const inicio = new Date(mesVisible.getFullYear(), mesVisible.getMonth(), 1).toISOString().slice(0, 10)
     const fin = new Date(mesVisible.getFullYear(), mesVisible.getMonth() + 1, 0).toISOString().slice(0, 10)
-    const [{ data: regs }, { data: sess }] = await Promise.all([
+    const [{ data: regs }, sesResultado] = await Promise.all([
       supabase.from('registros_diarios').select('*')
         .eq('jugador_id', jugadorId).gte('fecha', inicio).lte('fecha', fin),
-      supabase.from('sesiones').select('fecha').gte('fecha', inicio).lte('fecha', fin),
+      equipoId
+        ? supabase.from('sesiones').select('fecha').eq('equipo_id', equipoId).gte('fecha', inicio).lte('fecha', fin)
+        : Promise.resolve({ data: [] }), // sin equipo asignado no puede tener sesiones
     ])
     setRegistros(regs || [])
-    setSesiones(sess || [])
+    setSesiones(sesResultado.data || [])
     setCargando(false)
   }
 

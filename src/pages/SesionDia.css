@@ -27,6 +27,18 @@
 
 .sesion-form-card h2 { font-size: 18px; }
 
+.sesion-sin-equipo {
+  max-width: 480px;
+}
+
+.sesion-equipo-etiqueta {
+  font-size: 13px;
+  color: var(--text-dim);
+  margin: -8px 0 12px;
+}
+
+.sesion-equipo-etiqueta strong { color: var(--accent); }
+
 .capitalizada::first-letter { text-transform: uppercase; }
 
 .btn-eliminar-sesion {

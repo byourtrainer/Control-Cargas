@@ -12,7 +12,7 @@ function formatearFechaLarga(fechaISO) {
   return d.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-export default function SesionDia({ equipoActivo = 'todos' }) {
+export default function SesionDia({ equipoActivo = 'todos', equipos = [] }) {
   const [fecha, setFecha] = useState(hoyISO())
   const [duracion, setDuracion] = useState(60)
   const [microciclo, setMicrociclo] = useState('')
@@ -23,12 +23,18 @@ export default function SesionDia({ equipoActivo = 'todos' }) {
   const [cargandoSesion, setCargandoSesion] = useState(true)
   const [recargarCalendario, setRecargarCalendario] = useState(0)
 
-  useEffect(() => { cargarSesionDelDia() }, [fecha])
+  const equipoValido = equipoActivo !== 'todos' && equipoActivo !== 'sin_asignar'
+  const nombreEquipoActivo = equipos.find((e) => e.id === equipoActivo)?.nombre
+
+  useEffect(() => { if (equipoValido) cargarSesionDelDia() }, [fecha, equipoActivo])
 
   async function cargarSesionDelDia() {
     setCargandoSesion(true)
     setMensaje(null)
-    const { data } = await supabase.from('sesiones').select('*').eq('fecha', fecha).maybeSingle()
+    const { data } = await supabase
+      .from('sesiones').select('*')
+      .eq('fecha', fecha).eq('equipo_id', equipoActivo)
+      .maybeSingle()
     if (data) {
       setSesionExistente(data)
       setDuracion(data.duracion_min)
@@ -54,15 +60,16 @@ export default function SesionDia({ equipoActivo = 'todos' }) {
 
     const { error } = await supabase.from('sesiones').upsert({
       fecha,
+      equipo_id: equipoActivo,
       duracion_min: duracion,
       microciclo: microciclo || null,
       mdx: mdx || null,
-    }, { onConflict: 'fecha' })
+    }, { onConflict: 'fecha,equipo_id' })
 
     if (error) {
       setMensaje({ tipo: 'error', texto: 'No se pudo guardar la sesión.' })
     } else {
-      setMensaje({ tipo: 'ok', texto: 'Sesión guardada. Se ha aplicado a todos los jugadores de esa fecha.' })
+      setMensaje({ tipo: 'ok', texto: `Sesión guardada para ${nombreEquipoActivo}. Se ha aplicado a sus jugadores en esta fecha.` })
       cargarSesionDelDia()
       setRecargarCalendario((n) => n + 1)
     }
@@ -70,9 +77,9 @@ export default function SesionDia({ equipoActivo = 'todos' }) {
   }
 
   async function eliminarSesion() {
-    if (!window.confirm('¿Eliminar la sesión de este día? Los jugadores que ya hayan registrado RPE mantendrán su valor de duración actual, pero no se actualizará más.')) return
+    if (!window.confirm(`¿Eliminar la sesión de ${nombreEquipoActivo} de este día?`)) return
     setGuardando(true)
-    const { error } = await supabase.from('sesiones').delete().eq('fecha', fecha)
+    const { error } = await supabase.from('sesiones').delete().eq('fecha', fecha).eq('equipo_id', equipoActivo)
     if (!error) {
       setMensaje({ tipo: 'ok', texto: 'Sesión eliminada.' })
       cargarSesionDelDia()
@@ -81,6 +88,21 @@ export default function SesionDia({ equipoActivo = 'todos' }) {
       setMensaje({ tipo: 'error', texto: 'No se pudo eliminar la sesión.' })
     }
     setGuardando(false)
+  }
+
+  if (!equipoValido) {
+    return (
+      <div className="sesion-layout">
+        <section className="sesion-form-card sesion-sin-equipo">
+          <h2>Selecciona un equipo</h2>
+          <p className="sesion-sub">
+            Las sesiones se planifican por equipo, ya que no todos entrenan los mismos días.
+            Usa el selector <strong>◎</strong> de la cabecera y elige un equipo concreto
+            (no "Todos los equipos" ni "Sin asignar") para poder planificar aquí.
+          </p>
+        </section>
+      </div>
+    )
   }
 
   return (
@@ -96,11 +118,12 @@ export default function SesionDia({ equipoActivo = 'todos' }) {
 
       <section className="sesion-form-card">
         <h2 className="capitalizada">{formatearFechaLarga(fecha)}</h2>
+        <p className="sesion-equipo-etiqueta">Planificando para: <strong>{nombreEquipoActivo}</strong></p>
         <p className="sesion-sub">
           {sesionExistente
-            ? 'Ya hay una sesión guardada para este día — puedes modificarla.'
-            : 'Todavía no hay ninguna sesión guardada para este día.'}
-          {' '}Se aplica automáticamente a todos los jugadores que registren su RPE esta fecha.
+            ? 'Ya hay una sesión guardada para este equipo en este día — puedes modificarla.'
+            : 'Todavía no hay ninguna sesión guardada para este equipo en este día.'}
+          {' '}Se aplica automáticamente a los jugadores de este equipo que registren su RPE esta fecha.
         </p>
 
         {cargandoSesion ? (

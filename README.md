@@ -608,6 +608,32 @@ Alertas de hoy y al mapa de calor:
   "Desviación RPE vs equipo", con la misma escala de 4 colores, para ver el
   patrón de respuestas atípicas a lo largo de varios días, no solo hoy.
 
+## Sesiones por equipo (ya no son globales)
+
+Cambio de fondo: las sesiones (duración/microciclo/MDx) ya **no se aplican
+a todos los jugadores de todos los equipos** — ahora cada equipo tiene sus
+propias sesiones, independientes entre sí.
+
+- En **Planificación**, si el selector "◎" tiene puesto "Todos los equipos"
+  o "Sin asignar", la pestaña pide elegir un equipo concreto antes de poder
+  planificar nada — no tiene sentido guardar una sesión sin saber para
+  quién es.
+- El calendario del jugador y el cálculo de su carga usan la sesión de **su
+  propio equipo**, no la de cualquier otro.
+- El calendario del entrenador (dentro de Planificación) muestra el punto
+  de "sesión programada" del equipo que tengas activo en cada momento; si
+  tienes "Todos los equipos" seleccionado, se ve si *cualquier* equipo tiene
+  algo ese día.
+- Los jugadores marcados como "Sin asignar" no pueden tener sesión (no
+  pertenecen a ningún equipo), así que verán siempre el aviso de "el
+  entrenador aún no ha indicado la duración" hasta que se les asigne un
+  equipo.
+
+**Importante**: la migración de base de datos de este cambio borra las
+sesiones que ya tuvieras guardadas (no había forma de saber a qué equipo
+pertenecía cada una bajo el modelo anterior). Hay que volver a
+introducirlas, esta vez con el equipo seleccionado.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.
