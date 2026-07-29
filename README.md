@@ -634,6 +634,30 @@ sesiones que ya tuvieras guardadas (no había forma de saber a qué equipo
 pertenecía cada una bajo el modelo anterior). Hay que volver a
 introducirlas, esta vez con el equipo seleccionado.
 
+## El PDF de Resumen ya incluye los 5 gráficos, sin repetir información
+
+- El informe de 5 variables ("Ver informe completo") ahora **siempre está
+  presente en el documento**, esté o no desplegado en pantalla — antes,
+  como solo existía en la página cuando lo abrías manualmente, `Imprimir /
+  Guardar PDF` no lo capturaba si estaba colapsado.
+- El documento exportado tiene ahora una **portada** (título + equipo o
+  jugador + rango de fechas + fecha de generación) que solo aparece al
+  imprimir, no en pantalla.
+- Para evitar repetir información entre el mapa de calor y los 5 gráficos:
+  el **mapa de calor solo se incluye en el PDF cuando estás viendo un grupo
+  o equipo completo** (varias filas = información nueva). Si tienes un
+  jugador individual seleccionado, se omite del documento porque sería una
+  sola fila redundante con lo que ya muestran los 5 gráficos de ese mismo
+  jugador — en pantalla lo sigues viendo igual, esto solo afecta a lo que
+  se imprime.
+- El gráfico grande de una sola variable sigue sin imprimirse (ya estaba
+  así) porque esa misma variable ya aparece dentro de los 5 gráficos del
+  informe completo — evita duplicar el mismo dato dos veces en el documento.
+
+Con esto, el PDF final queda: portada → tarjetas de resumen (individuales o
+medias del grupo, según selección) → mapa de calor (solo en vista de grupo)
+→ los 5 gráficos con todas las variables.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

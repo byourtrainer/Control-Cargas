@@ -466,6 +466,20 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
         Usa el selector <strong>◎</strong> de arriba para cambiar el equipo, jugador o rango de fechas.
       </p>
 
+      <div className="informe-titulo-impresion-resumen">
+        <h2>
+          Informe {resumenTarjetas?.modo === 'individual' ? 'individual' : 'de equipo'}
+          {' '}— {resumenTarjetas?.modo === 'individual'
+            ? jugadoresGrafico[0]?.nombre
+            : (equipoActivo === 'todos' ? 'Todos los equipos' : equipoActivo === 'sin_asignar' ? 'Sin asignar' : jugadoresFiltrados[0]?.equipos?.nombre || 'Grupo seleccionado')}
+        </h2>
+        <p className="texto-dim">
+          Del {new Date(fechaDesde + 'T00:00:00').toLocaleDateString('es-ES')} al{' '}
+          {new Date(fechaHasta + 'T00:00:00').toLocaleDateString('es-ES')}
+          {' '}· Generado el {new Date().toLocaleDateString('es-ES')}
+        </p>
+      </div>
+
       <section className="alertas-card no-imprimir">
         <h3>Alertas de hoy</h3>
         <div className="alertas-grid">
@@ -522,7 +536,7 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
         ))}
       </section>
 
-      <section className="mapa-calor-card">
+      <section className={`mapa-calor-card ${resumenTarjetas?.modo === 'individual' ? 'no-imprimir' : ''}`}>
         <div className="mapa-calor-cabecera">
           <h3>Mapa de calor — jugador × día</h3>
           <select
@@ -630,18 +644,17 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
         {informeAbierto ? '▾' : '▸'} {informeAbierto ? 'Ocultar' : 'Ver'} informe completo (las 5 variables)
       </button>
 
-      {informeAbierto && (
-        <section className="informe-resumen-card">
-          <h2 className="informe-resumen-titulo">
-            {resumenTarjetas?.modo === 'individual'
-              ? `Informe individual — ${jugadoresGrafico[0]?.nombre || ''}`
-              : `Informe de equipo — ${equipoActivo === 'todos' ? 'Todos los equipos' : equipoActivo === 'sin_asignar' ? 'Sin asignar' : jugadoresFiltrados[0]?.equipos?.nombre || 'Grupo seleccionado'}`}
-          </h2>
-          <p className="texto-dim">
-            Vista {tiposVistaGrafico.find((t) => t.valor === tipoVistaGrafico).etiqueta.toLowerCase()},
-            {' '}del {new Date(fechaDesde + 'T00:00:00').toLocaleDateString('es-ES')} al{' '}
-            {new Date(fechaHasta + 'T00:00:00').toLocaleDateString('es-ES')}
-          </p>
+      <section className={`informe-resumen-card ${informeAbierto ? '' : 'informe-colapsado'}`}>
+        <h2 className="informe-resumen-titulo">
+          {resumenTarjetas?.modo === 'individual'
+            ? `Informe individual — ${jugadoresGrafico[0]?.nombre || ''}`
+            : `Informe de equipo — ${equipoActivo === 'todos' ? 'Todos los equipos' : equipoActivo === 'sin_asignar' ? 'Sin asignar' : jugadoresFiltrados[0]?.equipos?.nombre || 'Grupo seleccionado'}`}
+        </h2>
+        <p className="texto-dim">
+          Vista {tiposVistaGrafico.find((t) => t.valor === tipoVistaGrafico).etiqueta.toLowerCase()},
+          {' '}del {new Date(fechaDesde + 'T00:00:00').toLocaleDateString('es-ES')} al{' '}
+          {new Date(fechaHasta + 'T00:00:00').toLocaleDateString('es-ES')}
+        </p>
 
           <div className="informe-graficos-grid">
             {variablesGrafico.map((v) => (
@@ -662,8 +675,7 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
               </div>
             ))}
           </div>
-        </section>
-      )}
+      </section>
     </div>
   )
 }

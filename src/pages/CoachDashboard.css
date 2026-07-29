@@ -374,11 +374,22 @@
 @media print {
   .no-imprimir { display: none !important; }
   .coach-layout { display: block !important; }
-  .informe-resumen-card { border: none !important; padding: 0 !important; }
+  .informe-resumen-card { border: none !important; padding: 0 !important; margin-top: 20px; }
   .mini-grafico-card { break-inside: avoid; }
   .informe-graficos-grid { grid-template-columns: repeat(2, 1fr) !important; }
   .tarjetas-resumen { grid-template-columns: repeat(4, minmax(0,1fr)) !important; margin-bottom: 20px; }
+  .mapa-calor-card { margin-top: 20px; break-inside: avoid; }
+  .informe-titulo-impresion-resumen { display: block !important; margin-bottom: 20px; }
 }
+
+/* El informe de 5 gráficos SIEMPRE está en el DOM (para poder imprimirlo
+   aunque esté "colapsado" en pantalla) — en pantalla se oculta con esto: */
+@media screen {
+  .informe-colapsado { display: none; }
+}
+
+.informe-titulo-impresion-resumen { display: none; }
+.informe-titulo-impresion-resumen h2 { font-size: 20px; margin-bottom: 4px; }
 
 .equipo-etiqueta {
   display: inline-flex;
