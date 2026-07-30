@@ -678,6 +678,16 @@ medias del grupo, según selección) → mapa de calor (solo en vista de grupo)
   nivel de semana completa, no de una sesión suelta dentro de ella), así
   que no se repite información.
 
+## Gráficos cortados por los lados al exportar (corregido)
+
+Los gráficos (Recharts) calculan su ancho en píxeles según el tamaño de la
+pantalla en el momento de renderizarse, no según el ancho real de la hoja
+impresa — mucho más estrecha. Eso hacía que se cortaran por los lados al
+exportar a PDF, en cualquier pantalla con gráficos (Resumen y Tests).
+Corregido de forma global: al imprimir, se fuerza a que cada gráfico se
+reescale al ancho real de la página en vez de mantener el ancho de pantalla
+con el que se dibujó originalmente.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

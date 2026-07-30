@@ -276,6 +276,13 @@
   }
   .topbar, .pestanas-nav, .contexto-barra { display: none !important; }
   .contenido { padding: 0 !important; max-width: 100% !important; }
+
+  /* Recharts calcula el ancho del gráfico en píxeles según la pantalla en
+     el momento de renderizarlo, no según el ancho real de la hoja impresa
+     (más estrecho) — sin esto, los gráficos se cortan por los lados. */
+  .recharts-responsive-container { width: 100% !important; }
+  .recharts-wrapper { width: 100% !important; }
+  .recharts-wrapper svg { width: 100% !important; height: 100% !important; }
 }
 
 @media (max-width: 480px) {
