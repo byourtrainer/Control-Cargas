@@ -688,6 +688,28 @@ Corregido de forma global: al imprimir, se fuerza a que cada gráfico se
 reescale al ancho real de la página en vez de mantener el ancho de pantalla
 con el que se dibujó originalmente.
 
+## Sesiones por jugador (con atajo para asignar a todo el grupo)
+
+Las sesiones dejan de estar ligadas a un equipo — ahora cada sesión es de
+un **jugador concreto**, y "asignar a todo el equipo" es simplemente un
+atajo que rellena la misma duración a todos los jugadores del grupo activo
+de una vez, no un concepto distinto en la base de datos.
+
+- En **Planificación** hay dos modos: **"Todo el grupo"** (como hasta
+  ahora, un único campo de duración para todos) y **"Por jugador"** (una
+  fila con su propio campo de duración para cada jugador del grupo activo —
+  puedes rellenar solo a quien entrena ese día y dejar en blanco al resto).
+- Esto resuelve directamente el caso de los **deportistas individuales sin
+  equipo**: como ya no hace falta pertenecer a un equipo para tener una
+  sesión, un jugador en "Sin asignar" puede tener su propia duración cada
+  día, sin necesidad de crear un equipo ficticio tipo "Individuales".
+- También sirve dentro de un equipo normal para ajustes puntuales (por
+  ejemplo, un jugador que vuelve de lesión con sesión reducida ese día,
+  mientras el resto hace la sesión completa).
+- **Se conservan las sesiones de junio** que ya tenías — la migración las
+  expande automáticamente de "una por equipo" a "una por cada jugador de
+  ese equipo", no hace falta volver a introducirlas.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

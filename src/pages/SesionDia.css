@@ -27,19 +27,46 @@
 
 .sesion-form-card h2 { font-size: 18px; }
 
-.sesion-sin-equipo {
-  max-width: 480px;
+.capitalizada::first-letter { text-transform: uppercase; }
+
+.duraciones-individuales {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 420px;
+  overflow-y: auto;
+  margin-bottom: 16px;
+  padding-right: 4px;
 }
 
-.sesion-equipo-etiqueta {
+.duracion-individual-fila {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.duracion-individual-nombre {
+  flex: 1;
   font-size: 13px;
   color: var(--text-dim);
-  margin: -8px 0 12px;
 }
 
-.sesion-equipo-etiqueta strong { color: var(--accent); }
+.duracion-individual-fila input {
+  width: 64px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  padding: 6px 8px;
+  color: var(--text);
+  font-size: 13px;
+  text-align: right;
+}
 
-.capitalizada::first-letter { text-transform: uppercase; }
+.duracion-individual-min {
+  font-size: 11px;
+  color: var(--text-faint);
+  width: 24px;
+}
 
 .btn-eliminar-sesion {
   background: none;

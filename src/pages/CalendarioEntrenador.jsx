@@ -58,21 +58,16 @@ export default function CalendarioEntrenador({ equipoActivo = 'todos', onSelecci
     setJugadores(jugadoresFiltrados)
 
     const ids = jugadoresFiltrados.map((j) => j.id)
-    let consultaSesiones = supabase.from('sesiones').select('*').gte('fecha', inicio).lte('fecha', fin)
-    if (equipoActivo === 'sin_asignar') {
-      consultaSesiones = null // los jugadores sin equipo no pueden tener sesión
-    } else if (equipoActivo !== 'todos') {
-      consultaSesiones = consultaSesiones.eq('equipo_id', equipoActivo)
-    }
-
-    const [{ data: regs }, sesResultado] = await Promise.all([
+    const [{ data: regs }, { data: sess }] = await Promise.all([
       ids.length > 0
         ? supabase.from('registros_diarios').select('*').in('jugador_id', ids).gte('fecha', inicio).lte('fecha', fin)
         : Promise.resolve({ data: [] }),
-      consultaSesiones ? consultaSesiones : Promise.resolve({ data: [] }),
+      ids.length > 0
+        ? supabase.from('sesiones').select('*').in('jugador_id', ids).gte('fecha', inicio).lte('fecha', fin)
+        : Promise.resolve({ data: [] }),
     ])
     setRegistros(regs || [])
-    setSesiones(sesResultado.data || [])
+    setSesiones(sess || [])
     setCargando(false)
   }
 

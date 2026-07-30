@@ -225,7 +225,7 @@ export default function App() {
 
       <main className="contenido">
         {perfil.rol === 'entrenador' ? (
-          pestana === 'sesion' ? <SesionDia equipoActivo={equipoActivo} equipos={equipos} />
+          pestana === 'sesion' ? <SesionDia equipoActivo={equipoActivo} />
           : pestana === 'lesiones' ? (
             <Lesiones
               equipos={equipos} equipoActivo={equipoActivo}
