@@ -125,6 +125,27 @@
   width: fit-content;
 }
 
+.periodo-btn {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.periodo-btn:hover { color: var(--text); }
+
+.periodo-activo {
+  background: var(--accent);
+  color: #0d1210;
+}
+
+.periodo-activo:hover { color: #0d1210; }
+}
+
 .informe-nota {
   font-size: 13px;
   color: var(--text-dim);
