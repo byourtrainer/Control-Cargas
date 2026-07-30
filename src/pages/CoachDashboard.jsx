@@ -226,6 +226,18 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
   const [informeAbierto, setInformeAbierto] = useState(false)
   const [variableMapaCalor, setVariableMapaCalor] = useState('acwr')
   const [cargando, setCargando] = useState(true)
+  const [modoImpresion, setModoImpresion] = useState(false)
+
+  useEffect(() => {
+    const antesDeImprimir = () => setModoImpresion(true)
+    const despuesDeImprimir = () => setModoImpresion(false)
+    window.addEventListener('beforeprint', antesDeImprimir)
+    window.addEventListener('afterprint', despuesDeImprimir)
+    return () => {
+      window.removeEventListener('beforeprint', antesDeImprimir)
+      window.removeEventListener('afterprint', despuesDeImprimir)
+    }
+  }, [])
 
   useEffect(() => { cargarDatos() }, [])
 
@@ -721,7 +733,7 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
             {variablesGrafico.map((v) => (
               <div className="mini-grafico-card" key={v.valor}>
                 <h4>{v.etiqueta}</h4>
-                <ResponsiveContainer width="100%" height={170}>
+                <ResponsiveContainer width={modoImpresion ? 320 : '100%'} height={170}>
                   <LineChart data={construirDatosVariable(v.valor)} margin={{ top: 5, right: 10, bottom: 0, left: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
                     <XAxis dataKey="fecha" stroke="var(--text-faint)" fontSize={11} />

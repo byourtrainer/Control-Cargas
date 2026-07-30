@@ -678,7 +678,24 @@ medias del grupo, según selección) → mapa de calor (solo en vista de grupo)
   nivel de semana completa, no de una sesión suelta dentro de ella), así
   que no se repite información.
 
-## Gráficos cortados por los lados al exportar (corregido)
+## Gráficos cortados al exportar — arreglo más robusto
+
+El primer intento (forzar el ancho por CSS) no era fiable: el navegador
+cambia cómo se ve el gráfico al imprimir, pero no reescribe las
+proporciones internas del SVG (su `viewBox`), así que podía quedar con
+aspecto extraño o incompleto en vez de ajustarse de verdad a la hoja.
+
+Arreglo definitivo: la app ahora **detecta el momento exacto en que empieza
+la impresión** (evento `beforeprint` del navegador) y, en ese instante,
+redibuja cada gráfico con un ancho fijo pensado para el papel (320px, que
+encaja bien en dos columnas de una A4), en vez de dejar que el gráfico
+mantenga el ancho con el que se dibujó en pantalla. Al terminar de
+imprimir, vuelve a su comportamiento normal en pantalla. Aplicado a los 5
+gráficos del informe de Resumen y a los dos cuadrantes de Tests (donde
+existía el mismo problema).
+
+También se amplió el ancho máximo de los nombres de jugador en el mapa de
+calor (se estaban recortando con "…" al imprimir).
 
 Los gráficos (Recharts) calculan su ancho en píxeles según el tamaño de la
 pantalla en el momento de renderizarse, no según el ancho real de la hoja

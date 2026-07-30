@@ -96,12 +96,12 @@ function EtiquetaZona({ viewBox, linea1, linea2, color }) {
   )
 }
 
-function GraficoCuadrante1({ datos, maxX, maxY }) {
+function GraficoCuadrante1({ datos, maxX, maxY, modoImpresion }) {
   return (
     <>
       <h3>Fuerza-salto: CMJ vs. Sentadilla relativa</h3>
       <p className="cuadrante-sub">Eje Y: CMJ (cm), dividido en 40 cm · Eje X: Sentadilla (kg/peso corporal), dividido en 2.0×</p>
-      <ResponsiveContainer width="100%" height={280}>
+      <ResponsiveContainer width={modoImpresion ? 320 : '100%'} height={280}>
         <ScatterChart margin={{ top: 10, right: 20, bottom: 10, left: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
           <XAxis type="number" dataKey="x" name="Sentadilla relativa" domain={[0, maxX]} stroke="var(--text-faint)" fontSize={12} />
@@ -133,7 +133,7 @@ function GraficoCuadrante1({ datos, maxX, maxY }) {
   )
 }
 
-function GraficoCuadrante2({ datos, maxX, maxY }) {
+function GraficoCuadrante2({ datos, maxX, maxY, modoImpresion }) {
   return (
     <>
       <h3>Potencia vs. capacidad de repetirla (Wingate)</h3>
@@ -141,7 +141,7 @@ function GraficoCuadrante2({ datos, maxX, maxY }) {
         Eje Y: Potencia (PP1 en W/kg), dividido en 10 W/kg · Eje X: Índice de fatiga (%), dividido en 20% —
         eje invertido: más a la derecha = menor fatiga = mejor capacidad de repetir potencia
       </p>
-      <ResponsiveContainer width="100%" height={280}>
+      <ResponsiveContainer width={modoImpresion ? 320 : '100%'} height={280}>
         <ScatterChart margin={{ top: 10, right: 20, bottom: 10, left: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
           <XAxis type="number" dataKey="x" name="Índice de fatiga" domain={[0, maxX]} reversed stroke="var(--text-faint)" fontSize={12} />
@@ -177,6 +177,18 @@ export default function Tests({ equipoActivo = 'todos' }) {
   const [jugadores, setJugadores] = useState([])
   const [tests, setTests] = useState([])
   const [borrandoTestId, setBorrandoTestId] = useState(null)
+  const [modoImpresion, setModoImpresion] = useState(false)
+
+  useEffect(() => {
+    const antesDeImprimir = () => setModoImpresion(true)
+    const despuesDeImprimir = () => setModoImpresion(false)
+    window.addEventListener('beforeprint', antesDeImprimir)
+    window.addEventListener('afterprint', despuesDeImprimir)
+    return () => {
+      window.removeEventListener('beforeprint', antesDeImprimir)
+      window.removeEventListener('afterprint', despuesDeImprimir)
+    }
+  }, [])
   const [cargando, setCargando] = useState(true)
   const [form, setForm] = useState(formularioVacio)
   const [guardando, setGuardando] = useState(false)
@@ -612,11 +624,11 @@ export default function Tests({ equipoActivo = 'todos' }) {
 
       <div className="tests-columna-derecha no-imprimir">
         <section className="cuadrante-card">
-          <GraficoCuadrante1 datos={datosCuadrante1} maxX={maxX1} maxY={maxY1} />
+          <GraficoCuadrante1 datos={datosCuadrante1} maxX={maxX1} maxY={maxY1} modoImpresion={modoImpresion} />
         </section>
 
         <section className="cuadrante-card">
-          <GraficoCuadrante2 datos={datosCuadrante2} maxX={maxX2} maxY={maxY2} />
+          <GraficoCuadrante2 datos={datosCuadrante2} maxX={maxX2} maxY={maxY2} modoImpresion={modoImpresion} />
         </section>
       </div>
 
@@ -720,10 +732,10 @@ export default function Tests({ equipoActivo = 'todos' }) {
 
               <div className="informe-cuadrantes-grid">
                 <div className="cuadrante-card cuadrante-card-informe">
-                  <GraficoCuadrante1 datos={cuadrante1Informe} maxX={maxX1i} maxY={maxY1i} />
+                  <GraficoCuadrante1 datos={cuadrante1Informe} maxX={maxX1i} maxY={maxY1i} modoImpresion={modoImpresion} />
                 </div>
                 <div className="cuadrante-card cuadrante-card-informe">
-                  <GraficoCuadrante2 datos={cuadrante2Informe} maxX={maxX2i} maxY={maxY2i} />
+                  <GraficoCuadrante2 datos={cuadrante2Informe} maxX={maxX2i} maxY={maxY2i} modoImpresion={modoImpresion} />
                 </div>
               </div>
 
@@ -794,10 +806,10 @@ export default function Tests({ equipoActivo = 'todos' }) {
 
               <div className="informe-cuadrantes-grid">
                 <div className="cuadrante-card cuadrante-card-informe">
-                  <GraficoCuadrante1 datos={cuadrante1Informe} maxX={maxX1i} maxY={maxY1i} />
+                  <GraficoCuadrante1 datos={cuadrante1Informe} maxX={maxX1i} maxY={maxY1i} modoImpresion={modoImpresion} />
                 </div>
                 <div className="cuadrante-card cuadrante-card-informe">
-                  <GraficoCuadrante2 datos={cuadrante2Informe} maxX={maxX2i} maxY={maxY2i} />
+                  <GraficoCuadrante2 datos={cuadrante2Informe} maxX={maxX2i} maxY={maxY2i} modoImpresion={modoImpresion} />
                 </div>
               </div>
 

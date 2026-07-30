@@ -385,7 +385,7 @@
   .mapa-calor-scroll { overflow: visible !important; }
   .mapa-calor-tabla { font-size: 8px; }
   .mapa-calor-punto { width: 10px; height: 10px; }
-  .mapa-calor-th-jugador, .mapa-calor-td-jugador { max-width: 70px; overflow: hidden; text-overflow: ellipsis; }
+  .mapa-calor-th-jugador, .mapa-calor-td-jugador { max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
 }
 
 @page {
