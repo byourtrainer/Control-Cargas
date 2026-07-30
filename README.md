@@ -710,6 +710,29 @@ de una vez, no un concepto distinto en la base de datos.
   expande automáticamente de "una por equipo" a "una por cada jugador de
   ese equipo", no hace falta volver a introducirlas.
 
+## Tipo de sesión y contenido planificado (solo visible para el entrenador)
+
+- Al planificar una sesión (modo grupo o por jugador) hay dos campos
+  nuevos, además del MDx que ya existía:
+  - **Lugar / tipo de trabajo**: Pista, Gimnasio o Recuperación.
+  - **Contenido de la sesión**: cuadro de texto libre para anotar qué se
+    va a trabajar (series, ejercicios, enfoque de la sesión...).
+- Al volver a entrar en ese día desde Planificación, ambos campos aparecen
+  ya rellenos con lo que planificaste — así puedes consultar rápidamente
+  qué tenías previsto para esa sesión. El tipo de sesión, además, se ve de
+  un vistazo junto al resumen del día sin tener que abrir el formulario.
+
+**Nota sobre la privacidad de estos campos**: al igual que "Microciclo" y
+"MDx" (que ya existían), estos dos campos nuevos solo se muestran en el
+lado del entrenador — ninguna pantalla del jugador los pide ni los
+enseña. No es una restricción a nivel de base de datos columna por
+columna (Supabase no lo permite de forma sencilla sin añadir una capa
+extra), sino que, igual que con los campos ya existentes, la app
+simplemente nunca se los pide ni se los muestra al jugador. Si en algún
+momento quieres una separación más estricta a nivel de servidor, es
+posible pero añade complejidad — de momento sigue el mismo patrón que ya
+usa el resto de la Planificación.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

@@ -6,6 +6,7 @@ import './SesionDia.css'
 const hoyISO = () => new Date().toISOString().slice(0, 10)
 
 const opcionesMDx = ['MD', 'MD+1', 'MD+2', 'MD+/-3', 'MD-2', 'MD-1']
+const opcionesTipoSesion = ['Pista', 'Gimnasio', 'Recuperación']
 
 function formatearFechaLarga(fechaISO) {
   const d = new Date(fechaISO + 'T00:00:00')
@@ -22,6 +23,8 @@ export default function SesionDia({ equipoActivo = 'todos' }) {
   const [duracionesIndividuales, setDuracionesIndividuales] = useState({}) // jugador_id -> string
   const [microciclo, setMicrociclo] = useState('')
   const [mdx, setMdx] = useState('')
+  const [tipoSesion, setTipoSesion] = useState('')
+  const [contenido, setContenido] = useState('')
 
   const [guardando, setGuardando] = useState(false)
   const [mensaje, setMensaje] = useState(null)
@@ -55,6 +58,8 @@ export default function SesionDia({ equipoActivo = 'todos' }) {
     setDuracionGrupo(primeraSesion ? primeraSesion.duracion_min : 60)
     setMicrociclo(primeraSesion?.microciclo || '')
     setMdx(primeraSesion?.mdx || '')
+    setTipoSesion(primeraSesion?.tipo_sesion || '')
+    setContenido(primeraSesion?.contenido || '')
 
     const indivInicial = {}
     filtrados.forEach((j) => { indivInicial[j.id] = mapa[j.id] ? String(mapa[j.id].duracion_min) : '' })
@@ -76,6 +81,7 @@ export default function SesionDia({ equipoActivo = 'todos' }) {
     const filas = jugadores.map((j) => ({
       fecha, jugador_id: j.id, duracion_min: duracionGrupo,
       microciclo: microciclo || null, mdx: mdx || null,
+      tipo_sesion: tipoSesion || null, contenido: contenido || null,
     }))
     const { error } = await supabase.from('sesiones').upsert(filas, { onConflict: 'fecha,jugador_id' })
 
@@ -96,6 +102,7 @@ export default function SesionDia({ equipoActivo = 'todos' }) {
       .map((j) => ({
         fecha, jugador_id: j.id, duracion_min: Number(duracionesIndividuales[j.id]),
         microciclo: microciclo || null, mdx: mdx || null,
+        tipo_sesion: tipoSesion || null, contenido: contenido || null,
       }))
 
     if (filas.length === 0) {
@@ -159,6 +166,7 @@ export default function SesionDia({ equipoActivo = 'todos' }) {
           {jugadoresConSesion > 0
             ? `${jugadoresConSesion} de ${jugadores.length} jugador(es) del grupo activo ya tienen sesión guardada este día.`
             : `Ningún jugador del grupo activo tiene sesión guardada este día todavía.`}
+          {tipoSesion && <span className="tipo-sesion-badge"> · {tipoSesion}</span>}
         </p>
 
         <div className="informe-modo">
@@ -210,6 +218,24 @@ export default function SesionDia({ equipoActivo = 'todos' }) {
               </label>
             </div>
 
+            <label className="campo-sesion">
+              <span>Lugar / tipo de trabajo</span>
+              <select value={tipoSesion} onChange={(e) => setTipoSesion(e.target.value)}>
+                <option value="">Sin especificar</option>
+                {opcionesTipoSesion.map((op) => (
+                  <option key={op} value={op}>{op}</option>
+                ))}
+              </select>
+            </label>
+
+            <label className="campo-sesion">
+              <span>Contenido de la sesión (solo lo ves tú)</span>
+              <textarea
+                value={contenido} onChange={(e) => setContenido(e.target.value)}
+                rows={4} placeholder="Ej. Series de velocidad 6x30m, fuerza tren inferior, técnica de carrera…"
+              />
+            </label>
+
             {mensaje && (
               <div className={mensaje.tipo === 'ok' ? 'aviso-ok' : 'aviso-error'}>{mensaje.texto}</div>
             )}
@@ -243,6 +269,24 @@ export default function SesionDia({ equipoActivo = 'todos' }) {
                 </select>
               </label>
             </div>
+
+            <label className="campo-sesion">
+              <span>Lugar / tipo de trabajo</span>
+              <select value={tipoSesion} onChange={(e) => setTipoSesion(e.target.value)}>
+                <option value="">Sin especificar</option>
+                {opcionesTipoSesion.map((op) => (
+                  <option key={op} value={op}>{op}</option>
+                ))}
+              </select>
+            </label>
+
+            <label className="campo-sesion">
+              <span>Contenido de la sesión (solo lo ves tú)</span>
+              <textarea
+                value={contenido} onChange={(e) => setContenido(e.target.value)}
+                rows={4} placeholder="Ej. Series de velocidad 6x30m, fuerza tren inferior, técnica de carrera…"
+              />
+            </label>
 
             <div className="duraciones-individuales">
               {jugadores.map((j) => (
