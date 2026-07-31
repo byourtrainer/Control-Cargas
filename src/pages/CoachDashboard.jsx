@@ -505,7 +505,7 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
 
   return (
     <div className="coach-layout">
-      <div className="coach-header">
+      <div className="coach-header no-imprimir">
         <h2>Panel del entrenador</h2>
         <div className="coach-header-derecha">
           <span className="mono texto-dim">{jugadoresFiltrados.length} jugadores</span>
@@ -603,7 +603,7 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
         </div>
       </section>
 
-      <section className="tarjetas-resumen">
+      <section className="tarjetas-resumen no-imprimir">
         {resumenTarjetas?.tarjetas.map((t, i) => (
           <TarjetaResumen key={i} etiqueta={t.etiqueta} valor={t.valor} tono={t.tono} />
         ))}

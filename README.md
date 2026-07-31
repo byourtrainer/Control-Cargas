@@ -750,6 +750,20 @@ momento quieres una separación más estricta a nivel de servidor, es
 posible pero añade complejidad — de momento sigue el mismo patrón que ya
 usa el resto de la Planificación.
 
+## Informe de Resumen simplificado al máximo
+
+A petición expresa: el documento exportado ya no incluye las 8 tarjetas de
+arriba ni la cabecera con los botones/selectores — solo queda:
+
+1. Portada (título + equipo o jugador + fechas)
+2. Mapa de calor (con la variable que tengas elegida en su desplegable:
+   ACWR, Bienestar o Desviación RPE vs equipo) — solo en vista de grupo
+3. Los 5 gráficos de variables
+
+Todo lo demás (tarjetas, cabecera con botones, alertas, gráfico de una
+sola variable) se sigue viendo con normalidad en pantalla — estos cambios
+solo afectan a lo que se imprime/exporta.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.
