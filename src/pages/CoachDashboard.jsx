@@ -483,6 +483,28 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
     })
   }, [jugadoresGrafico, jugadoresFiltrados, registros, diasMapaCalor, variableMapaCalor, metodoACWR])
 
+  // --- Comentario general del informe (uno solo, ligado al contexto actual) ---
+  const claveContexto = jugadorActivo === 'equipo' ? `equipo:${equipoActivo}` : `jugador:${jugadorActivo}`
+  const clave = `general|${claveContexto}|${fechaDesde}|${fechaHasta}`
+  const [comentarioInforme, setComentarioInforme] = useState('')
+  const [guardandoComentario, setGuardandoComentario] = useState(false)
+
+  useEffect(() => { cargarComentarioInforme() }, [clave])
+
+  async function cargarComentarioInforme() {
+    const { data } = await supabase.from('comentarios_informe').select('texto').eq('clave', clave).maybeSingle()
+    setComentarioInforme(data?.texto || '')
+  }
+
+  async function guardarComentarioInforme() {
+    setGuardandoComentario(true)
+    await supabase.from('comentarios_informe').upsert(
+      { clave, texto: comentarioInforme || '' },
+      { onConflict: 'clave' }
+    )
+    setGuardandoComentario(false)
+  }
+
   function exportarInformeCSV() {
     const cabeceras = ['Periodo', ...variablesGrafico.map((v) => v.etiqueta)]
     const columnas = variablesGrafico.map((v) => construirDatosVariable(v.valor))
@@ -733,7 +755,7 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
             {variablesGrafico.map((v) => (
               <div className="mini-grafico-card" key={v.valor}>
                 <h4>{v.etiqueta}</h4>
-                <ResponsiveContainer width={modoImpresion ? 320 : '100%'} height={170}>
+                <ResponsiveContainer width={modoImpresion ? 300 : '100%'} height={130}>
                   <LineChart data={construirDatosVariable(v.valor)} margin={{ top: 5, right: 10, bottom: 0, left: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
                     <XAxis dataKey="fecha" stroke="var(--text-faint)" fontSize={11} />
@@ -747,6 +769,19 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
                 </ResponsiveContainer>
               </div>
             ))}
+          </div>
+
+          <div className="comentario-informe-card">
+            <h4>Comentario general del informe</h4>
+            <textarea
+              className="comentario-grafico"
+              placeholder="Explica aquí lo que muestra el informe en conjunto…"
+              value={comentarioInforme}
+              onChange={(e) => setComentarioInforme(e.target.value)}
+              onBlur={guardarComentarioInforme}
+              rows={5}
+            />
+            {guardandoComentario && <span className="comentario-guardando no-imprimir">Guardando…</span>}
           </div>
       </section>
     </div>

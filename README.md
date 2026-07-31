@@ -764,6 +764,22 @@ Todo lo demás (tarjetas, cabecera con botones, alertas, gráfico de una
 sola variable) se sigue viendo con normalidad en pantalla — estos cambios
 solo afectan a lo que se imprime/exporta.
 
+## Gráficos más pequeños y un comentario general del informe
+
+- Los 5 gráficos del informe de Resumen se mantienen más compactos que
+  antes (dejan más margen de página libre).
+- En vez de un comentario por cada gráfico, ahora hay **un único
+  comentario general** al final del bloque, pensado para explicar lo que
+  muestra el informe en conjunto — se guarda solo al salir del campo de
+  texto, y queda ligado al equipo/jugador y rango de fechas que estuvieras
+  viendo (si vuelves a esa misma combinación más adelante, tu comentario
+  sigue ahí).
+- Reducido el margen blanco de la página impresa (de 12mm a 8mm) y fijado
+  el fondo oscuro explícitamente durante la impresión. Aviso honesto: el
+  margen en sí es una zona que los navegadores no permiten colorear por
+  CSS — no se puede eliminar del todo sin salirse de los estándares web,
+  pero sí lo dejamos al mínimo razonable.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

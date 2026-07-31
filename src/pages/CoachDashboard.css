@@ -368,14 +368,52 @@
   margin: 0 0 8px;
 }
 
+.comentario-grafico {
+  width: 100%;
+  margin-top: 10px;
+  background: var(--bg);
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 12px;
+  resize: vertical;
+}
+
+.comentario-grafico::placeholder { color: var(--text-faint); }
+.comentario-grafico:focus { border-color: var(--accent); }
+
+.comentario-guardando {
+  display: block;
+  font-size: 11px;
+  color: var(--text-faint);
+  margin-top: 4px;
+}
+
+.comentario-informe-card {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.comentario-informe-card h4 {
+  font-size: 13px;
+  color: var(--text-dim);
+  font-weight: 500;
+  margin: 0 0 8px;
+}
+
 /* Impresión / Guardar como PDF: se conserva el diseño oscuro de la app,
    solo se ocultan los controles interactivos. Requiere tener activado
    "Gráficos de fondo" / "Background graphics" en el diálogo de impresión. */
 @media print {
+  html, body { background: var(--bg) !important; }
   .no-imprimir { display: none !important; }
   .coach-layout { display: block !important; }
   .informe-resumen-card { border: none !important; padding: 0 !important; margin-top: 20px; }
   .mini-grafico-card { break-inside: avoid; }
+  .comentario-informe-card { break-inside: avoid; }
   .informe-graficos-grid { grid-template-columns: repeat(2, 1fr) !important; }
   .tarjetas-resumen { grid-template-columns: repeat(4, minmax(0,1fr)) !important; margin-bottom: 20px; }
   .mapa-calor-card { margin-top: 20px; break-inside: avoid; }
@@ -386,11 +424,17 @@
   .mapa-calor-tabla { font-size: 8px; }
   .mapa-calor-punto { width: 10px; height: 10px; }
   .mapa-calor-th-jugador, .mapa-calor-td-jugador { max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
+
+  .comentario-grafico {
+    border: 1px solid var(--line) !important;
+    background: var(--bg-elevated) !important;
+    min-height: 50px;
+  }
 }
 
 @page {
   size: A4;
-  margin: 12mm;
+  margin: 8mm;
 }
 
 /* El informe de 5 gráficos SIEMPRE está en el DOM (para poder imprimirlo
