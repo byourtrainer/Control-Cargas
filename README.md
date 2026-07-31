@@ -791,6 +791,24 @@ una segunda página. Corregido de forma global: durante la impresión, esos
 contenedores pasan a `height: auto` para poder crecer y paginarse con
 normalidad, tantas páginas como haga falta.
 
+## Tema de impresión propio: informe claro y profesional
+
+Hasta ahora, imprimir/exportar mantenía el tema oscuro de la app tal cual
+— por eso el resultado final parecía "una captura de pantalla" en vez de
+un documento. Se ha creado un **tema de impresión independiente**, con
+fondo blanco, texto oscuro y colores reforzados para verse bien sobre
+blanco, sin tocar en absoluto el aspecto de la app en pantalla (que sigue
+exactamente igual que siempre).
+
+Cómo funciona: casi todo el CSS de la app está construido con variables
+(`var(--bg)`, `var(--text)`, `var(--accent)`...), así que basta con
+redefinir esas variables solo durante la impresión para que fondos, texto
+y bordes cambien automáticamente en toda la app a la vez — no ha hecho
+falta reescribir cada pantalla una por una. Además se reforzaron
+específicamente las insignias de color (riesgo, monotonía, bienestar,
+severidad), que usaban fondos muy translúcidos pensados para verse sobre
+oscuro y quedaban casi invisibles en blanco.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

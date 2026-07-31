@@ -269,11 +269,51 @@
 }
 
 @media print {
+  /* --- Tema de impresión: informe claro y profesional, separado del tema
+     oscuro de la app. Como casi todo el CSS usa var(--variable), redefinir
+     estas variables transforma automáticamente fondos, texto y bordes en
+     toda la app sin tener que tocar cada componente uno a uno. --- */
+  :root {
+    --bg: #ffffff;
+    --bg-elevated: #f6f7f6;
+    --bg-card: #ffffff;
+    --line: #e3e5e2;
+    --line-strong: #c7cbc6;
+    --text: #16201a;
+    --text-dim: #4b564e;
+    --text-faint: #7c887f;
+    --accent: #5a8f1f;
+    --accent-dim: #4a7519;
+  }
+
   * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
     color-adjust: exact !important;
   }
+
+  /* Las insignias (riesgo/monotonía/bienestar/severidad) usan fondos muy
+     translúcidos pensados para fondo oscuro — casi invisibles en blanco.
+     Se refuerzan agrupadas por familia de color. */
+  .riesgo-sin_datos, .monotonia-sin_datos, .bienestar-sin_datos {
+    background: #eceeec !important;
+  }
+  .riesgo-muy_baja, .riesgo-baja, .monotonia-correcta, .bienestar-optimo, .severidad-leve {
+    background: rgba(111,207,125,0.28) !important;
+  }
+  .riesgo-optima {
+    background: rgba(90,143,31,0.20) !important;
+  }
+  .riesgo-moderada_alta, .monotonia-elevada, .bienestar-bueno, .severidad-moderada {
+    background: rgba(217,164,40,0.28) !important;
+  }
+  .riesgo-alta {
+    background: rgba(224,120,50,0.28) !important;
+  }
+  .riesgo-muy_alta, .monotonia-riesgo_elevado, .bienestar-malo, .severidad-grave {
+    background: rgba(200,60,45,0.24) !important;
+  }
+
   /* html/body/#root están fijados a height:100% para el diseño en pantalla.
      Al imprimir eso limita TODO el contenido a una sola página y corta el
      resto — hay que dejar que crezca de forma natural para poder paginar. */
