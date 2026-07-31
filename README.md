@@ -780,6 +780,17 @@ solo afectan a lo que se imprime/exporta.
   CSS — no se puede eliminar del todo sin salirse de los estándares web,
   pero sí lo dejamos al mínimo razonable.
 
+## El informe se cortaba antes de terminar la página (corregido de raíz)
+
+Encontrado el motivo real: `html, body, #root` estaban fijados a
+`height: 100%` para el diseño en pantalla (necesario para que el layout de
+la app funcione bien). Al imprimir, eso limitaba **todo el documento a la
+altura de una sola página** — cualquier contenido que no cupiera ahí
+(como el comentario general al final) se cortaba en vez de continuar en
+una segunda página. Corregido de forma global: durante la impresión, esos
+contenedores pasan a `height: auto` para poder crecer y paginarse con
+normalidad, tantas páginas como haga falta.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

@@ -274,6 +274,14 @@
     print-color-adjust: exact !important;
     color-adjust: exact !important;
   }
+  /* html/body/#root están fijados a height:100% para el diseño en pantalla.
+     Al imprimir eso limita TODO el contenido a una sola página y corta el
+     resto — hay que dejar que crezca de forma natural para poder paginar. */
+  html, body, #root, .app-shell {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
   .topbar, .pestanas-nav, .contexto-barra { display: none !important; }
   .contenido { padding: 0 !important; max-width: 100% !important; }
 
