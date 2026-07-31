@@ -809,6 +809,22 @@ específicamente las insignias de color (riesgo, monotonía, bienestar,
 severidad), que usaban fondos muy translúcidos pensados para verse sobre
 oscuro y quedaban casi invisibles en blanco.
 
+## Dos correcciones: el tema de impresión no aplicaba, y el comentario iba lento
+
+- **Tema de impresión**: cuando dos sitios definen la misma variable de
+  color, gana el que aparece último en el CSS final compilado — no
+  necesariamente el que corresponde al modo impresión. Se añadió
+  `!important` a las variables del tema claro para que ganen siempre
+  durante la impresión, sin depender del orden de los archivos.
+- **Comentario lento al escribir**: cada uno de los 5 gráficos del informe
+  recalculaba TODOS sus datos (ACWR, Monotonía, Fatiga... de los 8
+  jugadores) en cada letra que se tecleaba en el comentario, porque esa
+  parte del código no estaba "memorizada" — cualquier cambio en el
+  componente (incluido escribir en un campo de texto sin relación)
+  disparaba el recálculo completo. Ahora esos datos se calculan una sola
+  vez y solo se recalculan cuando cambian de verdad (jugadores, fechas,
+  método de ACWR...), no en cada pulsación de tecla.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

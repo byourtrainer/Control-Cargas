@@ -293,6 +293,16 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
     [registros, jugadoresGrafico, variableGrafico, metodoACWR, buckets, tipoVistaGrafico, diasPartido]
   )
 
+  // Los 5 gráficos del informe completo: se calculan UNA vez cuando cambian
+  // los datos reales, no en cada render — si no, escribir en el comentario
+  // (que también vive en este componente) dispararía este cálculo pesado
+  // en cada letra que se teclea.
+  const datosInformeCompleto = useMemo(() => {
+    const resultado = {}
+    variablesGrafico.forEach((v) => { resultado[v.valor] = construirDatosVariable(v.valor) })
+    return resultado
+  }, [registros, jugadoresGrafico, metodoACWR, buckets, tipoVistaGrafico, diasPartido])
+
   const resumenTarjetas = useMemo(() => {
     if (buckets.length === 0) return null
     const periodoInicio = buckets[0].inicio.toISOString().slice(0, 10)
@@ -507,7 +517,7 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
 
   function exportarInformeCSV() {
     const cabeceras = ['Periodo', ...variablesGrafico.map((v) => v.etiqueta)]
-    const columnas = variablesGrafico.map((v) => construirDatosVariable(v.valor))
+    const columnas = variablesGrafico.map((v) => datosInformeCompleto[v.valor])
     const filas = buckets.map((b, i) => [
       b.etiqueta, ...columnas.map((col) => col[i].valor ?? ''),
     ])
@@ -756,7 +766,7 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
               <div className="mini-grafico-card" key={v.valor}>
                 <h4>{v.etiqueta}</h4>
                 <ResponsiveContainer width={modoImpresion ? 300 : '100%'} height={130}>
-                  <LineChart data={construirDatosVariable(v.valor)} margin={{ top: 5, right: 10, bottom: 0, left: 0 }}>
+                  <LineChart data={datosInformeCompleto[v.valor]} margin={{ top: 5, right: 10, bottom: 0, left: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
                     <XAxis dataKey="fecha" stroke="var(--text-faint)" fontSize={11} />
                     <YAxis stroke="var(--text-faint)" fontSize={11} width={32} />

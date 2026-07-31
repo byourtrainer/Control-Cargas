@@ -274,16 +274,16 @@
      estas variables transforma automáticamente fondos, texto y bordes en
      toda la app sin tener que tocar cada componente uno a uno. --- */
   :root {
-    --bg: #ffffff;
-    --bg-elevated: #f6f7f6;
-    --bg-card: #ffffff;
-    --line: #e3e5e2;
-    --line-strong: #c7cbc6;
-    --text: #16201a;
-    --text-dim: #4b564e;
-    --text-faint: #7c887f;
-    --accent: #5a8f1f;
-    --accent-dim: #4a7519;
+    --bg: #ffffff !important;
+    --bg-elevated: #f6f7f6 !important;
+    --bg-card: #ffffff !important;
+    --line: #e3e5e2 !important;
+    --line-strong: #c7cbc6 !important;
+    --text: #16201a !important;
+    --text-dim: #4b564e !important;
+    --text-faint: #7c887f !important;
+    --accent: #5a8f1f !important;
+    --accent-dim: #4a7519 !important;
   }
 
   * {
