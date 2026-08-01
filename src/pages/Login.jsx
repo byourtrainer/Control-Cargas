@@ -25,7 +25,7 @@ export default function Login() {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) setError(traducirError(error.message))
     } else {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -40,8 +40,12 @@ export default function Login() {
       })
       if (error) {
         setError(traducirError(error.message))
+      } else if (data.session) {
+        // No hacía falta confirmar el correo: ya hay sesión activa, se entra directo.
+        // No hace falta ningún aviso — el cambio de sesión lleva a la app automáticamente.
       } else {
-        setAviso('Cuenta creada. Revisa tu correo si se pide confirmación, o inicia sesión directamente.')
+        // Hace falta confirmar el correo antes de poder iniciar sesión.
+        setAviso(`Te hemos enviado un correo a ${email} para confirmar tu cuenta. Ábrelo, pulsa el enlace, y vuelve aquí para iniciar sesión.`)
         setModo('entrar')
       }
     }

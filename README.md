@@ -839,6 +839,24 @@ hueco real. Ahora:
   ("Sensaciones del jugador, condiciones del test, incidencias...") para
   animar a rellenarlo, ya que hasta ahora se perdía de vista.
 
+## Mensaje de registro ya no es ambiguo
+
+Antes, tras crear una cuenta, el jugador veía siempre el mismo aviso
+genérico ("revisa tu correo *si* se pide confirmación"), sin saber si de
+verdad tenía que hacer algo o no. Ahora la app **detecta automáticamente**
+qué ha ocurrido de verdad (mirando si Supabase devuelve una sesión activa
+tras el registro o no) y muestra el mensaje que corresponde a cada caso:
+
+- **Si tu proyecto de Supabase tiene la confirmación de email
+  desactivada**: no aparece ningún aviso — la cuenta queda activa al
+  instante y el jugador entra directo a la app.
+- **Si la tiene activada**: aparece un mensaje claro y concreto ("Te hemos
+  enviado un correo a [su email] para confirmar tu cuenta...") en vez del
+  mensaje ambiguo de antes.
+
+No hace falta que sepas de memoria cómo tienes configurado ese ajuste —
+la app reacciona a lo que realmente pasa en cada registro.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.
