@@ -3,12 +3,15 @@ import { supabase } from '../lib/supabaseClient'
 import './Equipos.css'
 
 const coloresSugeridos = ['#c8ff4d', '#4dc8ff', '#ff4d8f', '#ffb84d', '#a24dff', '#4dffb8', '#ff6b4d', '#4d6bff']
+const TAMANO_MAXIMO_MB = 1.5
 
 export default function Equipos({ equipos, equipoActivo, onCambiarEquipoActivo, onEquiposActualizados }) {
   const [nuevoEquipo, setNuevoEquipo] = useState('')
   const [colorNuevo, setColorNuevo] = useState(coloresSugeridos[equipos.length % coloresSugeridos.length])
   const [guardando, setGuardando] = useState(false)
   const [mensaje, setMensaje] = useState(null)
+  const [subiendoLogoId, setSubiendoLogoId] = useState(null)
+  const [errorLogo, setErrorLogo] = useState(null)
 
   async function anadirEquipo(e) {
     e.preventDefault()
@@ -28,6 +31,39 @@ export default function Equipos({ equipos, equipoActivo, onCambiarEquipoActivo, 
 
   async function cambiarColorEquipo(id, color) {
     await supabase.from('equipos').update({ color }).eq('id', id)
+    onEquiposActualizados()
+  }
+
+  function subirLogo(id, archivo) {
+    if (!archivo) return
+    setErrorLogo(null)
+
+    if (!archivo.type.startsWith('image/')) {
+      setErrorLogo('El archivo debe ser una imagen.')
+      return
+    }
+    if (archivo.size > TAMANO_MAXIMO_MB * 1024 * 1024) {
+      setErrorLogo(`La imagen es demasiado grande (máximo ${TAMANO_MAXIMO_MB} MB). Prueba con una versión más pequeña del escudo.`)
+      return
+    }
+
+    setSubiendoLogoId(id)
+    const lector = new FileReader()
+    lector.onload = async () => {
+      const { error } = await supabase.from('equipos').update({ logo_base64: lector.result }).eq('id', id)
+      if (error) setErrorLogo('No se pudo guardar el escudo.')
+      else onEquiposActualizados()
+      setSubiendoLogoId(null)
+    }
+    lector.onerror = () => {
+      setErrorLogo('No se pudo leer la imagen.')
+      setSubiendoLogoId(null)
+    }
+    lector.readAsDataURL(archivo)
+  }
+
+  async function quitarLogo(id) {
+    await supabase.from('equipos').update({ logo_base64: null }).eq('id', id)
     onEquiposActualizados()
   }
 
@@ -60,6 +96,23 @@ export default function Equipos({ equipos, equipoActivo, onCambiarEquipoActivo, 
                 className="equipo-color-input"
                 title="Cambiar color del equipo"
               />
+              <label className="equipo-logo-selector" title="Subir escudo del equipo">
+                {eq.logo_base64 ? (
+                  <img src={eq.logo_base64} alt={`Escudo de ${eq.nombre}`} className="equipo-logo-miniatura" />
+                ) : (
+                  <span className="equipo-logo-vacio">+ Escudo</span>
+                )}
+                <input
+                  type="file" accept="image/*" className="equipo-logo-input-oculto"
+                  onChange={(e) => subirLogo(eq.id, e.target.files?.[0])}
+                  disabled={subiendoLogoId === eq.id}
+                />
+              </label>
+              {eq.logo_base64 && (
+                <button type="button" className="equipo-logo-quitar" onClick={() => quitarLogo(eq.id)} title="Quitar escudo">
+                  ✕
+                </button>
+              )}
               {equipoActivo === eq.id && <span className="check-activo">✓</span>}
             </div>
           ))}
@@ -72,6 +125,7 @@ export default function Equipos({ equipos, equipoActivo, onCambiarEquipoActivo, 
             {equipoActivo === 'sin_asignar' && <span className="check-activo">✓</span>}
           </button>
         </div>
+        {errorLogo && <div className="aviso-error" style={{ marginTop: 12 }}>{errorLogo}</div>}
       </section>
 
       <section className="equipos-crear-card">

@@ -446,6 +446,13 @@
 .informe-titulo-impresion-resumen { display: none; }
 .informe-titulo-impresion-resumen h2 { font-size: 20px; margin-bottom: 4px; }
 
+.informe-logo-impresion {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  float: right;
+}
+
 .equipo-etiqueta {
   display: inline-flex;
   align-items: center;

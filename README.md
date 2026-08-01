@@ -857,6 +857,22 @@ tras el registro o no) y muestra el mensaje que corresponde a cada caso:
 No hace falta que sepas de memoria cómo tienes configurado ese ajuste —
 la app reacciona a lo que realmente pasa en cada registro.
 
+## Escudo del equipo en la cabecera de los informes exportados
+
+- En **Equipos**, junto al color de cada equipo, hay un pequeño recuadro
+  para **subir su escudo** (clic para elegir la imagen desde tu
+  ordenador/móvil). Se guarda directamente asociado a ese equipo — sin
+  necesidad de montar un sistema de almacenamiento aparte, la imagen viaja
+  con los datos del propio equipo. Límite de 1.5 MB por imagen (con aviso
+  claro si se supera).
+- El escudo aparece automáticamente en la **cabecera del PDF exportado
+  desde Resumen**, arriba a la derecha del título — tanto en el informe de
+  equipo (si tienes un equipo concreto seleccionado, no "Todos los
+  equipos") como en el informe individual (usando el escudo del equipo al
+  que pertenece ese jugador).
+- Se puede quitar el escudo en cualquier momento con el botón "✕" junto al
+  recuadro.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

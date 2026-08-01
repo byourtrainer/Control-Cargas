@@ -244,7 +244,7 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
   async function cargarDatos() {
     setCargando(true)
     const [{ data: perfiles }, { data: regs }, { data: sess }] = await Promise.all([
-      supabase.from('perfiles').select('*, equipos(id, nombre)').eq('rol', 'jugador').order('nombre'),
+      supabase.from('perfiles').select('*, equipos(id, nombre, logo_base64)').eq('rol', 'jugador').order('nombre'),
       supabase.from('registros_diarios').select('*').gte('fecha', diasAtras(400)).order('fecha'),
       supabase.from('sesiones').select('fecha, mdx').gte('fecha', diasAtras(400)),
     ])
@@ -560,6 +560,12 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
       </p>
 
       <div className="informe-titulo-impresion-resumen">
+        {(() => {
+          const logo = resumenTarjetas?.modo === 'individual'
+            ? jugadoresGrafico[0]?.equipos?.logo_base64
+            : (equipoActivo !== 'todos' && equipoActivo !== 'sin_asignar' ? jugadoresFiltrados[0]?.equipos?.logo_base64 : null)
+          return logo ? <img src={logo} alt="Escudo del equipo" className="informe-logo-impresion" /> : null
+        })()}
         <h2>
           {resumenTarjetas?.modo === 'individual'
             ? `Informe de ${jugadoresGrafico[0]?.nombre || 'jugador'}`

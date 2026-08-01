@@ -102,6 +102,55 @@
   cursor: pointer;
 }
 
+.equipo-logo-selector {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 6px;
+  cursor: pointer;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.equipo-logo-selector:hover { border-color: var(--accent); }
+
+.equipo-logo-miniatura {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.equipo-logo-vacio {
+  font-size: 9px;
+  color: var(--text-faint);
+  text-align: center;
+  line-height: 1.2;
+}
+
+.equipo-logo-input-oculto {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.equipo-logo-quitar {
+  background: none;
+  border: 1px solid var(--line-strong);
+  color: var(--text-faint);
+  border-radius: 6px;
+  width: 22px;
+  height: 22px;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.equipo-logo-quitar:hover { border-color: var(--risk-high); color: var(--risk-high); }
+
 .equipos-color-selector {
   display: flex;
   align-items: center;
