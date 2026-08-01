@@ -347,3 +347,11 @@
   padding: 9px 16px 9px 0;
   border-bottom: 1px solid var(--line);
 }
+
+.tests-tabla-notas {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-dim);
+  cursor: default;
+}

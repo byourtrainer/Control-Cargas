@@ -610,8 +610,11 @@ export default function Tests({ equipoActivo = 'todos' }) {
           )}
 
           <label className="campo-test">
-            <span>Notas (opcional)</span>
-            <textarea value={form.notas} onChange={(e) => setForm({ ...form, notas: e.target.value })} rows={2} />
+            <span>Notas del test (opcional, pero recomendado)</span>
+            <textarea
+              value={form.notas} onChange={(e) => setForm({ ...form, notas: e.target.value })}
+              rows={3} placeholder="Ej. Sensaciones del jugador, condiciones del test, incidencias, contexto…"
+            />
           </label>
 
           {mensaje && <div className={mensaje.tipo === 'ok' ? 'aviso-ok' : 'aviso-error'}>{mensaje.texto}</div>}
@@ -875,7 +878,7 @@ export default function Tests({ equipoActivo = 'todos' }) {
               <thead>
                 <tr>
                   <th>Fecha</th><th>Jugador</th><th>Test</th><th>Peso (kg)</th>
-                  <th>Valor</th><th>Detalle</th><th></th>
+                  <th>Valor</th><th>Detalle</th><th>Notas</th><th></th>
                 </tr>
               </thead>
               <tbody>
@@ -887,6 +890,7 @@ export default function Tests({ equipoActivo = 'todos' }) {
                     <td className="mono">{t.peso_corporal_kg ?? '—'}</td>
                     <td className="mono">{formatearValorPrincipal(t)}</td>
                     <td className="mono texto-dim">{formatearDetalle(t)}</td>
+                    <td className="tests-tabla-notas" title={t.notas || ''}>{t.notas || '—'}</td>
                     <td>
                       <button
                         className="btn-eliminar-fila" onClick={() => eliminarTest(t.id)}

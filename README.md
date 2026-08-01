@@ -825,6 +825,20 @@ oscuro y quedaban casi invisibles en blanco.
   vez y solo se recalculan cuando cambian de verdad (jugadores, fechas,
   método de ACWR...), no en cada pulsación de tecla.
 
+## Las notas del test ahora aparecen en el historial
+
+El campo de comentarios al registrar un test ya existía y se guardaba
+correctamente, pero **nunca se mostraba en ningún sitio después** — un
+hueco real. Ahora:
+
+- El historial de tests tiene una nueva columna **"Notas"**, con la fecha
+  del test justo al lado, tal y como pedías.
+- Si el comentario es largo, se recorta con "…" en la tabla, pero puedes
+  pasar el cursor por encima para ver el texto completo.
+- El campo del formulario de registro ahora tiene un texto de ejemplo
+  ("Sensaciones del jugador, condiciones del test, incidencias...") para
+  animar a rellenarlo, ya que hasta ahora se perdía de vista.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.
