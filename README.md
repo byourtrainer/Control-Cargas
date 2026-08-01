@@ -873,6 +873,16 @@ la app reacciona a lo que realmente pasa en cada registro.
 - Se puede quitar el escudo en cualquier momento con el botón "✕" junto al
   recuadro.
 
+## Flechas de dirección en el mapa de calor (Desviación RPE vs equipo)
+
+Cuando el mapa de calor está en modo "Desviación RPE vs equipo", cada
+celda con datos ahora muestra una pequeña flecha además del color:
+**▲ = ese día el jugador tuvo un RPE por encima de la media del equipo**,
+**▼ = por debajo**. Antes esa información solo estaba disponible pasando
+el cursor por encima (lo cual no funciona en absoluto en el PDF exportado)
+— ahora es visible directamente, tanto en pantalla como impreso. Se añadió
+también una nota explicativa debajo del mapa cuando esta vista está activa.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

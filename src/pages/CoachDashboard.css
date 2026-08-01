@@ -323,10 +323,19 @@
 }
 
 .mapa-calor-punto {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 16px;
   height: 16px;
   border-radius: 4px;
+}
+
+.mapa-calor-flecha {
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 700;
+  color: rgba(0,0,0,0.55);
 }
 
 .punto-leyenda-partido {
@@ -423,6 +432,7 @@
   .mapa-calor-scroll { overflow: visible !important; }
   .mapa-calor-tabla { font-size: 8px; }
   .mapa-calor-punto { width: 10px; height: 10px; }
+  .mapa-calor-flecha { font-size: 6px; }
   .mapa-calor-th-jugador, .mapa-calor-td-jugador { max-width: 110px; overflow: hidden; text-overflow: ellipsis; }
 
   .comentario-grafico {

@@ -481,6 +481,7 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
           const desviacion = registro.rpe - mediaEquipo
           return {
             fechaISO, color: colorDesviacion(Math.abs(desviacion)),
+            direccion: desviacion === 0 ? null : desviacion > 0 ? 'alta' : 'baja',
             valor: `RPE ${registro.rpe} · equipo ${mediaEquipo.toFixed(1)} (${desviacion > 0 ? '+' : ''}${desviacion.toFixed(1)})`,
           }
         }
@@ -678,7 +679,13 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
                   <td className="mapa-calor-td-jugador">{fila.nombre}</td>
                   {fila.celdas.map((c) => (
                     <td key={c.fechaISO} className="mapa-calor-celda">
-                      <span className="mapa-calor-punto" style={{ background: c.color }} title={`${c.fechaISO}: ${c.valor}`} />
+                      <span className="mapa-calor-punto" style={{ background: c.color }} title={`${c.fechaISO}: ${c.valor}`}>
+                        {variableMapaCalor === 'desviacion' && c.direccion && (
+                          <span className={`mapa-calor-flecha mapa-calor-flecha-${c.direccion}`}>
+                            {c.direccion === 'alta' ? '▲' : '▼'}
+                          </span>
+                        )}
+                      </span>
                     </td>
                   ))}
                 </tr>
@@ -689,6 +696,7 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
         {mapaCalor.length === 0 && <p className="texto-dim">No hay jugadores en este grupo.</p>}
         <p className="grafico-nota texto-dim">
           Un cuadrado gris en la cabecera de la fecha indica día de partido (MD).
+          {variableMapaCalor === 'desviacion' && ' ▲ = RPE por encima de la media del equipo · ▼ = por debajo.'}
         </p>
       </section>
 
