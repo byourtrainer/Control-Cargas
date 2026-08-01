@@ -135,6 +135,69 @@
   margin: 4px 0 0;
 }
 
+.calendario-club-rango {
+  font-size: 11px;
+  display: block;
+  margin-top: 2px;
+}
+
+.calendario-club-punto-doble {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.calendario-club-punto-intensidad {
+  outline: 1px solid var(--bg-elevated);
+}
+
+.calendario-club-intensidad-punto {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.calendario-club-intensidad-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-top: 4px;
+}
+
+.calendario-club-intensidad-selector {
+  display: flex;
+  gap: 6px;
+}
+
+.calendario-club-intensidad-boton {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--text-dim);
+  justify-content: center;
+}
+
+.calendario-club-intensidad-boton:hover { border-color: var(--color-intensidad); }
+
+.calendario-club-intensidad-activo {
+  border-color: var(--color-intensidad);
+  background: color-mix(in srgb, var(--color-intensidad) 15%, var(--bg-elevated));
+  color: var(--text);
+}
+
+.calendario-club-leyenda-intensidad {
+  margin-top: 8px;
+}
+
 .calendario-club-titulo-imprimir { display: none; }
 
 .calendario-club-eventos-imprimir {
@@ -179,6 +242,13 @@
     display: block;
     width: 100%;
     margin-top: 2px;
+  }
+
+  .calendario-club-evento-linea .calendario-club-intensidad-punto {
+    width: 5px;
+    height: 5px;
+    margin-right: 2px;
+    vertical-align: middle;
   }
 
   .calendario-club-leyenda { break-inside: avoid; }

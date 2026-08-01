@@ -916,6 +916,24 @@ competiciones, entrenamientos señalados...
   algunos colores (como el verde lima de "Liga") apenas se verían si se
   usaran como color de texto sobre el fondo blanco del informe.
 
+## Calendario: título opcional para partidos, eventos de varios días, semáforo de intensidad
+
+- **Título ya no es obligatorio** para Amistoso/Liga/Europa/Copa del
+  Rey/Play-Off — en su lugar, el **rival pasa a ser obligatorio** para
+  esos tipos (el título sigue siendo obligatorio solo para
+  "Entrenamiento", donde no hay rival). Si no pones título en un partido,
+  se muestra automáticamente "vs [Rival]" en el calendario, en la lista de
+  eventos del día y en el PDF exportado.
+- **Eventos de varios días**: nuevo campo "Hasta" (opcional) al crear un
+  evento. Si lo rellenas, ese evento aparece en todos los días del rango
+  (calendario, lista del día y PDF) — útil para concentraciones,
+  pretemporadas, torneos de varios días, etc.
+- **Semáforo de intensidad** (rojo/amarillo/verde): al crear cualquier
+  evento puedes marcar opcionalmente su intensidad esperada — se ve como
+  un puntito de color junto al del tipo de evento en el calendario
+  (pantalla), y como un punto de color delante del texto en el PDF
+  exportado. Tiene su propia leyenda debajo del calendario.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

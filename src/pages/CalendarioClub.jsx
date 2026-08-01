@@ -21,7 +21,28 @@ const colorPorTipo = {
   'Play-Off': '#ea5c4a',
 }
 
-const vacio = { tipo: 'Liga', titulo: '', hora: '', rival: '', lugar: '', notas: '' }
+const nivelesIntensidad = [
+  { valor: 'baja', etiqueta: 'Baja', color: 'var(--risk-low)' },
+  { valor: 'media', etiqueta: 'Media', color: 'var(--risk-mid)' },
+  { valor: 'alta', etiqueta: 'Alta', color: 'var(--risk-high)' },
+]
+const colorIntensidad = Object.fromEntries(nivelesIntensidad.map((n) => [n.valor, n.color]))
+const etiquetaIntensidad = Object.fromEntries(nivelesIntensidad.map((n) => [n.valor, n.etiqueta]))
+
+const vacio = { tipo: 'Liga', titulo: '', hora: '', rival: '', lugar: '', notas: '', fechaFin: '', intensidad: '' }
+
+/** Texto que identifica el evento: el título si lo hay, o "vs Rival" si no. */
+function tituloEfectivo(ev) {
+  if (ev.titulo && ev.titulo.trim()) return ev.titulo
+  if (ev.rival) return `vs ${ev.rival}`
+  return ev.tipo
+}
+
+/** Si "fecha" cae dentro del rango [ev.fecha, ev.fecha_fin || ev.fecha]. */
+function eventoIncluyeFecha(ev, fecha) {
+  const fin = ev.fecha_fin || ev.fecha
+  return fecha >= ev.fecha && fecha <= fin
+}
 
 export default function CalendarioClub({ equipoActivo = 'todos', equipos = [] }) {
   const equipoValido = equipoActivo !== 'todos' && equipoActivo !== 'sin_asignar'
@@ -40,13 +61,14 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [] })
 
   async function cargarMes() {
     setCargando(true)
-    const inicio = new Date(mesVisible.getFullYear(), mesVisible.getMonth(), 1).toISOString().slice(0, 10)
+    const inicio = new Date(mesVisible.getFullYear(), mesVisible.getMonth(), 1)
     const fin = new Date(mesVisible.getFullYear(), mesVisible.getMonth() + 1, 0).toISOString().slice(0, 10)
+    const inicioConsulta = new Date(inicio); inicioConsulta.setDate(inicioConsulta.getDate() - 45)
     const { data } = await supabase
       .from('eventos_calendario')
       .select('*')
       .eq('equipo_id', equipoActivo)
-      .gte('fecha', inicio)
+      .gte('fecha', inicioConsulta.toISOString().slice(0, 10))
       .lte('fecha', fin)
       .order('hora', { ascending: true })
     setEventos(data || [])
@@ -73,21 +95,34 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [] })
 
   async function guardarEvento(e) {
     e.preventDefault()
-    if (!form.titulo.trim()) {
-      setMensaje({ tipo: 'error', texto: 'Ponle un título al evento.' })
+    const esEntrenamiento = form.tipo === 'Entrenamiento'
+
+    if (esEntrenamiento && !form.titulo.trim()) {
+      setMensaje({ tipo: 'error', texto: 'Ponle un título al entrenamiento.' })
       return
     }
+    if (!esEntrenamiento && !form.rival.trim()) {
+      setMensaje({ tipo: 'error', texto: 'Indica el rival (el título es opcional para partidos/competiciones).' })
+      return
+    }
+    if (form.fechaFin && form.fechaFin < fechaSeleccionada) {
+      setMensaje({ tipo: 'error', texto: 'La fecha de fin no puede ser anterior a la fecha de inicio.' })
+      return
+    }
+
     setGuardando(true)
     setMensaje(null)
     const { error } = await supabase.from('eventos_calendario').insert({
       equipo_id: equipoActivo,
       fecha: fechaSeleccionada,
+      fecha_fin: form.fechaFin || null,
       tipo: form.tipo,
-      titulo: form.titulo.trim(),
+      titulo: form.titulo.trim() || null,
       hora: form.hora || null,
       rival: form.rival || null,
       lugar: form.lugar || null,
       notas: form.notas || null,
+      intensidad: form.intensidad || null,
     })
     if (error) {
       setMensaje({ tipo: 'error', texto: 'No se pudo guardar el evento.' })
@@ -133,7 +168,8 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [] })
     return `${mesVisible.getFullYear()}-${mm}-${dd}`
   }
 
-  const eventosDelDiaSeleccionado = eventos.filter((ev) => ev.fecha === fechaSeleccionada)
+  const esEntrenamientoForm = form.tipo === 'Entrenamiento'
+  const eventosDelDiaSeleccionado = eventos.filter((ev) => eventoIncluyeFecha(ev, fechaSeleccionada))
   const hoy = hoyISO()
 
   return (
@@ -161,7 +197,7 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [] })
           {celdas.map((d, i) => {
             if (d === null) return <div key={i} className="calendario-celda calendario-celda-vacia" />
             const fecha = fechaDe(d)
-            const eventosDia = eventos.filter((ev) => ev.fecha === fecha)
+            const eventosDia = eventos.filter((ev) => eventoIncluyeFecha(ev, fecha))
             const esHoy = fecha === hoy
             const esActiva = fecha === fechaSeleccionada
             return (
@@ -173,7 +209,12 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [] })
                 <span className="calendario-numero">{d}</span>
                 <span className="calendario-club-puntos no-imprimir">
                   {eventosDia.slice(0, 4).map((ev) => (
-                    <span key={ev.id} className="calendario-club-punto" style={{ background: colorPorTipo[ev.tipo] }} />
+                    <span key={ev.id} className="calendario-club-punto-doble">
+                      <span className="calendario-club-punto" style={{ background: colorPorTipo[ev.tipo] }} />
+                      {ev.intensidad && (
+                        <span className="calendario-club-punto calendario-club-punto-intensidad" style={{ background: colorIntensidad[ev.intensidad] }} />
+                      )}
+                    </span>
                   ))}
                 </span>
                 <span className="calendario-club-eventos-imprimir">
@@ -183,7 +224,10 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [] })
                       className="calendario-club-evento-linea"
                       style={{ borderLeftColor: colorPorTipo[ev.tipo] }}
                     >
-                      <strong>{ev.tipo}</strong> {ev.titulo}{ev.hora ? ` · ${ev.hora}` : ''}
+                      {ev.intensidad && (
+                        <span className="calendario-club-intensidad-punto" style={{ background: colorIntensidad[ev.intensidad] }} />
+                      )}
+                      <strong>{ev.tipo}</strong> {tituloEfectivo(ev)}{ev.hora ? ` · ${ev.hora}` : ''}
                     </span>
                   ))}
                 </span>
@@ -195,6 +239,12 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [] })
         <div className="calendario-club-leyenda">
           {tiposEvento.map((t) => (
             <span key={t}><span className="calendario-club-leyenda-punto" style={{ background: colorPorTipo[t] }} /> {t}</span>
+          ))}
+        </div>
+        <div className="calendario-club-leyenda calendario-club-leyenda-intensidad">
+          <span className="texto-dim">Intensidad:</span>
+          {nivelesIntensidad.map((n) => (
+            <span key={n.valor}><span className="calendario-club-leyenda-punto" style={{ background: n.color }} /> {n.etiqueta}</span>
           ))}
         </div>
       </section>
@@ -213,10 +263,21 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [] })
                   {ev.tipo}
                 </span>
                 <div className="calendario-club-evento-info">
-                  <strong>{ev.titulo}</strong>
+                  <strong>{tituloEfectivo(ev)}</strong>
                   <span className="texto-dim">
-                    {[ev.hora, ev.rival, ev.lugar].filter(Boolean).join(' · ')}
+                    {[ev.hora, (ev.titulo && ev.titulo.trim() && ev.rival) ? ev.rival : null, ev.lugar].filter(Boolean).join(' · ')}
                   </span>
+                  {ev.fecha_fin && ev.fecha_fin !== ev.fecha && (
+                    <span className="texto-dim calendario-club-rango">
+                      Del {new Date(ev.fecha + 'T00:00:00').toLocaleDateString('es-ES')} al {new Date(ev.fecha_fin + 'T00:00:00').toLocaleDateString('es-ES')}
+                    </span>
+                  )}
+                  {ev.intensidad && (
+                    <span className="calendario-club-intensidad-badge">
+                      <span className="calendario-club-intensidad-punto" style={{ background: colorIntensidad[ev.intensidad] }} />
+                      Intensidad {etiquetaIntensidad[ev.intensidad].toLowerCase()}
+                    </span>
+                  )}
                   {ev.notas && <p className="calendario-club-evento-notas">{ev.notas}</p>}
                 </div>
                 <button
@@ -239,13 +300,32 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [] })
             </select>
           </label>
 
-          <label className="campo-sesion">
-            <span>Título</span>
-            <input
-              type="text" value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })}
-              placeholder="Ej. vs Real Madrid, Entreno pretemporada…" required
-            />
-          </label>
+          {esEntrenamientoForm ? (
+            <label className="campo-sesion">
+              <span>Título</span>
+              <input
+                type="text" value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })}
+                placeholder="Ej. Pista, Gimnasio, Recuperación…" required
+              />
+            </label>
+          ) : (
+            <div className="fila-doble">
+              <label className="campo-sesion">
+                <span>Rival</span>
+                <input
+                  type="text" value={form.rival} onChange={(e) => setForm({ ...form, rival: e.target.value })}
+                  placeholder="Ej. Real Madrid" required
+                />
+              </label>
+              <label className="campo-sesion">
+                <span>Título (opcional)</span>
+                <input
+                  type="text" value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })}
+                  placeholder="Se usa vs Rival si se deja en blanco"
+                />
+              </label>
+            </div>
+          )}
 
           <div className="fila-doble">
             <label className="campo-sesion">
@@ -253,14 +333,38 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [] })
               <input type="text" value={form.hora} onChange={(e) => setForm({ ...form, hora: e.target.value })} placeholder="18:00" />
             </label>
             <label className="campo-sesion">
+              <span>Hasta (opcional, evento de varios días)</span>
+              <input type="date" value={form.fechaFin} min={fechaSeleccionada} onChange={(e) => setForm({ ...form, fechaFin: e.target.value })} />
+            </label>
+          </div>
+
+          {esEntrenamientoForm && (
+            <label className="campo-sesion">
               <span>Rival (opcional)</span>
               <input type="text" value={form.rival} onChange={(e) => setForm({ ...form, rival: e.target.value })} placeholder="—" />
             </label>
-          </div>
+          )}
 
           <label className="campo-sesion">
             <span>Lugar (opcional)</span>
             <input type="text" value={form.lugar} onChange={(e) => setForm({ ...form, lugar: e.target.value })} placeholder="Casa / Fuera / estadio…" />
+          </label>
+
+          <label className="campo-sesion">
+            <span>Intensidad esperada (opcional)</span>
+            <div className="calendario-club-intensidad-selector">
+              {nivelesIntensidad.map((n) => (
+                <button
+                  key={n.valor} type="button"
+                  className={`calendario-club-intensidad-boton ${form.intensidad === n.valor ? 'calendario-club-intensidad-activo' : ''}`}
+                  style={{ '--color-intensidad': n.color }}
+                  onClick={() => setForm({ ...form, intensidad: form.intensidad === n.valor ? '' : n.valor })}
+                >
+                  <span className="calendario-club-intensidad-punto" style={{ background: n.color }} />
+                  {n.etiqueta}
+                </button>
+              ))}
+            </div>
           </label>
 
           <label className="campo-sesion">
