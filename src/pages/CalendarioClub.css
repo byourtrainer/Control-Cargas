@@ -1,0 +1,136 @@
+.calendario-club-layout {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .calendario-club-layout { grid-template-columns: 1fr; }
+}
+
+.calendario-club-sin-equipo {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 24px;
+  max-width: 480px;
+}
+
+.calendario-club-sin-equipo strong { color: var(--accent); }
+
+.calendario-club-card {
+  position: sticky;
+  top: 88px;
+}
+
+@media (max-width: 900px) {
+  .calendario-club-card { position: static; }
+}
+
+.calendario-club-celda {
+  position: relative;
+}
+
+.calendario-club-puntos {
+  display: flex;
+  gap: 3px;
+  justify-content: center;
+  flex-wrap: wrap;
+  min-height: 6px;
+}
+
+.calendario-club-punto {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.calendario-club-leyenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 18px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.calendario-club-leyenda span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.calendario-club-leyenda-punto {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.calendario-club-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 24px;
+}
+
+.calendario-club-panel h2 { font-size: 18px; }
+
+.calendario-club-equipo {
+  font-size: 13px;
+  margin: 2px 0 18px;
+}
+
+.calendario-club-subtitulo {
+  font-size: 13px;
+  color: var(--text-dim);
+  font-weight: 500;
+  margin: 4px 0 12px;
+}
+
+.calendario-club-lista {
+  list-style: none;
+  margin: 0 0 20px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.calendario-club-lista li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.calendario-club-tipo-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.calendario-club-evento-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+}
+
+.calendario-club-evento-info span {
+  font-size: 12px;
+}
+
+.calendario-club-evento-notas {
+  font-size: 12px;
+  color: var(--text-faint);
+  margin: 4px 0 0;
+}

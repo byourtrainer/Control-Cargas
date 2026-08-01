@@ -883,6 +883,22 @@ el cursor por encima (lo cual no funciona en absoluto en el PDF exportado)
 — ahora es visible directamente, tanto en pantalla como impreso. Se añadió
 también una nota explicativa debajo del mapa cuando esta vista está activa.
 
+## Nueva pestaña "Calendario" (agenda del club)
+
+Distinta de "Planificación" (que gestiona la duración de las sesiones día
+a día) — esta es la **agenda de temporada** del club: partidos,
+competiciones, entrenamientos señalados...
+
+- Requiere tener un **equipo/club concreto** seleccionado en el "◎" (igual
+  que Planificación) — el calendario es siempre de un club a la vez.
+- Cada evento tiene un **tipo** con su propio color: Entrenamiento (gris),
+  Amistoso (azul), Liga (verde lima), Europa (morado), Copa del Rey
+  (dorado), Play-Off (rojo) — con su leyenda debajo del calendario.
+- Cada día del mes muestra puntos de color con los eventos de ese día. Al
+  hacer clic en un día se abre un panel con el listado de eventos (con
+  opción de borrar) y un formulario para añadir uno nuevo: tipo, título,
+  hora, rival y lugar (opcionales), y notas.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.
