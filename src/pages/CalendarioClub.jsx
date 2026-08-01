@@ -28,8 +28,15 @@ const nivelesIntensidad = [
 ]
 const colorIntensidad = Object.fromEntries(nivelesIntensidad.map((n) => [n.valor, n.color]))
 const etiquetaIntensidad = Object.fromEntries(nivelesIntensidad.map((n) => [n.valor, n.etiqueta]))
+const ordenIntensidad = nivelesIntensidad.map((n) => n.valor)
 
-const vacio = { tipo: 'Liga', titulo: '', hora: '', rival: '', lugar: '', notas: '', fechaFin: '', intensidad: '' }
+/** Devuelve la intensidad (array o null) siempre en el mismo orden (baja→media→alta). */
+function ordenarIntensidad(intensidad) {
+  if (!intensidad || intensidad.length === 0) return []
+  return ordenIntensidad.filter((v) => intensidad.includes(v))
+}
+
+const vacio = { tipo: 'Liga', titulo: '', hora: '', rival: '', lugar: '', notas: '', fechaFin: '', intensidad: [] }
 
 /** Texto que identifica el evento: el título si lo hay, o "vs Rival" si no. */
 function tituloEfectivo(ev) {
@@ -122,7 +129,7 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [] })
       rival: form.rival || null,
       lugar: form.lugar || null,
       notas: form.notas || null,
-      intensidad: form.intensidad || null,
+      intensidad: form.intensidad.length > 0 ? form.intensidad : null,
     })
     if (error) {
       setMensaje({ tipo: 'error', texto: 'No se pudo guardar el evento.' })
@@ -211,9 +218,9 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [] })
                   {eventosDia.slice(0, 4).map((ev) => (
                     <span key={ev.id} className="calendario-club-punto-doble">
                       <span className="calendario-club-punto" style={{ background: colorPorTipo[ev.tipo] }} />
-                      {ev.intensidad && (
-                        <span className="calendario-club-punto calendario-club-punto-intensidad" style={{ background: colorIntensidad[ev.intensidad] }} />
-                      )}
+                      {ordenarIntensidad(ev.intensidad).map((valor) => (
+                        <span key={valor} className="calendario-club-punto calendario-club-punto-intensidad" style={{ background: colorIntensidad[valor] }} />
+                      ))}
                     </span>
                   ))}
                 </span>
@@ -224,9 +231,9 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [] })
                       className="calendario-club-evento-linea"
                       style={{ borderLeftColor: colorPorTipo[ev.tipo] }}
                     >
-                      {ev.intensidad && (
-                        <span className="calendario-club-intensidad-punto" style={{ background: colorIntensidad[ev.intensidad] }} />
-                      )}
+                      {ordenarIntensidad(ev.intensidad).map((valor) => (
+                        <span key={valor} className="calendario-club-intensidad-punto" style={{ background: colorIntensidad[valor] }} />
+                      ))}
                       <strong>{ev.tipo}</strong> {tituloEfectivo(ev)}{ev.hora ? ` · ${ev.hora}` : ''}
                     </span>
                   ))}
@@ -272,10 +279,12 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [] })
                       Del {new Date(ev.fecha + 'T00:00:00').toLocaleDateString('es-ES')} al {new Date(ev.fecha_fin + 'T00:00:00').toLocaleDateString('es-ES')}
                     </span>
                   )}
-                  {ev.intensidad && (
+                  {ev.intensidad && ev.intensidad.length > 0 && (
                     <span className="calendario-club-intensidad-badge">
-                      <span className="calendario-club-intensidad-punto" style={{ background: colorIntensidad[ev.intensidad] }} />
-                      Intensidad {etiquetaIntensidad[ev.intensidad].toLowerCase()}
+                      {ordenarIntensidad(ev.intensidad).map((valor) => (
+                        <span key={valor} className="calendario-club-intensidad-punto" style={{ background: colorIntensidad[valor] }} />
+                      ))}
+                      Intensidad {ordenarIntensidad(ev.intensidad).map((v) => etiquetaIntensidad[v].toLowerCase()).join('-')}
                     </span>
                   )}
                   {ev.notas && <p className="calendario-club-evento-notas">{ev.notas}</p>}
@@ -351,19 +360,29 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [] })
           </label>
 
           <label className="campo-sesion">
-            <span>Intensidad esperada (opcional)</span>
+            <span>Intensidad esperada (opcional, hasta 2 — ej. rojo-amarillo)</span>
             <div className="calendario-club-intensidad-selector">
-              {nivelesIntensidad.map((n) => (
-                <button
-                  key={n.valor} type="button"
-                  className={`calendario-club-intensidad-boton ${form.intensidad === n.valor ? 'calendario-club-intensidad-activo' : ''}`}
-                  style={{ '--color-intensidad': n.color }}
-                  onClick={() => setForm({ ...form, intensidad: form.intensidad === n.valor ? '' : n.valor })}
-                >
-                  <span className="calendario-club-intensidad-punto" style={{ background: n.color }} />
-                  {n.etiqueta}
-                </button>
-              ))}
+              {nivelesIntensidad.map((n) => {
+                const activo = form.intensidad.includes(n.valor)
+                const bloqueado = !activo && form.intensidad.length >= 2
+                return (
+                  <button
+                    key={n.valor} type="button"
+                    className={`calendario-club-intensidad-boton ${activo ? 'calendario-club-intensidad-activo' : ''}`}
+                    style={{ '--color-intensidad': n.color }}
+                    disabled={bloqueado}
+                    onClick={() => setForm({
+                      ...form,
+                      intensidad: activo
+                        ? form.intensidad.filter((v) => v !== n.valor)
+                        : [...form.intensidad, n.valor],
+                    })}
+                  >
+                    <span className="calendario-club-intensidad-punto" style={{ background: n.color }} />
+                    {n.etiqueta}
+                  </button>
+                )
+              })}
             </div>
           </label>
 

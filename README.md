@@ -934,6 +934,16 @@ competiciones, entrenamientos señalados...
   (pantalla), y como un punto de color delante del texto en el PDF
   exportado. Tiene su propia leyenda debajo del calendario.
 
+## Intensidad combinada (hasta 2 niveles a la vez)
+
+El semáforo de intensidad ya no es de elección única — ahora puedes marcar
+**hasta 2 niveles a la vez** (por ejemplo, rojo + amarillo para una
+intensidad intermedia-alta, o verde + amarillo para intermedia-baja). El
+tercer botón se bloquea automáticamente si ya tienes 2 marcados. Se
+muestra siempre en el mismo orden (verde→amarillo→rojo) sin importar en
+qué orden los marcaste, tanto en los puntos del calendario como en el
+texto del PDF exportado ("Intensidad baja-media", etc.).
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

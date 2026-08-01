@@ -194,6 +194,11 @@
   color: var(--text);
 }
 
+.calendario-club-intensidad-boton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .calendario-club-leyenda-intensidad {
   margin-top: 8px;
 }
