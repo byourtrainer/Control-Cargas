@@ -138,13 +138,19 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [] })
 
   return (
     <div className="calendario-club-layout">
+      <div className="calendario-club-titulo-imprimir">
+        <h2>Calendario — {nombreEquipoActivo}</h2>
+        <p className="texto-dim">{MESES[mesVisible.getMonth()]} {mesVisible.getFullYear()}</p>
+      </div>
+
       <section className="calendario-card calendario-club-card">
         <div className="calendario-cabecera">
-          <button className="calendario-nav" onClick={() => cambiarMes(-1)}>←</button>
+          <button className="calendario-nav no-imprimir" onClick={() => cambiarMes(-1)}>←</button>
           <button className="calendario-mes-titulo" onClick={irAHoy}>
             {MESES[mesVisible.getMonth()]} {mesVisible.getFullYear()}
           </button>
-          <button className="calendario-nav" onClick={() => cambiarMes(1)}>→</button>
+          <button className="calendario-nav no-imprimir" onClick={() => cambiarMes(1)}>→</button>
+          <button className="btn-exportar no-imprimir" onClick={() => window.print()}>Imprimir / Guardar PDF</button>
         </div>
 
         <div className="calendario-dias-semana">
@@ -165,9 +171,20 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [] })
                 onClick={() => seleccionarDia(fecha)}
               >
                 <span className="calendario-numero">{d}</span>
-                <span className="calendario-club-puntos">
+                <span className="calendario-club-puntos no-imprimir">
                   {eventosDia.slice(0, 4).map((ev) => (
                     <span key={ev.id} className="calendario-club-punto" style={{ background: colorPorTipo[ev.tipo] }} />
+                  ))}
+                </span>
+                <span className="calendario-club-eventos-imprimir">
+                  {eventosDia.map((ev) => (
+                    <span
+                      key={ev.id}
+                      className="calendario-club-evento-linea"
+                      style={{ borderLeftColor: colorPorTipo[ev.tipo] }}
+                    >
+                      <strong>{ev.tipo}</strong> {ev.titulo}{ev.hora ? ` · ${ev.hora}` : ''}
+                    </span>
                   ))}
                 </span>
               </button>
@@ -182,7 +199,7 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [] })
         </div>
       </section>
 
-      <section className="calendario-club-panel">
+      <section className="calendario-club-panel no-imprimir">
         <h2 className="capitalizada">
           {new Date(fechaSeleccionada + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
         </h2>

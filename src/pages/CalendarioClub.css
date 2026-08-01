@@ -134,3 +134,52 @@
   color: var(--text-faint);
   margin: 4px 0 0;
 }
+
+.calendario-club-titulo-imprimir { display: none; }
+
+.calendario-club-eventos-imprimir {
+  display: none;
+}
+
+.calendario-club-evento-linea {
+  display: block;
+  font-size: 8px;
+  line-height: 1.3;
+  border-left: 2px solid;
+  padding-left: 4px;
+  margin-bottom: 2px;
+  text-align: left;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.calendario-club-evento-linea strong { font-weight: 700; }
+
+@media print {
+  .calendario-club-titulo-imprimir { display: block; margin-bottom: 16px; }
+  .calendario-club-titulo-imprimir h2 { font-size: 19px; margin-bottom: 2px; }
+
+  .calendario-club-layout { display: block !important; }
+  .calendario-club-card { position: static !important; }
+
+  .calendario-club-celda {
+    aspect-ratio: auto !important;
+    min-height: 70px;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    padding: 4px !important;
+  }
+
+  .calendario-club-celda .calendario-numero {
+    align-self: flex-start;
+    font-size: 11px;
+  }
+
+  .calendario-club-eventos-imprimir {
+    display: block;
+    width: 100%;
+    margin-top: 2px;
+  }
+
+  .calendario-club-leyenda { break-inside: avoid; }
+}

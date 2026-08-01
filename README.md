@@ -899,6 +899,23 @@ competiciones, entrenamientos señalados...
   opción de borrar) y un formulario para añadir uno nuevo: tipo, título,
   hora, rival y lugar (opcionales), y notas.
 
+## Calendario de club exportable a PDF, con eventos legibles día a día
+
+- Nuevo botón **"Imprimir / Guardar PDF"** en el Calendario.
+- En pantalla, cada día sigue mostrando puntos de color compactos (para no
+  saturar la vista). **Al exportar**, esos puntos se sustituyen por el
+  texto real de cada evento dentro de la propia casilla — por ejemplo
+  **"Entrenamiento Pista · 19:00"** o **"Amistoso vs Rival · 18:00"** — con
+  una barra lateral del color de su tipo, y las casillas se agrandan
+  automáticamente para dar cabida al texto.
+- El panel de edición del día (interactivo, solo tiene sentido en pantalla)
+  no se imprime — el documento final es solo el calendario completo del
+  mes con todo legible de un vistazo, más su leyenda de colores.
+- Ajuste de contraste: el color de cada tipo se usa como barra lateral,
+  pero el texto en sí se mantiene siempre en el color normal de lectura —
+  algunos colores (como el verde lima de "Liga") apenas se verían si se
+  usaran como color de texto sobre el fondo blanco del informe.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.
