@@ -986,6 +986,17 @@ asignación). Las siguientes fases (crear planes combinando estos
 ejercicios, y asignarlos a jugadores con un calendario que ellos vean) se
 construirán sobre esta misma base, cuando quieras retomarlo.
 
+## Autocompletar el nombre del ejercicio desde YouTube
+
+Al pegar el enlace de un vídeo al añadir un ejercicio, si el campo
+"Nombre" está vacío, la app busca automáticamente el título real del
+vídeo en YouTube (usando su servicio público de "oEmbed", sin necesidad de
+clave ni configuración) y lo rellena solo. Si ya has escrito algo en
+"Nombre" (o estás editando un ejercicio existente), no lo toca — solo
+actúa cuando el campo está en blanco. Puedes seguir editando el nombre
+libremente después de que se autocomplete, por si el título del vídeo no
+es exactamente como quieres llamarlo en tu biblioteca.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

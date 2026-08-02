@@ -66,6 +66,25 @@ export default function BibliotecaEjercicios() {
   }
 
   const youtubeIdPreview = extraerYoutubeId(form.url_youtube)
+  const [buscandoTitulo, setBuscandoTitulo] = useState(false)
+
+  useEffect(() => {
+    if (!youtubeIdPreview) return
+    if (form.nombre.trim()) return // no pisar un nombre que ya se haya escrito (o al editar uno existente)
+
+    let cancelado = false
+    setBuscandoTitulo(true)
+    fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${youtubeIdPreview}&format=json`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelado && data?.title) setForm((f) => (f.nombre.trim() ? f : { ...f, nombre: data.title }))
+      })
+      .catch(() => {})
+      .finally(() => { if (!cancelado) setBuscandoTitulo(false) })
+
+    return () => { cancelado = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [youtubeIdPreview])
 
   function alternarMaterial(mat) {
     setForm((f) => ({
@@ -177,7 +196,7 @@ export default function BibliotecaEjercicios() {
           <form onSubmit={guardarEjercicio}>
             <div className="fila-doble">
               <label className="campo-sesion">
-                <span>Nombre</span>
+                <span>Nombre {buscandoTitulo && <span className="texto-dim">(buscando título del vídeo…)</span>}</span>
                 <input
                   type="text" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })}
                   placeholder="Ej. Sentadilla búlgara" required
