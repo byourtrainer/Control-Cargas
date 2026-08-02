@@ -49,6 +49,7 @@ export default function BibliotecaEjercicios() {
   const [mensaje, setMensaje] = useState(null)
   const [borrandoId, setBorrandoId] = useState(null)
   const [formularioAbierto, setFormularioAbierto] = useState(false)
+  const [reproduciendoId, setReproduciendoId] = useState(null)
 
   const [filtroTexto, setFiltroTexto] = useState('')
   const [filtroCategoria, setFiltroCategoria] = useState('')
@@ -330,8 +331,22 @@ export default function BibliotecaEjercicios() {
           {ejerciciosFiltrados.map((ej) => (
             <div className="biblioteca-tarjeta" key={ej.id}>
               <div className="biblioteca-tarjeta-video">
-                <img src={`https://img.youtube.com/vi/${ej.youtube_id}/mqdefault.jpg`} alt={ej.nombre} />
-                <a href={ej.url_youtube} target="_blank" rel="noopener noreferrer" className="biblioteca-tarjeta-play">▶</a>
+                {reproduciendoId === ej.id ? (
+                  <>
+                    <iframe
+                      src={`https://www.youtube.com/embed/${ej.youtube_id}?autoplay=1`}
+                      title={ej.nombre}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                    <button className="biblioteca-tarjeta-cerrar" onClick={() => setReproduciendoId(null)} title="Cerrar vídeo">✕</button>
+                  </>
+                ) : (
+                  <>
+                    <img src={`https://img.youtube.com/vi/${ej.youtube_id}/mqdefault.jpg`} alt={ej.nombre} />
+                    <button className="biblioteca-tarjeta-play" onClick={() => setReproduciendoId(ej.id)}>▶</button>
+                  </>
+                )}
               </div>
               <div className="biblioteca-tarjeta-cuerpo">
                 <h4>{ej.nombre}</h4>

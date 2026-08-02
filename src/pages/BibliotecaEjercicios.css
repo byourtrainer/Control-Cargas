@@ -126,6 +126,29 @@
   object-fit: cover;
 }
 
+.biblioteca-tarjeta-video iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+
+.biblioteca-tarjeta-cerrar {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.6);
+  color: white;
+  border: none;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.biblioteca-tarjeta-cerrar:hover { background: rgba(0,0,0,0.85); }
+
 .biblioteca-tarjeta-play {
   position: absolute;
   inset: 0;
@@ -137,6 +160,9 @@
   text-shadow: 0 2px 8px rgba(0,0,0,0.6);
   background: rgba(0,0,0,0.15);
   transition: background 0.15s;
+  border: none;
+  width: 100%;
+  cursor: pointer;
 }
 
 .biblioteca-tarjeta-play:hover { background: rgba(0,0,0,0.35); }

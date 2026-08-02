@@ -997,6 +997,13 @@ actúa cuando el campo está en blanco. Puedes seguir editando el nombre
 libremente después de que se autocomplete, por si el título del vídeo no
 es exactamente como quieres llamarlo en tu biblioteca.
 
+## Reproducir el vídeo directamente en la tarjeta del ejercicio
+
+Al pulsar el botón de play en cualquier ejercicio de la biblioteca, el
+vídeo se reproduce **incrustado en la propia tarjeta**, sin salir de la
+app ni abrir YouTube en otra pestaña. Un botón "✕" en la esquina permite
+cerrarlo y volver a la miniatura.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.
