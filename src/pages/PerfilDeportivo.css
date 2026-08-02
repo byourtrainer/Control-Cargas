@@ -1,0 +1,51 @@
+.perfil-deportivo {
+  max-width: 900px;
+}
+
+.perfil-deportivo h2 { margin-bottom: 4px; }
+
+.perfil-deportivo-sub {
+  font-size: 13px;
+  margin-bottom: 20px;
+}
+
+.perfil-deportivo-card {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 22px;
+  margin-bottom: 20px;
+}
+
+.perfil-deportivo-card h3 {
+  font-size: 15px;
+  margin-bottom: 12px;
+}
+
+.perfil-deportivo-nota {
+  font-size: 12px;
+  margin: -6px 0 16px;
+}
+
+.perfil-deportivo-interpretacion {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.perfil-deportivo-cuadrantes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.perfil-deportivo-graficos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}

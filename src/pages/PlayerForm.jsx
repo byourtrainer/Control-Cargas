@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabaseClient'
 import { colorParaValor } from '../lib/colorEscalas'
 import Calendario from './Calendario'
 import SelectorCuerpo from './SelectorCuerpo'
+import PerfilDeportivo from './PerfilDeportivo'
 import './PlayerForm.css'
 
 const hoyISO = () => new Date().toISOString().slice(0, 10)
@@ -42,7 +43,7 @@ const escalas = [
 ]
 
 export default function PlayerForm({ perfil }) {
-  const [vista, setVista] = useState('calendario') // 'calendario' | 'dia'
+  const [vista, setVista] = useState('calendario') // 'calendario' | 'dia' | 'perfil'
   const [fechaSeleccionada, setFechaSeleccionada] = useState(hoyISO())
 
   const [registroDia, setRegistroDia] = useState(null)
@@ -266,6 +267,10 @@ export default function PlayerForm({ perfil }) {
           </div>
 
           <div className="player-columna-lateral">
+            <button type="button" className="perfil-deportivo-boton" onClick={() => setVista('perfil')}>
+              📊 Ver mi Perfil Deportivo
+            </button>
+
             <section className="historial-card">
               <div className="mis-datos-header">
                 <h3>Mis datos</h3>
@@ -349,6 +354,8 @@ export default function PlayerForm({ perfil }) {
             </section>
           </div>
         </div>
+      ) : vista === 'perfil' ? (
+        <PerfilDeportivo perfil={perfil} onVolver={() => setVista('calendario')} />
       ) : (
         <div className="player-layout">
           <div className="player-columna-principal">

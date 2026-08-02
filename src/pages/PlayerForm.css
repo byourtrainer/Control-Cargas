@@ -60,6 +60,22 @@
   font-size: 12px;
 }
 
+.perfil-deportivo-boton {
+  display: block;
+  width: 100%;
+  background: var(--bg-card);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  border-radius: 10px;
+  padding: 14px;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.perfil-deportivo-boton:hover { background: rgba(200,255,77,0.08); }
+
 .zona-elegida {
   color: var(--accent);
   font-weight: 600;

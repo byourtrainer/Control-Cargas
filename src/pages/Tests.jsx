@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
-  ResponsiveContainer, ScatterChart, Scatter, XAxis, YAxis, ZAxis,
+  ResponsiveContainer, ComposedChart, Scatter, XAxis, YAxis, ZAxis,
   CartesianGrid, Tooltip, ReferenceLine, ReferenceArea, Cell, LabelList, LineChart, Line, BarChart, Bar,
 } from 'recharts'
 import { supabase } from '../lib/supabaseClient'
@@ -22,7 +22,7 @@ function calcularEdad(fechaNacimiento) {
 
 const traducirSexo = (s) => ({ masculino: 'Masculino', femenino: 'Femenino', neutro: 'Neutro' }[s] || '—')
 
-function iniciales(nombre) {
+export function iniciales(nombre) {
   return (nombre || '')
     .split(' ')
     .filter(Boolean)
@@ -49,7 +49,7 @@ const metricasInforme = [
   { clave: 'wingate_fatiga', etiqueta: 'Índice de fatiga Wingate (%)', tipoTest: 'wingate', extraer: (t) => t.indice_fatiga ?? indiceFatiga(t.mp1, t.mp2), decimales: 1, mejorEsMenor: true },
 ]
 
-function calcularDatosCuadrante1(jugadoresLista, testsLista) {
+export function calcularDatosCuadrante1(jugadoresLista, testsLista) {
   return jugadoresLista.map((j) => {
     const suyos = testsLista.filter((t) => t.jugador_id === j.id)
     const porTipo = ultimosTestsPorTipo(suyos)
@@ -66,7 +66,7 @@ function calcularDatosCuadrante1(jugadoresLista, testsLista) {
   }).filter(Boolean)
 }
 
-function calcularDatosCuadrante2(jugadoresLista, testsLista) {
+export function calcularDatosCuadrante2(jugadoresLista, testsLista) {
   return jugadoresLista.map((j) => {
     const suyos = testsLista.filter((t) => t.jugador_id === j.id)
     const porTipo = ultimosTestsPorTipo(suyos)
@@ -96,13 +96,13 @@ function EtiquetaZona({ viewBox, linea1, linea2, color }) {
   )
 }
 
-function GraficoCuadrante1({ datos, maxX, maxY, modoImpresion }) {
+export function GraficoCuadrante1({ datos, maxX, maxY, modoImpresion, trayectoria }) {
   return (
     <>
       <h3>Fuerza-salto: CMJ vs. Sentadilla relativa</h3>
       <p className="cuadrante-sub">Eje Y: CMJ (cm), dividido en 40 cm · Eje X: Sentadilla (kg/peso corporal), dividido en 2.0×</p>
       <ResponsiveContainer width={modoImpresion ? 320 : '100%'} height={280}>
-        <ScatterChart margin={{ top: 10, right: 20, bottom: 10, left: 0 }}>
+        <ComposedChart margin={{ top: 10, right: 20, bottom: 10, left: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
           <XAxis type="number" dataKey="x" name="Sentadilla relativa" domain={[0, maxX]} stroke="var(--text-faint)" fontSize={12} />
           <YAxis type="number" dataKey="y" name="CMJ" domain={[0, maxY]} stroke="var(--text-faint)" fontSize={12} />
@@ -118,11 +118,14 @@ function GraficoCuadrante1({ datos, maxX, maxY, modoImpresion }) {
           <ReferenceLine x={2.0} stroke="var(--text-faint)" strokeDasharray="4 4" />
           <ReferenceLine y={40} stroke="var(--text-faint)" strokeDasharray="4 4" />
           <Tooltip content={<TooltipCuadrante etiquetaX="Sentadilla rel." etiquetaY="CMJ (cm)" />} cursor={{ strokeDasharray: '3 3' }} />
+          {trayectoria && trayectoria.length > 1 && (
+            <Line data={trayectoria} dataKey="y" stroke="var(--accent)" strokeWidth={1.5} strokeDasharray="4 3" dot={{ r: 3, fill: 'var(--text-faint)' }} activeDot={false} isAnimationActive={false} />
+          )}
           <Scatter data={datos}>
             {datos.map((d, i) => <Cell key={i} fill={d.color} />)}
             <LabelList dataKey="iniciales" position="top" offset={6} style={{ fill: 'var(--text)', fontSize: 10, fontWeight: 700 }} />
           </Scatter>
-        </ScatterChart>
+        </ComposedChart>
       </ResponsiveContainer>
       {datos.length === 0 && <p className="texto-dim cuadrante-vacio">Necesitas al menos un test de CMJ y de Sentadilla por jugador.</p>}
       <p className="cuadrante-leyenda">
@@ -133,7 +136,7 @@ function GraficoCuadrante1({ datos, maxX, maxY, modoImpresion }) {
   )
 }
 
-function GraficoCuadrante2({ datos, maxX, maxY, modoImpresion }) {
+export function GraficoCuadrante2({ datos, maxX, maxY, modoImpresion, trayectoria }) {
   return (
     <>
       <h3>Potencia vs. capacidad de repetirla (Wingate)</h3>
@@ -142,7 +145,7 @@ function GraficoCuadrante2({ datos, maxX, maxY, modoImpresion }) {
         eje invertido: más a la derecha = menor fatiga = mejor capacidad de repetir potencia
       </p>
       <ResponsiveContainer width={modoImpresion ? 320 : '100%'} height={280}>
-        <ScatterChart margin={{ top: 10, right: 20, bottom: 10, left: 0 }}>
+        <ComposedChart margin={{ top: 10, right: 20, bottom: 10, left: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
           <XAxis type="number" dataKey="x" name="Índice de fatiga" domain={[0, maxX]} reversed stroke="var(--text-faint)" fontSize={12} />
           <YAxis type="number" dataKey="y" name="Potencia" domain={[0, maxY]} stroke="var(--text-faint)" fontSize={12} />
@@ -158,11 +161,14 @@ function GraficoCuadrante2({ datos, maxX, maxY, modoImpresion }) {
           <ReferenceLine x={20} stroke="var(--text-faint)" strokeDasharray="4 4" />
           <ReferenceLine y={10} stroke="var(--text-faint)" strokeDasharray="4 4" />
           <Tooltip content={<TooltipCuadrante etiquetaX="Índice fatiga (%)" etiquetaY="Potencia (W/kg)" />} cursor={{ strokeDasharray: '3 3' }} />
+          {trayectoria && trayectoria.length > 1 && (
+            <Line data={trayectoria} dataKey="y" stroke="var(--accent)" strokeWidth={1.5} strokeDasharray="4 3" dot={{ r: 3, fill: 'var(--text-faint)' }} activeDot={false} isAnimationActive={false} />
+          )}
           <Scatter data={datos}>
             {datos.map((d, i) => <Cell key={i} fill={d.color} />)}
             <LabelList dataKey="iniciales" position="top" offset={6} style={{ fill: 'var(--text)', fontSize: 10, fontWeight: 700 }} />
           </Scatter>
-        </ScatterChart>
+        </ComposedChart>
       </ResponsiveContainer>
       {datos.length === 0 && <p className="texto-dim cuadrante-vacio">Necesitas al menos un test de Doble Wingate por jugador.</p>}
       <p className="cuadrante-leyenda">

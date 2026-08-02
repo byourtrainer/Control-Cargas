@@ -944,6 +944,27 @@ muestra siempre en el mismo orden (verde→amarillo→rojo) sin importar en
 qué orden los marcaste, tanto en los puntos del calendario como en el
 texto del PDF exportado ("Intensidad baja-media", etc.).
 
+## "Mi Perfil Deportivo" para el jugador
+
+Nuevo botón destacado en el calendario del jugador ("📊 Ver mi Perfil
+Deportivo") que abre una pantalla con sus propios resultados de tests:
+
+- **Interpretación automática** de su último resultado (Sentadilla, CMJ,
+  Wingate), igual que ya veía el entrenador.
+- **Los dos cuadrantes, con trayectoria**: en vez de un selector de fecha
+  para ver "un test u otro", se muestra una **línea que conecta todos sus
+  tests en orden cronológico**, con el resultado más reciente destacado al
+  final — así ve de un vistazo si ha ido mejorando hacia la zona verde del
+  cuadrante a lo largo de la temporada, no solo dónde está hoy.
+- **Evolución por variable**: mini-gráficos de línea de cada métrica
+  (Sentadilla, CMJ, Potencia, Índice de fatiga) a lo largo del tiempo.
+
+Los cuadrantes reutilizan exactamente el mismo componente que ya usa el
+entrenador (mismos umbrales, colores y leyenda) — se les añadió la opción
+de dibujar esa línea de trayectoria, que solo aparece cuando se le pasan
+datos históricos (así el uso que ya hacía el entrenador no cambia en
+absoluto).
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.
