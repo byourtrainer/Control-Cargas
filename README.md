@@ -965,6 +965,27 @@ de dibujar esa línea de trayectoria, que solo aparece cuando se le pasan
 datos históricos (así el uso que ya hacía el entrenador no cambia en
 absoluto).
 
+## "App Entrenamiento" — Biblioteca de ejercicios (fase 1)
+
+Nueva sección **totalmente aparte** del control de cargas — pensada para
+programas de trabajo complementario (gimnasio), no para las sesiones de
+equipo del calendario ya existente.
+
+- **Añadir ejercicios**: nombre + enlace de YouTube (se reconoce
+  automáticamente el vídeo y se muestra su miniatura como confirmación) +
+  toda tu taxonomía: Categoría, Miembro, Lateralidad, Patrón de
+  movimiento, Contracción (agrupada visualmente en Dinámico/Isométrico al
+  elegir) y Material (selección múltiple, con chips).
+- **Biblioteca en cuadrícula**, cada ejercicio con su miniatura de vídeo,
+  etiquetas visibles, y opción de editar/eliminar.
+- **Filtros**: por texto, categoría, miembro, patrón y material — para
+  encontrar rápido lo que buscas cuando la biblioteca crezca.
+
+Esta es la primera de las tres piezas que hablamos (biblioteca → planes →
+asignación). Las siguientes fases (crear planes combinando estos
+ejercicios, y asignarlos a jugadores con un calendario que ellos vean) se
+construirán sobre esta misma base, cuando quieras retomarlo.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.
