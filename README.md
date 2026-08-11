@@ -1022,6 +1022,15 @@ cerrarlo y volver a la miniatura.
   real. El entrenador ve la misma fase, con el mismo mensaje, en una nueva
   columna "Ciclo" dentro de la pestaña Jugadores.
 
+## Molestias: selección múltiple de zonas
+
+Antes solo se podía marcar una zona (y un lado) por día. Ahora el jugador
+puede marcar **tantas zonas como necesite** en el mismo registro — por
+ejemplo "Rodilla (Derecho)" y "Hombro (Izquierdo)" a la vez. Se guarda como
+una lista, y todo lo que ya dependía de esto se actualizó en consecuencia:
+el mapa de calor del entrenador cuenta cada zona marcada por separado, y la
+alerta "Molestia reportada hoy" del Resumen muestra todas las zonas de golpe.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

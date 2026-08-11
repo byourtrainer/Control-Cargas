@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { colorParaValor } from '../lib/colorEscalas'
 import Calendario from './Calendario'
-import SelectorCuerpo from './SelectorCuerpo'
+import SelectorCuerpo, { claveZona } from './SelectorCuerpo'
 import PerfilDeportivo from './PerfilDeportivo'
 import CicloMenstrual from './CicloMenstrual'
 import './PlayerForm.css'
@@ -63,8 +63,7 @@ export default function PlayerForm({ perfil }) {
   // Bienestar
   const [valores, setValores] = useState({ sueno: 3, fatiga: 3, dolor_muscular: 3, estres: 3, animo: 3 })
   const [tieneMolestia, setTieneMolestia] = useState(false)
-  const [zonaMolestia, setZonaMolestia] = useState('')
-  const [ladoMolestia, setLadoMolestia] = useState(null)
+  const [zonasMolestia, setZonasMolestia] = useState([])
   const [guardandoBienestar, setGuardandoBienestar] = useState(false)
   const [mensajeBienestar, setMensajeBienestar] = useState(null)
 
@@ -105,13 +104,11 @@ export default function PlayerForm({ perfil }) {
         estres: data.estres, animo: data.animo,
       })
       setTieneMolestia(!!data.tiene_molestia)
-      setZonaMolestia(data.zona_molestia || '')
-      setLadoMolestia(data.lado_molestia || null)
+      setZonasMolestia(data.zonas_molestia || [])
     } else {
       setValores({ sueno: 3, fatiga: 3, dolor_muscular: 3, estres: 3, animo: 3 })
       setTieneMolestia(false)
-      setZonaMolestia('')
-      setLadoMolestia(null)
+      setZonasMolestia([])
     }
     if (data && data.rpe !== null) {
       setRpe(data.rpe)
@@ -186,8 +183,8 @@ export default function PlayerForm({ perfil }) {
 
   async function guardarBienestar(e) {
     e.preventDefault()
-    if (tieneMolestia && !zonaMolestia) {
-      setMensajeBienestar({ tipo: 'error', texto: 'Indica en qué parte del cuerpo tienes la molestia.' })
+    if (tieneMolestia && zonasMolestia.length === 0) {
+      setMensajeBienestar({ tipo: 'error', texto: 'Indica en qué parte(s) del cuerpo tienes molestia.' })
       return
     }
     setGuardandoBienestar(true)
@@ -198,8 +195,7 @@ export default function PlayerForm({ perfil }) {
       fecha: fechaSeleccionada,
       ...valores,
       tiene_molestia: tieneMolestia,
-      zona_molestia: tieneMolestia ? zonaMolestia : null,
-      lado_molestia: tieneMolestia ? ladoMolestia : null,
+      zonas_molestia: tieneMolestia ? zonasMolestia : null,
     }, { onConflict: 'jugador_id,fecha' })
 
     if (error) {
@@ -405,7 +401,7 @@ export default function PlayerForm({ perfil }) {
                 <label className="campo-checkbox">
                   <input
                     type="checkbox" checked={tieneMolestia}
-                    onChange={(e) => { setTieneMolestia(e.target.checked); if (!e.target.checked) { setZonaMolestia(''); setLadoMolestia(null) } }}
+                    onChange={(e) => { setTieneMolestia(e.target.checked); if (!e.target.checked) setZonasMolestia([]) }}
                   />
                   <span>Tengo alguna molestia o dolor localizado</span>
                 </label>
@@ -413,14 +409,19 @@ export default function PlayerForm({ perfil }) {
                 {tieneMolestia && (
                   <div className="campo-notas">
                     <span>
-                      ¿En qué parte del cuerpo?
-                      {zonaMolestia && (
-                        <strong className="zona-elegida"> — {zonaMolestia}{ladoMolestia ? ` (${ladoMolestia})` : ''}</strong>
+                      ¿En qué parte(s) del cuerpo? <span className="texto-faint">(puedes marcar varias)</span>
+                      {zonasMolestia.length > 0 && (
+                        <strong className="zona-elegida"> — {zonasMolestia.join(', ')}</strong>
                       )}
                     </span>
                     <SelectorCuerpo
-                      modo="seleccion" zonaSeleccionada={zonaMolestia} ladoSeleccionada={ladoMolestia}
-                      onSeleccionarZona={(zona, lado) => { setZonaMolestia(zona); setLadoMolestia(lado) }}
+                      modo="seleccion" zonasSeleccionadas={zonasMolestia}
+                      onSeleccionarZona={(zona, lado) => {
+                        const clave = claveZona(zona, lado)
+                        setZonasMolestia((prev) => (
+                          prev.includes(clave) ? prev.filter((z) => z !== clave) : [...prev, clave]
+                        ))
+                      }}
                     />
                   </div>
                 )}

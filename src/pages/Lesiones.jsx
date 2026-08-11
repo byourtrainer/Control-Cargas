@@ -51,7 +51,7 @@ export default function Lesiones({ equipoActivo = 'todos', jugadorActivo = 'equi
     setCargandoMapa(true)
     const { data } = await supabase
       .from('registros_diarios')
-      .select('jugador_id, fecha, tiene_molestia, zona_molestia, lado_molestia')
+      .select('jugador_id, fecha, tiene_molestia, zonas_molestia')
       .in('jugador_id', ids)
       .eq('tiene_molestia', true)
       .gte('fecha', fechaDesde)
@@ -61,10 +61,7 @@ export default function Lesiones({ equipoActivo = 'todos', jugadorActivo = 'equi
   }
 
   const frecuenciasMapa = registrosMapa.reduce((acc, r) => {
-    if (r.zona_molestia) {
-      const clave = r.lado_molestia ? `${r.zona_molestia} (${r.lado_molestia})` : r.zona_molestia
-      acc[clave] = (acc[clave] || 0) + 1
-    }
+    ;(r.zonas_molestia || []).forEach((clave) => { acc[clave] = (acc[clave] || 0) + 1 })
     return acc
   }, {})
   const zonasOrdenadas = Object.entries(frecuenciasMapa).sort((a, b) => b[1] - a[1])

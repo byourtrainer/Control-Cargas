@@ -427,7 +427,7 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
       if (riesgo === 'alta' || riesgo === 'muy_alta') enRiesgo.push(j.nombre)
 
       const registroHoy = suyos.find((r) => r.fecha === hoy)
-      if (registroHoy?.tiene_molestia) conMolestiaHoy.push(`${j.nombre} (${registroHoy.zona_molestia})`)
+      if (registroHoy?.tiene_molestia) conMolestiaHoy.push(`${j.nombre} (${(registroHoy.zonas_molestia || []).join(', ') || 'sin zona'})`)
 
       if (mediaHoy !== null && registroHoy?.rpe !== null && registroHoy?.rpe !== undefined) {
         const desviacion = registroHoy.rpe - mediaHoy

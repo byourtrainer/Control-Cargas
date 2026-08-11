@@ -1,7 +1,7 @@
 import './SelectorCuerpo.css'
 
 // Silueta corporal (frontal + posterior) con dos modos:
-// - modo="seleccion": el jugador toca una zona (y, si aplica, un lado) para indicar dónde tiene la molestia.
+// - modo="seleccion": el jugador toca todas las zonas (y lados) donde tiene molestia — selección múltiple.
 // - modo="mapa": el entrenador ve cada zona coloreada según cuántas veces se ha reportado.
 // No es anatómicamente exacta (es esquemática), pero cubre las 19 zonas del club.
 // Las zonas duplicadas (hombro, brazo, codo, antebrazo, muñeca, cuádriceps,
@@ -17,20 +17,20 @@ function colorMapa(count, max) {
   return `rgba(234, 92, 74, ${alpha.toFixed(2)})`
 }
 
-function claveZona(zona, lado) {
+export function claveZona(zona, lado) {
   return lado ? `${zona} (${lado})` : zona
 }
 
 const SILUETA = 'M40,20 C40,9 49,0 60,0 C71,0 80,9 80,20 C80,28 76,34 70,37 L70,44 C90,46 108,54 116,68 L128,140 C129,146 124,151 118,150 C113,149 110,145 109,140 L100,90 L96,150 L100,290 C101,298 95,304 87,304 L84,304 C77,304 71,299 70,292 L64,180 L60,180 L56,292 C55,299 49,304 42,304 L39,304 C31,304 25,298 26,290 L30,150 L26,90 L17,140 C16,145 13,149 8,150 C2,151 -3,146 -2,140 L10,68 C18,54 36,46 56,44 L56,37 C50,34 46,28 40,20 Z'
 
 export default function SelectorCuerpo({
-  modo = 'mapa', frecuencias = {}, zonaSeleccionada = null, ladoSeleccionada = null, onSeleccionarZona,
+  modo = 'mapa', frecuencias = {}, zonasSeleccionadas = [], onSeleccionarZona,
 }) {
   const max = Math.max(0, ...Object.values(frecuencias))
 
   function estiloZona(zona, lado) {
     if (modo === 'seleccion') {
-      const activo = zonaSeleccionada === zona && (ladoSeleccionada || null) === (lado || null)
+      const activo = zonasSeleccionadas.includes(claveZona(zona, lado))
       return activo
         ? { fill: 'var(--accent)', fillOpacity: 0.55, stroke: 'var(--accent)', strokeWidth: 2 }
         : { fill: 'var(--bg-elevated)', fillOpacity: 0.9, stroke: 'var(--line-strong)', strokeWidth: 1 }
