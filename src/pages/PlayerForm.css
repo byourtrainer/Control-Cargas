@@ -365,3 +365,4 @@
 }
 
 .texto-dim { color: var(--text-dim); font-size: 13px; }
+.texto-faint { color: var(--text-faint); font-size: 12px; }

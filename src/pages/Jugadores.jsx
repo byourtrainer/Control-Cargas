@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { calcularEstadoCiclo, infoFase } from '../lib/ciclosMenstruales'
 import './Jugadores.css'
 
 function calcularEdad(fechaNacimiento) {
@@ -20,6 +21,7 @@ export default function Jugadores({ equipoActivo = 'todos' }) {
   const [cargando, setCargando] = useState(true)
   const [editandoPeso, setEditandoPeso] = useState(null)
   const [pesoTemp, setPesoTemp] = useState('')
+  const [ciclosPorJugadora, setCiclosPorJugadora] = useState({})
 
   useEffect(() => { cargarJugadores() }, [])
 
@@ -31,6 +33,21 @@ export default function Jugadores({ equipoActivo = 'todos' }) {
       .eq('rol', 'jugador')
       .order('nombre')
     setJugadores(data || [])
+
+    const idsFemenino = (data || []).filter((j) => j.sexo === 'femenino').map((j) => j.id)
+    if (idsFemenino.length > 0) {
+      const { data: ciclos } = await supabase
+        .from('ciclos_menstruales')
+        .select('*')
+        .in('jugador_id', idsFemenino)
+        .order('fecha_inicio', { ascending: true })
+      const agrupados = {}
+      ;(ciclos || []).forEach((c) => {
+        if (!agrupados[c.jugador_id]) agrupados[c.jugador_id] = []
+        agrupados[c.jugador_id].push(c)
+      })
+      setCiclosPorJugadora(agrupados)
+    }
     setCargando(false)
   }
 
@@ -69,7 +86,7 @@ export default function Jugadores({ equipoActivo = 'todos' }) {
           <thead>
             <tr>
               <th>Jugador</th><th>Equipo</th><th>Peso corporal</th><th>Altura</th>
-              <th>Fecha nacimiento</th><th>Sexo</th><th>Dado de alta</th>
+              <th>Fecha nacimiento</th><th>Sexo</th><th>Ciclo</th><th>Dado de alta</th>
             </tr>
           </thead>
           <tbody>
@@ -111,6 +128,22 @@ export default function Jugadores({ equipoActivo = 'todos' }) {
                     : '—'}
                 </td>
                 <td className="texto-dim">{traducirSexo(j.sexo)}</td>
+                <td>
+                  {j.sexo === 'femenino' ? (
+                    (() => {
+                      const estado = calcularEstadoCiclo(ciclosPorJugadora[j.id] || [])
+                      return estado
+                        ? (
+                          <span className="ciclo-fase-badge" title={infoFase[estado.fase].mensaje}>
+                            {infoFase[estado.fase].etiqueta} · día {estado.diaCiclo}
+                          </span>
+                        )
+                        : <span className="texto-faint">Sin registros</span>
+                    })()
+                  ) : (
+                    <span className="texto-faint">—</span>
+                  )}
+                </td>
                 <td className="mono texto-dim">
                   {j.creado_en ? new Date(j.creado_en).toLocaleDateString('es-ES') : '—'}
                 </td>

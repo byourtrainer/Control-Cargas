@@ -4,6 +4,7 @@ import { colorParaValor } from '../lib/colorEscalas'
 import Calendario from './Calendario'
 import SelectorCuerpo from './SelectorCuerpo'
 import PerfilDeportivo from './PerfilDeportivo'
+import CicloMenstrual from './CicloMenstrual'
 import './PlayerForm.css'
 
 const hoyISO = () => new Date().toISOString().slice(0, 10)
@@ -63,6 +64,7 @@ export default function PlayerForm({ perfil }) {
   const [valores, setValores] = useState({ sueno: 3, fatiga: 3, dolor_muscular: 3, estres: 3, animo: 3 })
   const [tieneMolestia, setTieneMolestia] = useState(false)
   const [zonaMolestia, setZonaMolestia] = useState('')
+  const [ladoMolestia, setLadoMolestia] = useState(null)
   const [guardandoBienestar, setGuardandoBienestar] = useState(false)
   const [mensajeBienestar, setMensajeBienestar] = useState(null)
 
@@ -104,10 +106,12 @@ export default function PlayerForm({ perfil }) {
       })
       setTieneMolestia(!!data.tiene_molestia)
       setZonaMolestia(data.zona_molestia || '')
+      setLadoMolestia(data.lado_molestia || null)
     } else {
       setValores({ sueno: 3, fatiga: 3, dolor_muscular: 3, estres: 3, animo: 3 })
       setTieneMolestia(false)
       setZonaMolestia('')
+      setLadoMolestia(null)
     }
     if (data && data.rpe !== null) {
       setRpe(data.rpe)
@@ -195,6 +199,7 @@ export default function PlayerForm({ perfil }) {
       ...valores,
       tiene_molestia: tieneMolestia,
       zona_molestia: tieneMolestia ? zonaMolestia : null,
+      lado_molestia: tieneMolestia ? ladoMolestia : null,
     }, { onConflict: 'jugador_id,fecha' })
 
     if (error) {
@@ -270,6 +275,8 @@ export default function PlayerForm({ perfil }) {
             <button type="button" className="perfil-deportivo-boton" onClick={() => setVista('perfil')}>
               📊 Ver mi Perfil Deportivo
             </button>
+
+            {misDatos.sexo === 'femenino' && <CicloMenstrual jugadorId={perfil.id} editable />}
 
             <section className="historial-card">
               <div className="mis-datos-header">
@@ -398,15 +405,23 @@ export default function PlayerForm({ perfil }) {
                 <label className="campo-checkbox">
                   <input
                     type="checkbox" checked={tieneMolestia}
-                    onChange={(e) => { setTieneMolestia(e.target.checked); if (!e.target.checked) setZonaMolestia('') }}
+                    onChange={(e) => { setTieneMolestia(e.target.checked); if (!e.target.checked) { setZonaMolestia(''); setLadoMolestia(null) } }}
                   />
                   <span>Tengo alguna molestia o dolor localizado</span>
                 </label>
 
                 {tieneMolestia && (
                   <div className="campo-notas">
-                    <span>¿En qué parte del cuerpo? {zonaMolestia && <strong className="zona-elegida">— {zonaMolestia}</strong>}</span>
-                    <SelectorCuerpo modo="seleccion" zonaSeleccionada={zonaMolestia} onSeleccionarZona={setZonaMolestia} />
+                    <span>
+                      ¿En qué parte del cuerpo?
+                      {zonaMolestia && (
+                        <strong className="zona-elegida"> — {zonaMolestia}{ladoMolestia ? ` (${ladoMolestia})` : ''}</strong>
+                      )}
+                    </span>
+                    <SelectorCuerpo
+                      modo="seleccion" zonaSeleccionada={zonaMolestia} ladoSeleccionada={ladoMolestia}
+                      onSeleccionarZona={(zona, lado) => { setZonaMolestia(zona); setLadoMolestia(lado) }}
+                    />
                   </div>
                 )}
 

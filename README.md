@@ -1004,6 +1004,24 @@ vídeo se reproduce **incrustado en la propia tarjeta**, sin salir de la
 app ni abrir YouTube en otra pestaña. Un botón "✕" en la esquina permite
 cerrarlo y volver a la miniatura.
 
+## Selección unilateral en el muñeco, y ciclo menstrual
+
+- **Muñeco unilateral**: las 12 zonas que tienen lado (hombro, brazo, codo,
+  antebrazo, muñeca, cuádriceps, rodilla, tibiales, tobillo, pie,
+  isquiotibiales, gemelos) ahora se marcan por separado — el jugador toca
+  el lado concreto donde tiene la molestia, y el mapa de calor del
+  entrenador colorea cada lado de forma independiente. Las 7 zonas sin
+  lado (cuello, cadera, psoas, aductores, dorsal, lumbar, glúteos) se
+  quedan igual que antes.
+- **Ciclo menstrual** (solo visible si `sexo === 'femenino'`): la jugadora
+  marca únicamente el día que le empieza la regla — la app deduce sola la
+  duración media de su ciclo (a partir de sus propios registros, mejora
+  con el tiempo) y en qué fase estimada está hoy (Menstrual, Folicular,
+  Ovulatoria, Lútea), con un mensaje explicando qué implica cada fase y un
+  aviso claro de que es una estimación por calendario, no una medición
+  real. El entrenador ve la misma fase, con el mismo mensaje, en una nueva
+  columna "Ciclo" dentro de la pestaña Jugadores.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

@@ -1,0 +1,89 @@
+.ciclo-card {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.ciclo-card h3 {
+  font-size: 15px;
+  margin-bottom: 12px;
+}
+
+.ciclo-boton-marcar {
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.ciclo-sin-datos {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.ciclo-dia {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 12px;
+}
+
+.ciclo-fase-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.ciclo-fase-card h4 {
+  font-size: 14px;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+
+.ciclo-fase-card p {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.5;
+  margin: 0 0 8px;
+}
+
+.ciclo-aviso {
+  font-size: 11px;
+  color: var(--text-faint) !important;
+  margin-bottom: 0 !important;
+}
+
+.ciclo-historial {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.ciclo-historial h4 {
+  font-size: 12px;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 10px;
+}
+
+.ciclo-historial ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.ciclo-historial li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.ciclo-historial li > span:first-child { min-width: 80px; }
+.ciclo-historial li > span:nth-child(2) { flex: 1; }
