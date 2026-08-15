@@ -1031,20 +1031,22 @@ una lista, y todo lo que ya dependía de esto se actualizó en consecuencia:
 el mapa de calor del entrenador cuenta cada zona marcada por separado, y la
 alerta "Molestia reportada hoy" del Resumen muestra todas las zonas de golpe.
 
-## Pizarra Táctica — pista de hockey y herramientas de dibujo ampliadas
+## Pizarra Táctica: campo real de hockey, tamaños ajustables, y líneas movibles
 
-- **Fondos de hockey sobre patines** (no fútbol): pista completa y media
-  pista con las marcas propias del deporte (pista de esquinas
-  redondeadas, áreas semicirculares frente a cada portería, círculo
-  central, porterías naranjas en cada extremo). "Espacio reducido" y
-  "Gimnasio" se mantienen genéricos.
+- **Campo rediseñado según pista real de hockey sobre patines**: áreas de
+  gol rectangulares junto a cada pared, con un círculo mitad sólido /
+  mitad discontinuo marcando la zona de portería, y el punto de penalti —
+  pista de esquinas redondeadas y círculo central. **Sin porterías
+  dibujadas de fondo**: las colocas tú donde te convenga con el elemento
+  "+ Portería". "Espacio reducido" y "Gimnasio" se mantienen genéricos.
 - **Color propio en cada elemento** (menos porterías): jugadores, conos y
-  vallas se pueden pintar de 7 colores distintos, para poder organizar
-  grupos o estaciones de trabajo con un vistazo.
+  vallas se pueden pintar de 7 colores distintos.
+- **Tamaño ajustable** en conos, vallas y porterías — control deslizante,
+  tanto al añadirlos como después, seleccionándolos.
 - **Porterías de hockey**: postes naranjas y red con patrón de cuadros
   blanco.
 - **4 balones distintos**: hockey (negra, pequeña), fútbol, baloncesto y
-  voleibol — cada uno con su forma y color propios.
+  voleibol.
 - **Sistema de líneas completo**:
   - 3 herramientas de trazo: **flecha recta**, **flecha curva** (arrastra
     el punto verde para curvarla después de dibujarla) y **lápiz libre**
@@ -1053,7 +1055,10 @@ alerta "Molestia reportada hoy" del Resumen muestra todas las zonas de golpe.
     diferenciar tipos de desplazamiento (sprint, conducción de balón,
     carrera suave...).
   - **Color y grosor editables en cualquier momento**, tanto al dibujar
-    como después, seleccionando la línea ya creada.
+    como después.
+  - **Las líneas se pueden mover enteras** arrastrándolas desde cualquier
+    punto de su trazo, no solo editarse — útil para corregir la posición
+    si te equivocas al dibujarla.
 
 ## Próximos pasos posibles
 

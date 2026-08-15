@@ -27,30 +27,51 @@ const trazos = [
 ]
 
 const dasharrayPorTrazo = { solida: undefined, discontinua: '10 6', punteada: '2 7' }
+const tiposObstaculo = ['cono', 'valla', 'porteria']
 
 function clamp(v, min, max) { return Math.min(max, Math.max(min, v)) }
 function idNuevo() { return Math.random().toString(36).slice(2, 10) }
 function slugColor(c) { return c.replace('#', '') }
+
+// Área de portero: rectángulo separado de la pared, con un semicírculo en
+// su borde más cercano a la pared (mitad discontinua hacia la pared,
+// mitad sólida hacia el campo) — según el modelo de pista de hockey patines.
+function AreaPorteria({ xPared, direccionCampo }) {
+  const gap = 75
+  const anchoRect = 100
+  const altoRect = 230
+  const xBordePared = xPared + direccionCampo * gap
+  const xBordeCampo = xBordePared + direccionCampo * anchoRect
+  const x1 = Math.min(xBordePared, xBordeCampo)
+  const x2 = Math.max(xBordePared, xBordeCampo)
+  const r = 35
+  const sentidoHaciaCampo = direccionCampo === 1 ? 1 : 0
+  const sentidoHaciaPared = direccionCampo === 1 ? 0 : 1
+  return (
+    <g>
+      <rect x={x1} y={260 - altoRect / 2} width={x2 - x1} height={altoRect} />
+      <path d={`M ${xBordePared},${260 - r} A ${r} ${r} 0 0 ${sentidoHaciaCampo} ${xBordePared},${260 + r}`} />
+      <path d={`M ${xBordePared},${260 - r} A ${r} ${r} 0 0 ${sentidoHaciaPared} ${xBordePared},${260 + r}`} strokeDasharray="5 4" />
+      <circle cx={xBordeCampo + direccionCampo * 65} cy="260" r="2.5" fill="rgba(255,255,255,0.6)" />
+    </g>
+  )
+}
 
 function FondoCampo({ fondo }) {
   if (fondo === 'campo_completo' || fondo === 'medio_campo') {
     const soloDerecha = fondo === 'medio_campo'
     return (
       <g stroke="rgba(255,255,255,0.6)" strokeWidth="2.5" fill="none">
-        <rect x="20" y="20" width="760" height="480" rx="36" ry="36" />
+        <rect x="20" y="20" width="760" height="480" rx="40" ry="40" />
         {!soloDerecha && (
           <>
             <line x1="400" y1="20" x2="400" y2="500" />
-            <circle cx="400" cy="260" r="45" />
-            <circle cx="400" cy="260" r="2.5" fill="rgba(255,255,255,0.6)" />
-            <path d="M 20,150 A 112 112 0 0 1 20,370" />
-            <circle cx="70" cy="260" r="2.5" fill="rgba(255,255,255,0.6)" />
-            <rect x="8" y="236" width="14" height="48" fill="none" stroke="#ff7a1a" strokeWidth="3" />
+            <AreaPorteria xPared={20} direccionCampo={1} />
           </>
         )}
-        <path d="M 780,150 A 112 112 0 0 0 780,370" />
-        <circle cx="730" cy="260" r="2.5" fill="rgba(255,255,255,0.6)" />
-        <rect x="778" y="236" width="14" height="48" fill="none" stroke="#ff7a1a" strokeWidth="3" />
+        <circle cx="400" cy="260" r="60" />
+        <circle cx="400" cy="260" r="2.5" fill="rgba(255,255,255,0.6)" />
+        <AreaPorteria xPared={780} direccionCampo={-1} />
       </g>
     )
   }
@@ -72,8 +93,9 @@ function FondoCampo({ fondo }) {
 }
 
 function ElementoSVG({ el, seleccionado }) {
+  const t = el.tamano || 1
   const anillo = seleccionado && (
-    <circle cx={el.x} cy={el.y} r="22" fill="none" stroke="var(--accent)" strokeWidth="2" strokeDasharray="4 3" />
+    <circle cx={el.x} cy={el.y} r={22 * t} fill="none" stroke="var(--accent)" strokeWidth="2" strokeDasharray="4 3" />
   )
 
   if (el.tipo === 'jugador') {
@@ -89,7 +111,10 @@ function ElementoSVG({ el, seleccionado }) {
     return (
       <g>
         {anillo}
-        <polygon points={`${el.x},${el.y - 12} ${el.x - 10},${el.y + 10} ${el.x + 10},${el.y + 10}`} fill={el.color} stroke="rgba(0,0,0,0.4)" strokeWidth="1" />
+        <polygon
+          points={`${el.x},${el.y - 12 * t} ${el.x - 10 * t},${el.y + 10 * t} ${el.x + 10 * t},${el.y + 10 * t}`}
+          fill={el.color} stroke="rgba(0,0,0,0.4)" strokeWidth="1"
+        />
       </g>
     )
   }
@@ -97,9 +122,9 @@ function ElementoSVG({ el, seleccionado }) {
     return (
       <g>
         {anillo}
-        <rect x={el.x - 16} y={el.y - 4} width="32" height="8" fill={el.color} stroke="rgba(0,0,0,0.4)" strokeWidth="1" />
-        <rect x={el.x - 16} y={el.y - 12} width="4" height="20" fill="#7a7a7a" />
-        <rect x={el.x + 12} y={el.y - 12} width="4" height="20" fill="#7a7a7a" />
+        <rect x={el.x - 16 * t} y={el.y - 4 * t} width={32 * t} height={8 * t} fill={el.color} stroke="rgba(0,0,0,0.4)" strokeWidth="1" />
+        <rect x={el.x - 16 * t} y={el.y - 12 * t} width={4 * t} height={20 * t} fill="#7a7a7a" />
+        <rect x={el.x + 12 * t} y={el.y - 12 * t} width={4 * t} height={20 * t} fill="#7a7a7a" />
       </g>
     )
   }
@@ -112,10 +137,10 @@ function ElementoSVG({ el, seleccionado }) {
             <path d="M0,0 L5,5 M5,0 L0,5" stroke="#fff" strokeWidth="0.6" />
           </pattern>
         </defs>
-        <rect x={el.x - 16} y={el.y - 13} width="32" height="26" fill={`url(#red-${el.id})`} opacity="0.8" />
+        <rect x={el.x - 16 * t} y={el.y - 13 * t} width={32 * t} height={26 * t} fill={`url(#red-${el.id})`} opacity="0.8" />
         <path
-          d={`M ${el.x - 18} ${el.y + 14} L ${el.x - 18} ${el.y - 14} L ${el.x + 18} ${el.y - 14} L ${el.x + 18} ${el.y + 14}`}
-          fill="none" stroke="#ff7a1a" strokeWidth="4"
+          d={`M ${el.x - 18 * t} ${el.y + 14 * t} L ${el.x - 18 * t} ${el.y - 14 * t} L ${el.x + 18 * t} ${el.y - 14 * t} L ${el.x + 18 * t} ${el.y + 14 * t}`}
+          fill="none" stroke="#ff7a1a" strokeWidth={4 * t}
         />
       </g>
     )
@@ -165,9 +190,11 @@ export default function PizarraTactica() {
   const [herramienta, setHerramienta] = useState('mover')
   const [arrastrandoId, setArrastrandoId] = useState(null)
   const [arrastrandoControlId, setArrastrandoControlId] = useState(null)
+  const [arrastrandoLinea, setArrastrandoLinea] = useState(null) // { id, dx0, dy0, original }
   const [dibujando, setDibujando] = useState(false)
   const [lineaTemp, setLineaTemp] = useState(null)
   const [colorNuevoElemento, setColorNuevoElemento] = useState(paletaElementos[0])
+  const [tamanoNuevoElemento, setTamanoNuevoElemento] = useState(1)
   const [tipoBalonNuevo, setTipoBalonNuevo] = useState('hockey')
   const [estiloLineaActual, setEstiloLineaActual] = useState({ color: '#f5f5f5', grosor: 3, trazo: 'solida' })
 
@@ -191,6 +218,9 @@ export default function PizarraTactica() {
       base.numero = elementos.filter((e) => e.tipo === 'jugador').length + 1
     } else if (tipo === 'cono' || tipo === 'valla') {
       base.color = colorNuevoElemento
+      base.tamano = tamanoNuevoElemento
+    } else if (tipo === 'porteria') {
+      base.tamano = tamanoNuevoElemento
     } else if (tipo === 'balon') {
       base.variante = tipoBalonNuevo
     }
@@ -203,6 +233,14 @@ export default function PizarraTactica() {
     e.stopPropagation()
     setSeleccionId(id)
     setArrastrandoId(id)
+  }
+
+  function iniciarArrastreLinea(linea, e) {
+    if (herramienta !== 'mover') return
+    e.stopPropagation()
+    setSeleccionId(linea.id)
+    const { x, y } = coordsSVG(e)
+    setArrastrandoLinea({ id: linea.id, dx0: x, dy0: y, original: linea })
   }
 
   function iniciarArrastreControl(lineaId, e) {
@@ -222,6 +260,22 @@ export default function PizarraTactica() {
       setLineas((prev) => prev.map((l) => (l.id === arrastrandoControlId ? { ...l, cx: x, cy: y } : l)))
       return
     }
+    if (arrastrandoLinea) {
+      const { x, y } = coordsSVG(e)
+      const dx = x - arrastrandoLinea.dx0
+      const dy = y - arrastrandoLinea.dy0
+      const orig = arrastrandoLinea.original
+      setLineas((prev) => prev.map((l) => {
+        if (l.id !== arrastrandoLinea.id) return l
+        if (l.tipo === 'libre') {
+          return { ...l, puntos: orig.puntos.map((p) => ({ x: p.x + dx, y: p.y + dy })) }
+        }
+        const actualizado = { ...l, x1: orig.x1 + dx, y1: orig.y1 + dy, x2: orig.x2 + dx, y2: orig.y2 + dy }
+        if (l.tipo === 'curva') { actualizado.cx = orig.cx + dx; actualizado.cy = orig.cy + dy }
+        return actualizado
+      }))
+      return
+    }
     if (dibujando && herramienta === 'lapiz') {
       const { x, y } = coordsSVG(e)
       setLineaTemp((prev) => {
@@ -239,6 +293,7 @@ export default function PizarraTactica() {
   function manejarPointerUp() {
     if (arrastrandoId) setArrastrandoId(null)
     if (arrastrandoControlId) setArrastrandoControlId(null)
+    if (arrastrandoLinea) setArrastrandoLinea(null)
 
     if (dibujando && lineaTemp) {
       if (herramienta === 'lapiz') {
@@ -353,10 +408,14 @@ export default function PizarraTactica() {
         <button className="pizarra-boton" onClick={() => anadirElemento('jugador')}>+ Jugador</button>
         <button className="pizarra-boton" onClick={() => anadirElemento('cono')}>+ Cono</button>
         <button className="pizarra-boton" onClick={() => anadirElemento('valla')}>+ Valla</button>
+        <button className="pizarra-boton" onClick={() => anadirElemento('porteria')}>+ Portería</button>
         <select value={colorNuevoElemento} onChange={(e) => setColorNuevoElemento(e.target.value)} className="pizarra-color-select" style={{ background: colorNuevoElemento }}>
           {paletaElementos.map((c) => <option key={c} value={c}>●</option>)}
         </select>
-        <button className="pizarra-boton" onClick={() => anadirElemento('porteria')}>+ Portería</button>
+        <label className="pizarra-linea-campo">
+          <span>Tamaño</span>
+          <input type="range" min="0.5" max="2" step="0.1" value={tamanoNuevoElemento} onChange={(e) => setTamanoNuevoElemento(Number(e.target.value))} />
+        </label>
         <select value={tipoBalonNuevo} onChange={(e) => setTipoBalonNuevo(e.target.value)}>
           {tiposBalon.map((t) => <option key={t.valor} value={t.valor}>{t.etiqueta}</option>)}
         </select>
@@ -427,22 +486,22 @@ export default function PizarraTactica() {
             <g key={l.id}>
               {l.tipo === 'recta' ? (
                 <>
-                  <line x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2} stroke={l.color} strokeWidth="14" opacity="0.01" onPointerDown={(e) => iniciarArrastre(l.id, e)} />
+                  <line x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2} stroke={l.color} strokeWidth="16" opacity="0.01" style={{ cursor: herramienta === 'mover' ? 'grab' : 'default' }} onPointerDown={(e) => iniciarArrastreLinea(l, e)} />
                   <line
                     x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2} stroke={l.color} strokeWidth={l.grosor}
                     strokeDasharray={dasharrayPorTrazo[l.trazo]} strokeLinecap="round"
                     markerEnd={`url(#flecha-${slugColor(l.color)})`}
-                    onPointerDown={(e) => iniciarArrastre(l.id, e)}
+                    style={{ pointerEvents: 'none' }}
                   />
                 </>
               ) : (
                 <>
-                  <path d={pathDeLinea(l)} fill="none" stroke={l.color} strokeWidth="14" opacity="0.01" onPointerDown={(e) => iniciarArrastre(l.id, e)} />
+                  <path d={pathDeLinea(l)} fill="none" stroke={l.color} strokeWidth="16" opacity="0.01" style={{ cursor: herramienta === 'mover' ? 'grab' : 'default' }} onPointerDown={(e) => iniciarArrastreLinea(l, e)} />
                   <path
                     d={pathDeLinea(l)} fill="none" stroke={l.color} strokeWidth={l.grosor}
                     strokeDasharray={dasharrayPorTrazo[l.trazo]} strokeLinecap="round" strokeLinejoin="round"
                     markerEnd={l.tipo === 'curva' ? `url(#flecha-${slugColor(l.color)})` : undefined}
-                    onPointerDown={(e) => iniciarArrastre(l.id, e)}
+                    style={{ pointerEvents: 'none' }}
                   />
                 </>
               )}
@@ -477,6 +536,7 @@ export default function PizarraTactica() {
           ) : lineaSeleccionada ? (
             <>
               <h4>Línea / flecha</h4>
+              <p className="texto-faint">Arrástrala desde cualquier punto para moverla entera.</p>
               <label className="campo-sesion">
                 <span>Color</span>
                 <div className="pizarra-color-chips">
@@ -504,7 +564,7 @@ export default function PizarraTactica() {
                 </select>
               </label>
               {lineaSeleccionada.tipo === 'curva' && (
-                <p className="texto-faint">Arrastra el punto verde de la pizarra para curvar la línea.</p>
+                <p className="texto-faint">Arrastra el punto verde para curvarla.</p>
               )}
               <button className="btn-eliminar-sesion" onClick={eliminarSeleccionado}>Eliminar</button>
             </>
@@ -533,25 +593,34 @@ export default function PizarraTactica() {
               </label>
               <button className="btn-eliminar-sesion" onClick={eliminarSeleccionado}>Eliminar</button>
             </>
-          ) : seleccionado.tipo === 'cono' || seleccionado.tipo === 'valla' ? (
+          ) : tiposObstaculo.includes(seleccionado.tipo) ? (
             <>
-              <h4>{seleccionado.tipo === 'cono' ? 'Cono' : 'Valla'}</h4>
+              <h4>{{ cono: 'Cono', valla: 'Valla', porteria: 'Portería' }[seleccionado.tipo]}</h4>
+              {seleccionado.tipo !== 'porteria' && (
+                <label className="campo-sesion">
+                  <span>Color</span>
+                  <div className="pizarra-color-chips">
+                    {paletaElementos.map((c) => (
+                      <button
+                        key={c} type="button"
+                        className={`pizarra-color-chip ${seleccionado.color === c ? 'pizarra-color-chip-activo' : ''}`}
+                        style={{ background: c }}
+                        onClick={() => actualizarSeleccionado({ color: c })}
+                      />
+                    ))}
+                  </div>
+                </label>
+              )}
               <label className="campo-sesion">
-                <span>Color</span>
-                <div className="pizarra-color-chips">
-                  {paletaElementos.map((c) => (
-                    <button
-                      key={c} type="button"
-                      className={`pizarra-color-chip ${seleccionado.color === c ? 'pizarra-color-chip-activo' : ''}`}
-                      style={{ background: c }}
-                      onClick={() => actualizarSeleccionado({ color: c })}
-                    />
-                  ))}
-                </div>
+                <span>Tamaño</span>
+                <input
+                  type="range" min="0.5" max="2" step="0.1" value={seleccionado.tamano || 1}
+                  onChange={(e) => actualizarSeleccionado({ tamano: Number(e.target.value) })}
+                />
               </label>
               <button className="btn-eliminar-sesion" onClick={eliminarSeleccionado}>Eliminar</button>
             </>
-          ) : seleccionado.tipo === 'balon' ? (
+          ) : (
             <>
               <h4>Balón</h4>
               <label className="campo-sesion">
@@ -560,11 +629,6 @@ export default function PizarraTactica() {
                   {tiposBalon.map((t) => <option key={t.valor} value={t.valor}>{t.etiqueta}</option>)}
                 </select>
               </label>
-              <button className="btn-eliminar-sesion" onClick={eliminarSeleccionado}>Eliminar</button>
-            </>
-          ) : (
-            <>
-              <h4>Portería</h4>
               <button className="btn-eliminar-sesion" onClick={eliminarSeleccionado}>Eliminar</button>
             </>
           )}
