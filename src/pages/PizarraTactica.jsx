@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { supabase } from '../lib/supabaseClient'
 import './PizarraTactica.css'
 
 const ANCHO = 800
@@ -94,9 +95,11 @@ function FondoCampo({ fondo }) {
 
 function ElementoSVG({ el, seleccionado }) {
   const t = el.tamano || 1
+  const rot = el.rotacion || 0
   const anillo = seleccionado && (
     <circle cx={el.x} cy={el.y} r={22 * t} fill="none" stroke="var(--accent)" strokeWidth="2" strokeDasharray="4 3" />
   )
+  const transformRotacion = rot ? `rotate(${rot} ${el.x} ${el.y})` : undefined
 
   if (el.tipo === 'jugador') {
     return (
@@ -109,7 +112,7 @@ function ElementoSVG({ el, seleccionado }) {
   }
   if (el.tipo === 'cono') {
     return (
-      <g>
+      <g transform={transformRotacion}>
         {anillo}
         <polygon
           points={`${el.x},${el.y - 12 * t} ${el.x - 10 * t},${el.y + 10 * t} ${el.x + 10 * t},${el.y + 10 * t}`}
@@ -120,7 +123,7 @@ function ElementoSVG({ el, seleccionado }) {
   }
   if (el.tipo === 'valla') {
     return (
-      <g>
+      <g transform={transformRotacion}>
         {anillo}
         <rect x={el.x - 16 * t} y={el.y - 4 * t} width={32 * t} height={8 * t} fill={el.color} stroke="rgba(0,0,0,0.4)" strokeWidth="1" />
         <rect x={el.x - 16 * t} y={el.y - 12 * t} width={4 * t} height={20 * t} fill="#7a7a7a" />
@@ -130,7 +133,7 @@ function ElementoSVG({ el, seleccionado }) {
   }
   if (el.tipo === 'porteria') {
     return (
-      <g>
+      <g transform={transformRotacion}>
         {anillo}
         <defs>
           <pattern id={`red-${el.id}`} width="5" height="5" patternUnits="userSpaceOnUse">
@@ -184,6 +187,7 @@ function ElementoSVG({ el, seleccionado }) {
 export default function PizarraTactica() {
   const svgRef = useRef(null)
   const [fondo, setFondo] = useState('campo_completo')
+  const [colorCampo, setColorCampo] = useState('#1f6b3a')
   const [elementos, setElementos] = useState([])
   const [lineas, setLineas] = useState([])
   const [seleccionId, setSeleccionId] = useState(null)
@@ -197,6 +201,103 @@ export default function PizarraTactica() {
   const [tamanoNuevoElemento, setTamanoNuevoElemento] = useState(1)
   const [tipoBalonNuevo, setTipoBalonNuevo] = useState('hockey')
   const [estiloLineaActual, setEstiloLineaActual] = useState({ color: '#f5f5f5', grosor: 3, trazo: 'solida' })
+
+  // --- Biblioteca de ejercicios de pizarra ---
+  const [nombreEjercicio, setNombreEjercicio] = useState('')
+  const [descripcionEjercicio, setDescripcionEjercicio] = useState('')
+  const [variantesEjercicio, setVariantesEjercicio] = useState('')
+  const [etiquetasSeleccionadas, setEtiquetasSeleccionadas] = useState([])
+  const [etiquetaInput, setEtiquetaInput] = useState('')
+  const [etiquetasDisponibles, setEtiquetasDisponibles] = useState([])
+  const [guardandoEjercicio, setGuardandoEjercicio] = useState(false)
+  const [mensajeEjercicio, setMensajeEjercicio] = useState(null)
+  const [ejerciciosGuardados, setEjerciciosGuardados] = useState([])
+  const [borrandoEjercicioId, setBorrandoEjercicioId] = useState(null)
+
+  useEffect(() => { cargarEjerciciosPizarra() }, [])
+
+  async function cargarEjerciciosPizarra() {
+    const { data } = await supabase.from('ejercicios_pizarra').select('*').order('creado_en', { ascending: false })
+    setEjerciciosGuardados(data || [])
+    const todasEtiquetas = new Set()
+    ;(data || []).forEach((ej) => (ej.etiquetas || []).forEach((et) => todasEtiquetas.add(et)))
+    setEtiquetasDisponibles([...todasEtiquetas].sort())
+  }
+
+  function anadirEtiqueta() {
+    const valor = etiquetaInput.trim()
+    if (!valor || etiquetasSeleccionadas.includes(valor)) { setEtiquetaInput(''); return }
+    setEtiquetasSeleccionadas((prev) => [...prev, valor])
+    setEtiquetaInput('')
+  }
+
+  function quitarEtiqueta(et) {
+    setEtiquetasSeleccionadas((prev) => prev.filter((e) => e !== et))
+  }
+
+  function generarImagenBase64() {
+    return new Promise((resolve, reject) => {
+      const svg = svgRef.current
+      const serializer = new XMLSerializer()
+      const svgString = serializer.serializeToString(svg)
+      const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' })
+      const url = URL.createObjectURL(svgBlob)
+      const img = new Image()
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        canvas.width = ANCHO
+        canvas.height = ALTO
+        const ctx = canvas.getContext('2d')
+        ctx.drawImage(img, 0, 0, ANCHO, ALTO)
+        URL.revokeObjectURL(url)
+        resolve(canvas.toDataURL('image/png'))
+      }
+      img.onerror = reject
+      img.src = url
+    })
+  }
+
+  async function guardarEjercicioPizarra(e) {
+    e.preventDefault()
+    if (!nombreEjercicio.trim()) {
+      setMensajeEjercicio({ tipo: 'error', texto: 'Ponle un nombre al ejercicio.' })
+      return
+    }
+    setGuardandoEjercicio(true)
+    setMensajeEjercicio(null)
+    try {
+      const imagen = await generarImagenBase64()
+      const { error } = await supabase.from('ejercicios_pizarra').insert({
+        nombre: nombreEjercicio.trim(),
+        etiquetas: etiquetasSeleccionadas.length > 0 ? etiquetasSeleccionadas : null,
+        descripcion: descripcionEjercicio || null,
+        variantes: variantesEjercicio || null,
+        imagen_base64: imagen,
+        fondo,
+      })
+      if (error) {
+        setMensajeEjercicio({ tipo: 'error', texto: 'No se pudo guardar el ejercicio.' })
+      } else {
+        setMensajeEjercicio({ tipo: 'ok', texto: 'Ejercicio guardado en la biblioteca.' })
+        setNombreEjercicio('')
+        setDescripcionEjercicio('')
+        setVariantesEjercicio('')
+        setEtiquetasSeleccionadas([])
+        cargarEjerciciosPizarra()
+      }
+    } catch {
+      setMensajeEjercicio({ tipo: 'error', texto: 'No se pudo generar la imagen del ejercicio.' })
+    }
+    setGuardandoEjercicio(false)
+  }
+
+  async function eliminarEjercicioPizarra(id) {
+    if (!window.confirm('¿Eliminar este ejercicio de la biblioteca?')) return
+    setBorrandoEjercicioId(id)
+    const { error } = await supabase.from('ejercicios_pizarra').delete().eq('id', id)
+    if (!error) setEjerciciosGuardados((prev) => prev.filter((ej) => ej.id !== id))
+    setBorrandoEjercicioId(null)
+  }
 
   const seleccionado = elementos.find((e) => e.id === seleccionId)
   const lineaSeleccionada = lineas.find((l) => l.id === seleccionId)
@@ -402,6 +503,10 @@ export default function PizarraTactica() {
         <select value={fondo} onChange={(e) => setFondo(e.target.value)}>
           {fondos.map((f) => <option key={f.valor} value={f.valor}>{f.etiqueta}</option>)}
         </select>
+        <input
+          type="color" value={colorCampo} onChange={(e) => setColorCampo(e.target.value)}
+          className="pizarra-color-select" title="Color del campo"
+        />
 
         <div className="pizarra-separador" />
 
@@ -471,7 +576,7 @@ export default function PizarraTactica() {
           onPointerLeave={manejarPointerUp}
           onPointerDown={manejarPointerDownCanvas}
         >
-          <rect x="0" y="0" width={ANCHO} height={ALTO} fill={fondo === 'gimnasio' ? '#3a3f3c' : '#1f6b3a'} />
+          <rect x="0" y="0" width={ANCHO} height={ALTO} fill={colorCampo} />
           <FondoCampo fondo={fondo} />
 
           <defs>
@@ -618,6 +723,13 @@ export default function PizarraTactica() {
                   onChange={(e) => actualizarSeleccionado({ tamano: Number(e.target.value) })}
                 />
               </label>
+              <label className="campo-sesion">
+                <span>Rotación ({seleccionado.rotacion || 0}°)</span>
+                <input
+                  type="range" min="0" max="350" step="10" value={seleccionado.rotacion || 0}
+                  onChange={(e) => actualizarSeleccionado({ rotacion: Number(e.target.value) })}
+                />
+              </label>
               <button className="btn-eliminar-sesion" onClick={eliminarSeleccionado}>Eliminar</button>
             </>
           ) : (
@@ -634,6 +746,96 @@ export default function PizarraTactica() {
           )}
         </div>
       </div>
+
+      <section className="pizarra-ejercicio-card">
+        <h3>Guardar este ejercicio en la biblioteca</h3>
+        <form onSubmit={guardarEjercicioPizarra}>
+          <label className="campo-sesion">
+            <span>Nombre del ejercicio</span>
+            <input
+              type="text" value={nombreEjercicio} onChange={(e) => setNombreEjercicio(e.target.value)}
+              placeholder="Ej. Superioridad 3x2 en espacio reducido" required
+            />
+          </label>
+
+          <label className="campo-sesion">
+            <span>Etiquetas</span>
+            <div className="pizarra-etiquetas-entrada">
+              <input
+                type="text" list="pizarra-etiquetas-disponibles" value={etiquetaInput}
+                onChange={(e) => setEtiquetaInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); anadirEtiqueta() } }}
+                placeholder="Escribe una etiqueta y pulsa Enter…"
+              />
+              <datalist id="pizarra-etiquetas-disponibles">
+                {etiquetasDisponibles.map((et) => <option key={et} value={et} />)}
+              </datalist>
+              <button type="button" className="pizarra-boton" onClick={anadirEtiqueta}>+ Añadir</button>
+            </div>
+            {etiquetasSeleccionadas.length > 0 && (
+              <div className="pizarra-etiquetas-chips">
+                {etiquetasSeleccionadas.map((et) => (
+                  <span key={et} className="pizarra-etiqueta-chip">
+                    {et}
+                    <button type="button" onClick={() => quitarEtiqueta(et)}>✕</button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </label>
+
+          <label className="campo-sesion">
+            <span>Descripción del ejercicio</span>
+            <textarea
+              value={descripcionEjercicio} onChange={(e) => setDescripcionEjercicio(e.target.value)}
+              rows={3} placeholder="Explica en qué consiste, objetivo, consignas…"
+            />
+          </label>
+
+          <label className="campo-sesion">
+            <span>Posibles variantes</span>
+            <textarea
+              value={variantesEjercicio} onChange={(e) => setVariantesEjercicio(e.target.value)}
+              rows={2} placeholder="Ej. Reducir espacio, añadir un comodín, limitar toques…"
+            />
+          </label>
+
+          {mensajeEjercicio && (
+            <div className={mensajeEjercicio.tipo === 'ok' ? 'aviso-ok' : 'aviso-error'}>{mensajeEjercicio.texto}</div>
+          )}
+
+          <button type="submit" className="btn-principal" disabled={guardandoEjercicio}>
+            {guardandoEjercicio ? 'Guardando…' : '+ Guardar ejercicio en la biblioteca'}
+          </button>
+        </form>
+      </section>
+
+      {ejerciciosGuardados.length > 0 && (
+        <section className="pizarra-ejercicio-card">
+          <h3>Ejercicios guardados ({ejerciciosGuardados.length})</h3>
+          <div className="pizarra-galeria">
+            {ejerciciosGuardados.map((ej) => (
+              <div className="pizarra-galeria-item" key={ej.id}>
+                <img src={ej.imagen_base64} alt={ej.nombre} />
+                <div className="pizarra-galeria-info">
+                  <strong>{ej.nombre}</strong>
+                  {ej.etiquetas && ej.etiquetas.length > 0 && (
+                    <div className="pizarra-etiquetas-chips">
+                      {ej.etiquetas.map((et) => <span key={et} className="pizarra-etiqueta-chip pizarra-etiqueta-chip-lectura">{et}</span>)}
+                    </div>
+                  )}
+                  <button
+                    className="btn-eliminar-fila" onClick={() => eliminarEjercicioPizarra(ej.id)}
+                    disabled={borrandoEjercicioId === ej.id} title="Eliminar ejercicio"
+                  >
+                    {borrandoEjercicioId === ej.id ? '…' : '✕ Eliminar'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   )
 }

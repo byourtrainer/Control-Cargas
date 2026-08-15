@@ -126,3 +126,90 @@
 }
 
 .pizarra-color-chip-activo { border-color: var(--text); }
+
+.pizarra-ejercicio-card {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 22px;
+}
+
+.pizarra-ejercicio-card h3 { margin-bottom: 16px; font-size: 15px; }
+
+.pizarra-etiquetas-entrada {
+  display: flex;
+  gap: 8px;
+}
+
+.pizarra-etiquetas-entrada input {
+  flex: 1;
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+.pizarra-etiquetas-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.pizarra-etiqueta-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(200,255,77,0.12);
+  border: 1px solid rgba(200,255,77,0.3);
+  color: var(--accent);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.pizarra-etiqueta-chip button {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 11px;
+  padding: 0;
+  line-height: 1;
+}
+
+.pizarra-etiqueta-chip-lectura {
+  font-size: 10px;
+  padding: 2px 8px;
+}
+
+.pizarra-galeria {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.pizarra-galeria-item {
+  background: var(--bg-elevated);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.pizarra-galeria-item img {
+  width: 100%;
+  aspect-ratio: 800/520;
+  object-fit: cover;
+  display: block;
+}
+
+.pizarra-galeria-info {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pizarra-galeria-info strong { font-size: 13px; }

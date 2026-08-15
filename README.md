@@ -1060,6 +1060,25 @@ alerta "Molestia reportada hoy" del Resumen muestra todas las zonas de golpe.
     punto de su trazo, no solo editarse — útil para corregir la posición
     si te equivocas al dibujarla.
 
+## Pizarra Táctica: color de campo, rotación, y biblioteca de ejercicios
+
+- **Color del campo modificable** — selector de color en la barra de
+  herramientas, independiente del fondo elegido.
+- **Rotación** en conos, vallas y porterías — control deslizante (0-350°)
+  en el panel lateral al seleccionarlos, junto al de tamaño.
+- **Guardar el ejercicio en una biblioteca propia**, justo debajo de la
+  pizarra: nombre, etiquetas (escribes y pulsas Enter — las etiquetas ya
+  usadas antes aparecen como sugerencias, así se va formando un
+  vocabulario consistente sin tener que recordarlo de memoria),
+  descripción y variantes. Al guardar, se genera automáticamente la
+  imagen de la escena actual y se guarda todo junto. Debajo aparece una
+  galería con todo lo guardado hasta ahora, con opción de borrar.
+
+Esta biblioteca (`ejercicios_pizarra`) es independiente de la biblioteca
+de vídeos de YouTube de "App Entrenamiento" — cada una guarda un tipo de
+contenido distinto (imagen de pizarra vs. vídeo), pensadas para
+propósitos distintos.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.
