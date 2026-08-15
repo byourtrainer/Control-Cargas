@@ -1031,6 +1031,26 @@ una lista, y todo lo que ya dependía de esto se actualizó en consecuencia:
 el mapa de calor del entrenador cuenta cada zona marcada por separado, y la
 alerta "Molestia reportada hoy" del Resumen muestra todas las zonas de golpe.
 
+## Pizarra Táctica (versión mínima)
+
+Nueva pestaña **"🎯 Pizarra Táctica"**, construida desde cero con SVG y sin
+ninguna librería externa de dibujo (mantiene el proyecto ligero y
+consistente con el resto de la app):
+
+- **4 fondos**: campo completo, medio campo, espacio reducido y gimnasio.
+- **Elementos arrastrables**: jugadores (círculo de color + número
+  editable, 5 colores a elegir), conos, vallas, porterías y balón.
+- **Herramienta de flecha**: para marcar desplazamientos o pases —
+  clic y arrastra sobre la pizarra.
+- Selecciona cualquier elemento (jugador, obstáculo o flecha) tocándolo,
+  edítalo o bórralo desde el panel lateral.
+- **"Guardar como imagen"**: exporta la pizarra completa a PNG, lista para
+  usar en la biblioteca de ejercicios o en un documento de sesión.
+
+Es intencionadamente sencilla — sin animaciones, capas o deshacer múltiple —
+pensada para validar si sustituye una parte de tu flujo actual con
+"Pizarra Táctica" para iPad antes de invertir en algo más completo.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

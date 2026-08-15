@@ -1,0 +1,108 @@
+.pizarra-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 1100px;
+}
+
+.pizarra-cabecera h2 { margin-bottom: 4px; }
+.pizarra-cabecera p { font-size: 13px; max-width: 620px; }
+
+.pizarra-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.pizarra-toolbar select {
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 7px 10px;
+  font-size: 13px;
+}
+
+.pizarra-separador {
+  width: 1px;
+  align-self: stretch;
+  background: var(--line);
+  margin: 0 2px;
+}
+
+.pizarra-boton {
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-strong);
+  color: var(--text-dim);
+  border-radius: 6px;
+  padding: 7px 12px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.pizarra-boton:hover:not(:disabled) { border-color: var(--accent); color: var(--text); }
+.pizarra-boton:disabled { opacity: 0.4; }
+
+.pizarra-boton-activo {
+  border-color: var(--accent);
+  background: rgba(200,255,77,0.1);
+  color: var(--accent);
+}
+
+.pizarra-boton-exportar { margin-left: auto; }
+
+.pizarra-color-select {
+  width: 44px;
+  padding: 6px !important;
+}
+
+.pizarra-cuerpo {
+  display: grid;
+  grid-template-columns: 1fr 220px;
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 800px) {
+  .pizarra-cuerpo { grid-template-columns: 1fr; }
+}
+
+.pizarra-svg {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  touch-action: none;
+  display: block;
+}
+
+.pizarra-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.pizarra-panel h4 {
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+.pizarra-color-chips {
+  display: flex;
+  gap: 6px;
+}
+
+.pizarra-color-chip {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+
+.pizarra-color-chip-activo { border-color: var(--text); }

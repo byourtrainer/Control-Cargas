@@ -11,6 +11,7 @@ import Tests from './pages/Tests'
 import Referencias from './pages/Referencias'
 import CalendarioClub from './pages/CalendarioClub'
 import BibliotecaEjercicios from './pages/BibliotecaEjercicios'
+import PizarraTactica from './pages/PizarraTactica'
 import './App.css'
 
 const pestanasEntrenador = [
@@ -23,6 +24,7 @@ const pestanasEntrenador = [
   { clave: 'lesiones', etiqueta: 'Lesiones' },
   { clave: 'referencias', etiqueta: 'Referencias' },
   { clave: 'entrenamiento', etiqueta: '🏋 App Entrenamiento' },
+  { clave: 'pizarra', etiqueta: '🎯 Pizarra Táctica' },
 ]
 
 const diasAtras = (n) => {
@@ -239,6 +241,7 @@ export default function App() {
           : pestana === 'referencias' ? <Referencias />
           : pestana === 'calendario' ? <CalendarioClub equipoActivo={equipoActivo} equipos={equipos} />
           : pestana === 'entrenamiento' ? <BibliotecaEjercicios />
+          : pestana === 'pizarra' ? <PizarraTactica />
           : pestana === 'jugadores' ? <Jugadores equipoActivo={equipoActivo} />
           : pestana === 'tests' ? <Tests equipoActivo={equipoActivo} />
           : pestana === 'equipos' ? (
