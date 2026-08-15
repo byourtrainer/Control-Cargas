@@ -56,6 +56,26 @@
 
 .pizarra-boton-exportar { margin-left: auto; }
 
+.pizarra-toolbar-linea {
+  background: var(--bg-elevated);
+}
+
+.pizarra-linea-campo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.pizarra-linea-campo input[type="range"] { width: 80px; }
+
+.texto-faint {
+  font-size: 11px;
+  color: var(--text-faint);
+  margin: 6px 0;
+}
+
 .pizarra-color-select {
   width: 44px;
   padding: 6px !important;

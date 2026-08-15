@@ -1031,25 +1031,29 @@ una lista, y todo lo que ya dependía de esto se actualizó en consecuencia:
 el mapa de calor del entrenador cuenta cada zona marcada por separado, y la
 alerta "Molestia reportada hoy" del Resumen muestra todas las zonas de golpe.
 
-## Pizarra Táctica (versión mínima)
+## Pizarra Táctica — pista de hockey y herramientas de dibujo ampliadas
 
-Nueva pestaña **"🎯 Pizarra Táctica"**, construida desde cero con SVG y sin
-ninguna librería externa de dibujo (mantiene el proyecto ligero y
-consistente con el resto de la app):
-
-- **4 fondos**: campo completo, medio campo, espacio reducido y gimnasio.
-- **Elementos arrastrables**: jugadores (círculo de color + número
-  editable, 5 colores a elegir), conos, vallas, porterías y balón.
-- **Herramienta de flecha**: para marcar desplazamientos o pases —
-  clic y arrastra sobre la pizarra.
-- Selecciona cualquier elemento (jugador, obstáculo o flecha) tocándolo,
-  edítalo o bórralo desde el panel lateral.
-- **"Guardar como imagen"**: exporta la pizarra completa a PNG, lista para
-  usar en la biblioteca de ejercicios o en un documento de sesión.
-
-Es intencionadamente sencilla — sin animaciones, capas o deshacer múltiple —
-pensada para validar si sustituye una parte de tu flujo actual con
-"Pizarra Táctica" para iPad antes de invertir en algo más completo.
+- **Fondos de hockey sobre patines** (no fútbol): pista completa y media
+  pista con las marcas propias del deporte (pista de esquinas
+  redondeadas, áreas semicirculares frente a cada portería, círculo
+  central, porterías naranjas en cada extremo). "Espacio reducido" y
+  "Gimnasio" se mantienen genéricos.
+- **Color propio en cada elemento** (menos porterías): jugadores, conos y
+  vallas se pueden pintar de 7 colores distintos, para poder organizar
+  grupos o estaciones de trabajo con un vistazo.
+- **Porterías de hockey**: postes naranjas y red con patrón de cuadros
+  blanco.
+- **4 balones distintos**: hockey (negra, pequeña), fútbol, baloncesto y
+  voleibol — cada uno con su forma y color propios.
+- **Sistema de líneas completo**:
+  - 3 herramientas de trazo: **flecha recta**, **flecha curva** (arrastra
+    el punto verde para curvarla después de dibujarla) y **lápiz libre**
+    (dibujo a mano alzada).
+  - 3 estilos de trazo (sólida / discontinua / punteada) — útil para
+    diferenciar tipos de desplazamiento (sprint, conducción de balón,
+    carrera suave...).
+  - **Color y grosor editables en cualquier momento**, tanto al dibujar
+    como después, seleccionando la línea ya creada.
 
 ## Próximos pasos posibles
 
