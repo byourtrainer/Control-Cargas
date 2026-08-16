@@ -266,6 +266,37 @@
   display: block;
 }
 
+.pizarra-galeria-youtube {
+  position: relative;
+  display: block;
+  width: 100%;
+  border: none;
+  padding: 0;
+}
+
+.pizarra-galeria-youtube iframe {
+  width: 100%;
+  aspect-ratio: 800/520;
+  border: none;
+  display: block;
+}
+
+.pizarra-galeria-cerrar {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.6);
+  color: white;
+  border: none;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.pizarra-galeria-cerrar:hover { background: rgba(0,0,0,0.85); }
+
 .pizarra-galeria-play {
   position: absolute;
   inset: 0;

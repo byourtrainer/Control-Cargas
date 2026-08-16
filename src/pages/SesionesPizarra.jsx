@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import './SesionesPizarra.css'
 
@@ -15,18 +15,90 @@ function miniaturaDe(ej) {
 export default function SesionesPizarra() {
   const [sesiones, setSesiones] = useState([])
   const [biblioteca, setBiblioteca] = useState([])
+  const [equipos, setEquipos] = useState([])
+  const [logoEntrenador, setLogoEntrenador] = useState(null)
   const [cargando, setCargando] = useState(true)
   const [sesionActivaId, setSesionActivaId] = useState(null)
   const [titulo, setTitulo] = useState('')
   const [fecha, setFecha] = useState('')
   const [notasSesion, setNotasSesion] = useState('')
+  const [equipoId, setEquipoId] = useState('')
   const [items, setItems] = useState([])
   const [filtroBiblioteca, setFiltroBiblioteca] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [mensaje, setMensaje] = useState(null)
   const [diapositivaIdx, setDiapositivaIdx] = useState(null)
+  const [grabando, setGrabando] = useState(false)
+  const [enPantallaCompleta, setEnPantallaCompleta] = useState(false)
+  const diapositivasRef = useRef(null)
+  const grabadorRef = useRef(null)
+  const trozosRef = useRef([])
 
-  useEffect(() => { cargarSesiones(); cargarBiblioteca() }, [])
+  useEffect(() => {
+    const alCambiar = () => setEnPantallaCompleta(!!document.fullscreenElement)
+    document.addEventListener('fullscreenchange', alCambiar)
+    return () => document.removeEventListener('fullscreenchange', alCambiar)
+  }, [])
+
+  function alternarPantallaCompleta() {
+    if (document.fullscreenElement) {
+      document.exitFullscreen()
+    } else {
+      diapositivasRef.current?.requestFullscreen?.().catch(() => {
+        setMensaje({ tipo: 'error', texto: 'Tu navegador no permite pantalla completa aquí.' })
+      })
+    }
+  }
+
+  async function iniciarGrabacion() {
+    if (!navigator.mediaDevices?.getDisplayMedia) {
+      setMensaje({ tipo: 'error', texto: 'Tu navegador no permite grabar la pantalla.' })
+      return
+    }
+    try {
+      const streamPantalla = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
+      let streamMic = null
+      try { streamMic = await navigator.mediaDevices.getUserMedia({ audio: true }) } catch { /* sin micrófono, se graba solo la pantalla */ }
+
+      const pistas = [...streamPantalla.getVideoTracks()]
+      if (streamMic) {
+        const contexto = new AudioContext()
+        const destino = contexto.createMediaStreamDestination()
+        if (streamPantalla.getAudioTracks().length > 0) contexto.createMediaStreamSource(streamPantalla).connect(destino)
+        contexto.createMediaStreamSource(streamMic).connect(destino)
+        pistas.push(...destino.stream.getAudioTracks())
+      } else {
+        pistas.push(...streamPantalla.getAudioTracks())
+      }
+
+      const streamFinal = new MediaStream(pistas)
+      const grabador = new MediaRecorder(streamFinal, { mimeType: 'video/webm' })
+      trozosRef.current = []
+      grabador.ondataavailable = (e) => { if (e.data.size > 0) trozosRef.current.push(e.data) }
+      grabador.onstop = () => {
+        const blob = new Blob(trozosRef.current, { type: 'video/webm' })
+        const enlace = document.createElement('a')
+        enlace.href = URL.createObjectURL(blob)
+        enlace.download = `sesion-${titulo || 'grabacion'}-${new Date().toISOString().slice(0, 10)}.webm`
+        enlace.click()
+        streamMic?.getTracks().forEach((t) => t.stop())
+        setGrabando(false)
+      }
+      streamPantalla.getVideoTracks()[0].onended = () => grabador.state !== 'inactive' && grabador.stop()
+
+      grabadorRef.current = grabador
+      grabador.start()
+      setGrabando(true)
+    } catch {
+      setMensaje({ tipo: 'error', texto: 'No se pudo iniciar la grabación (¿cancelaste el permiso?).' })
+    }
+  }
+
+  function detenerGrabacion() {
+    grabadorRef.current?.stop()
+  }
+
+  useEffect(() => { cargarSesiones(); cargarBiblioteca(); cargarEquipos(); cargarLogoEntrenador() }, [])
 
   async function cargarSesiones() {
     setCargando(true)
@@ -40,11 +112,22 @@ export default function SesionesPizarra() {
     setBiblioteca(data || [])
   }
 
+  async function cargarEquipos() {
+    const { data } = await supabase.from('equipos').select('id, nombre, logo_base64').order('nombre')
+    setEquipos(data || [])
+  }
+
+  async function cargarLogoEntrenador() {
+    const { data } = await supabase.from('perfiles').select('logo_base64').eq('rol', 'entrenador').not('logo_base64', 'is', null).limit(1).maybeSingle()
+    setLogoEntrenador(data?.logo_base64 || null)
+  }
+
   function nuevaSesion() {
     setSesionActivaId('nueva')
     setTitulo('')
     setFecha('')
     setNotasSesion('')
+    setEquipoId('')
     setItems([])
     setMensaje(null)
   }
@@ -54,6 +137,7 @@ export default function SesionesPizarra() {
     setTitulo(sesion.titulo)
     setFecha(sesion.fecha || '')
     setNotasSesion(sesion.notas || '')
+    setEquipoId(sesion.equipo_id || '')
     setMensaje(null)
     const { data } = await supabase
       .from('sesiones_pizarra_ejercicios')
@@ -106,13 +190,13 @@ export default function SesionesPizarra() {
     let idSesion = sesionActivaId
     if (sesionActivaId === 'nueva') {
       const { data, error } = await supabase.from('sesiones_pizarra')
-        .insert({ titulo: titulo.trim(), fecha: fecha || null, notas: notasSesion || null })
+        .insert({ titulo: titulo.trim(), fecha: fecha || null, notas: notasSesion || null, equipo_id: equipoId || null })
         .select().single()
       if (error) { setMensaje({ tipo: 'error', texto: 'No se pudo crear la sesión.' }); setGuardando(false); return }
       idSesion = data.id
     } else {
       const { error } = await supabase.from('sesiones_pizarra')
-        .update({ titulo: titulo.trim(), fecha: fecha || null, notas: notasSesion || null })
+        .update({ titulo: titulo.trim(), fecha: fecha || null, notas: notasSesion || null, equipo_id: equipoId || null })
         .eq('id', idSesion)
       if (error) { setMensaje({ tipo: 'error', texto: 'No se pudo actualizar la sesión.' }); setGuardando(false); return }
       await supabase.from('sesiones_pizarra_ejercicios').delete().eq('sesion_id', idSesion)
@@ -187,11 +271,22 @@ export default function SesionesPizarra() {
     const it = items[diapositivaIdx]
     const ej = it.ejercicio
     return (
-      <div className="sesiones-diapositivas">
+      <div className="sesiones-diapositivas" ref={diapositivasRef}>
         <div className="sesiones-diapo-cabecera no-imprimir">
           <span>{titulo} — {diapositivaIdx + 1} / {items.length}</span>
-          <button className="pizarra-boton" onClick={() => setDiapositivaIdx(null)}>✕ Cerrar</button>
+          <div className="sesiones-diapo-botones">
+            {grabando ? (
+              <button className="pizarra-boton pizarra-boton-grabando" onClick={detenerGrabacion}>⏺ Detener grabación</button>
+            ) : (
+              <button className="pizarra-boton" onClick={iniciarGrabacion}>⏺ Grabar pantalla</button>
+            )}
+            <button className="pizarra-boton" onClick={alternarPantallaCompleta}>
+              {enPantallaCompleta ? '⤢ Salir de pantalla completa' : '⛶ Pantalla completa'}
+            </button>
+            <button className="pizarra-boton" onClick={() => setDiapositivaIdx(null)}>✕ Cerrar</button>
+          </div>
         </div>
+        {mensaje && <div className={`no-imprimir ${mensaje.tipo === 'ok' ? 'aviso-ok' : 'aviso-error'}`}>{mensaje.texto}</div>}
         <div className="sesiones-diapo-cuerpo">
           <div className="sesiones-diapo-media">
             {ej.tipo_origen === 'youtube' ? (
@@ -222,10 +317,15 @@ export default function SesionesPizarra() {
     )
   }
 
+  const equipoSeleccionado = equipos.find((eq) => eq.id === equipoId)
+
   return (
     <div className="sesiones-layout">
       <div className="sesiones-titulo-imprimir">
+        {logoEntrenador && <img src={logoEntrenador} alt="Logo del entrenador" className="sesiones-logo-imprimir sesiones-logo-izquierda" />}
+        {equipoSeleccionado?.logo_base64 && <img src={equipoSeleccionado.logo_base64} alt={`Escudo de ${equipoSeleccionado.nombre}`} className="sesiones-logo-imprimir sesiones-logo-derecha" />}
         <h2>{titulo || 'Sesión'}</h2>
+        {equipoSeleccionado && <p className="texto-dim">{equipoSeleccionado.nombre}</p>}
         {fecha && <p className="texto-dim">{new Date(fecha + 'T00:00:00').toLocaleDateString('es-ES')}</p>}
         {notasSesion && <p className="texto-dim">{notasSesion}</p>}
       </div>
@@ -249,6 +349,13 @@ export default function SesionesPizarra() {
             <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
           </label>
         </div>
+        <label className="campo-sesion">
+          <span>Equipo destinatario (opcional, para mostrar su escudo en el documento)</span>
+          <select value={equipoId} onChange={(e) => setEquipoId(e.target.value)}>
+            <option value="">Sin especificar</option>
+            {equipos.map((eq) => <option key={eq.id} value={eq.id}>{eq.nombre}</option>)}
+          </select>
+        </label>
         <label className="campo-sesion">
           <span>Notas generales (opcional)</span>
           <textarea value={notasSesion} onChange={(e) => setNotasSesion(e.target.value)} rows={2} />

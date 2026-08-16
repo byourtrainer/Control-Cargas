@@ -192,11 +192,44 @@
 
 .sesiones-titulo-imprimir { display: none; }
 
+.sesiones-logo-imprimir {
+  display: none;
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+}
+
 .sesiones-diapositivas {
   display: flex;
   flex-direction: column;
   height: calc(100vh - 140px);
   min-height: 480px;
+}
+
+.sesiones-diapo-botones {
+  display: flex;
+  gap: 8px;
+}
+
+.pizarra-boton-grabando {
+  border-color: var(--risk-high);
+  color: var(--risk-high);
+  animation: pulso-grabando 1.4s infinite;
+}
+
+@keyframes pulso-grabando {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.sesiones-diapositivas:fullscreen {
+  background: var(--bg);
+  padding: 24px;
+  height: 100vh;
+}
+
+.sesiones-diapositivas:fullscreen .sesiones-diapo-cuerpo {
+  height: calc(100vh - 90px);
 }
 
 .sesiones-diapo-cabecera {
@@ -276,11 +309,25 @@
 }
 
 @media print {
-  .sesiones-titulo-imprimir { display: block; margin-bottom: 20px; }
+  .sesiones-titulo-imprimir { display: block; margin-bottom: 20px; position: relative; padding: 0 68px; }
   .sesiones-titulo-imprimir h2 { font-size: 20px; }
+  .sesiones-logo-imprimir { display: block; position: absolute; top: 0; }
+  .sesiones-logo-izquierda { left: 0; }
+  .sesiones-logo-derecha { right: 0; }
   .sesiones-cuerpo { display: block !important; }
   .sesiones-biblioteca-panel { display: none !important; }
-  .sesiones-item-card { break-inside: avoid; margin-bottom: 14px; }
+  .sesiones-item-card {
+    break-inside: avoid;
+    margin-bottom: 16px;
+    flex-direction: column !important;
+  }
+  .sesiones-item-imagen {
+    width: 100% !important;
+    height: auto !important;
+    max-height: 320px;
+    object-fit: contain !important;
+    background: #eee;
+  }
   .sesiones-item-variables-imprimir {
     display: block;
     font-size: 12px;

@@ -1134,6 +1134,42 @@ propósitos distintos.
   pasada anterior de este mismo bloque de trabajo — confirmado que
   funcionan correctamente.
 
+## Formas geométricas: tamaño sin límite arrastrando, y rectángulo libre
+
+- **Tirador de esquina**: cualquier forma seleccionada muestra un pequeño
+  cuadrado verde en su esquina — arrástralo para agrandarla o encogerla
+  sin ningún límite superior, en vez de depender solo del slider.
+- **Nueva herramienta "▭ Rectángulo libre"**: dibújalo arrastrando por la
+  pizarra, igual que una flecha, con el ancho y alto exactos que quieras
+  (no una forma proporcional escalada) — pensado para delimitar una zona
+  concreta del campo a tu medida. Una vez creado, se puede seguir
+  ajustando arrastrando su propio tirador, o escribiendo el ancho/alto a
+  mano en el panel lateral.
+
+## Reproductor inline, PDF de sesión completo, logos, y pantalla completa + grabación
+
+- **Vídeo dentro de la propia app**: en la galería de la biblioteca de
+  pizarra, los ejercicios de YouTube ahora se reproducen incrustados al
+  pulsar play, igual que en "App Entrenamiento" — sin salir a YouTube.
+- **Imágenes completas en el PDF de sesión**: se recortaban porque el
+  documento reutilizaba el recuadro pequeño de la pantalla (pensado para
+  verse en una lista, no para imprimir). Ahora, solo al exportar, cada
+  ejercicio pasa a mostrarse en columna con la imagen completa (sin
+  recortar, escalada para que quepa entera).
+- **Logo del entrenador y escudo del equipo en la cabecera del PDF**:
+  nuevo campo "Equipo destinatario" (opcional) al crear la sesión — si lo
+  rellenas, su escudo aparece a la derecha del título, y tu logo personal
+  (el mismo que configuraste para "Sin asignar") a la izquierda, si lo
+  tienes subido.
+- **Pantalla completa** en las diapositivas, con un botón dedicado.
+- **Grabar pantalla**: botón que graba pantalla + micrófono (si das
+  permiso) mientras pasas las diapositivas explicando en voz alta, y al
+  terminar descarga el vídeo automáticamente en tu ordenador (formato
+  .webm). Aviso honesto: esta función depende del navegador — funciona
+  bien en Chrome/Edge y Safari de escritorio, pero **no está disponible en
+  navegadores de móvil/tablet** (ninguna app puede saltarse esa
+  limitación, es una restricción del propio sistema operativo).
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

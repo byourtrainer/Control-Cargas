@@ -40,6 +40,9 @@ const tiposObstaculo = ['cono', 'valla', 'bidon', 'porteria']
 const etiquetaObstaculo = { cono: 'Cono', valla: 'Valla', bidon: 'Bidón', porteria: 'Portería' }
 const tiposForma = ['circulo', 'cuadrado', 'rectangulo', 'triangulo', 'pentagono']
 const etiquetaForma = { circulo: 'Círculo', cuadrado: 'Cuadrado', rectangulo: 'Rectángulo', triangulo: 'Triángulo', pentagono: 'Pentágono' }
+// Distancia del centro a la esquina de cada figura cuando tamano=1 — se usa
+// para traducir "arrastrar el tirador" en un nuevo valor de tamaño.
+const radioBaseForma = { circulo: 22, cuadrado: 28.3, rectangulo: 36.7, triangulo: 24, pentagono: 24 }
 
 function puntosPoligono(cx, cy, radio, lados) {
   const puntos = []
@@ -118,6 +121,21 @@ function FondoCampo({ fondo, colorCampo }) {
   )
 }
 
+function anchoMitad(el) {
+  if (el.figura === 'libre') return (el.anchoLibre || 100) / 2
+  const t = el.tamano || 1
+  if (el.figura === 'cuadrado') return 20 * t
+  if (el.figura === 'rectangulo') return 32 * t
+  return radioBaseForma[el.figura] * t
+}
+function altoMitad(el) {
+  if (el.figura === 'libre') return (el.altoLibre || 100) / 2
+  const t = el.tamano || 1
+  if (el.figura === 'cuadrado') return 20 * t
+  if (el.figura === 'rectangulo') return 18 * t
+  return radioBaseForma[el.figura] * t
+}
+
 function ElementoSVG({ el, seleccionado }) {
   const t = el.tamano || 1
   const rot = el.rotacion || 0
@@ -170,12 +188,24 @@ function ElementoSVG({ el, seleccionado }) {
     const comun = { fill: el.color, fillOpacity: op, stroke: el.color, strokeWidth: 1.5, strokeOpacity: Math.min(1, op + 0.2) }
     return (
       <g transform={transformRotacion}>
-        {anillo}
         {el.figura === 'circulo' && <circle cx={el.x} cy={el.y} r={22 * t} {...comun} />}
         {el.figura === 'cuadrado' && <rect x={el.x - 20 * t} y={el.y - 20 * t} width={40 * t} height={40 * t} {...comun} />}
         {el.figura === 'rectangulo' && <rect x={el.x - 32 * t} y={el.y - 18 * t} width={64 * t} height={36 * t} {...comun} />}
         {el.figura === 'triangulo' && <polygon points={puntosPoligono(el.x, el.y, 24 * t, 3)} {...comun} />}
         {el.figura === 'pentagono' && <polygon points={puntosPoligono(el.x, el.y, 24 * t, 5)} {...comun} />}
+        {el.figura === 'libre' && (
+          <rect
+            x={el.x - (el.anchoLibre || 100) / 2} y={el.y - (el.altoLibre || 100) / 2}
+            width={el.anchoLibre || 100} height={el.altoLibre || 100} {...comun}
+          />
+        )}
+        {seleccionado && (
+          <rect
+            x={el.x - anchoMitad(el) - 6} y={el.y - altoMitad(el) - 6}
+            width={(anchoMitad(el) + 6) * 2} height={(altoMitad(el) + 6) * 2}
+            fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeDasharray="4 3"
+          />
+        )}
       </g>
     )
   }
@@ -242,6 +272,7 @@ export default function PizarraTactica() {
   const [herramienta, setHerramienta] = useState('mover')
   const [arrastrandoId, setArrastrandoId] = useState(null)
   const [arrastrandoControlId, setArrastrandoControlId] = useState(null)
+  const [redimensionandoId, setRedimensionandoId] = useState(null)
   const [arrastrandoLinea, setArrastrandoLinea] = useState(null) // { id, dx0, dy0, original }
   const [dibujando, setDibujando] = useState(false)
   const [lineaTemp, setLineaTemp] = useState(null)
@@ -269,6 +300,7 @@ export default function PizarraTactica() {
   const [mensajeEjercicio, setMensajeEjercicio] = useState(null)
   const [ejerciciosGuardados, setEjerciciosGuardados] = useState([])
   const [borrandoEjercicioId, setBorrandoEjercicioId] = useState(null)
+  const [reproduciendoId, setReproduciendoId] = useState(null)
 
   // --- Subir ejercicio externo (imagen o YouTube) ---
   const [origenExterno, setOrigenExterno] = useState('imagen') // 'imagen' | 'youtube'
@@ -532,6 +564,12 @@ export default function PizarraTactica() {
     setArrastrandoControlId(lineaId)
   }
 
+  function iniciarRedimension(id, e) {
+    e.stopPropagation()
+    setSeleccionId(id)
+    setRedimensionandoId(id)
+  }
+
   function manejarPointerMove(e) {
     if (arrastrandoId) {
       const { x, y } = coordsSVG(e)
@@ -541,6 +579,21 @@ export default function PizarraTactica() {
     if (arrastrandoControlId) {
       const { x, y } = coordsSVG(e)
       setLineas((prev) => prev.map((l) => (l.id === arrastrandoControlId ? { ...l, cx: x, cy: y } : l)))
+      return
+    }
+    if (redimensionandoId) {
+      const { x, y } = coordsSVG(e)
+      setElementos((prev) => prev.map((el) => {
+        if (el.id !== redimensionandoId) return el
+        if (el.figura === 'libre') {
+          const nuevoAncho = Math.max(20, Math.abs(x - el.x) * 2)
+          const nuevoAlto = Math.max(20, Math.abs(y - el.y) * 2)
+          return { ...el, anchoLibre: nuevoAncho, altoLibre: nuevoAlto }
+        }
+        const distancia = Math.hypot(x - el.x, y - el.y)
+        const nuevoTamano = Math.max(0.2, distancia / (radioBaseForma[el.figura] * Math.SQRT2))
+        return { ...el, tamano: nuevoTamano }
+      }))
       return
     }
     if (arrastrandoLinea) {
@@ -576,6 +629,7 @@ export default function PizarraTactica() {
   function manejarPointerUp() {
     if (arrastrandoId) setArrastrandoId(null)
     if (arrastrandoControlId) setArrastrandoControlId(null)
+    if (redimensionandoId) setRedimensionandoId(null)
     if (arrastrandoLinea) setArrastrandoLinea(null)
 
     if (dibujando && lineaTemp) {
@@ -583,6 +637,23 @@ export default function PizarraTactica() {
         if (lineaTemp.puntos.length > 1) {
           setLineas((prev) => [...prev, { ...lineaTemp, id: idNuevo() }])
         }
+      } else if (herramienta === 'rectangulo_libre') {
+        const ancho = Math.abs(lineaTemp.x2 - lineaTemp.x1)
+        const alto = Math.abs(lineaTemp.y2 - lineaTemp.y1)
+        if (ancho > 8 && alto > 8) {
+          const nuevaForma = {
+            id: idNuevo(), tipo: 'forma', figura: 'libre',
+            x: (lineaTemp.x1 + lineaTemp.x2) / 2, y: (lineaTemp.y1 + lineaTemp.y2) / 2,
+            anchoLibre: ancho, altoLibre: alto,
+            color: colorNuevoElemento, opacidad: opacidadNuevaForma,
+          }
+          setElementos((prev) => [...prev, nuevaForma])
+          setSeleccionId(nuevaForma.id)
+          setHerramienta('mover')
+        }
+        setLineaTemp(null)
+        setDibujando(false)
+        return
       } else {
         const distancia = Math.hypot(lineaTemp.x2 - lineaTemp.x1, lineaTemp.y2 - lineaTemp.y1)
         if (distancia > 8) {
@@ -608,6 +679,8 @@ export default function PizarraTactica() {
     setDibujando(true)
     if (herramienta === 'lapiz') {
       setLineaTemp({ tipo: 'libre', puntos: [{ x, y }], color: estiloLineaActual.color, grosor: estiloLineaActual.grosor, trazo: estiloLineaActual.trazo })
+    } else if (herramienta === 'rectangulo_libre') {
+      setLineaTemp({ x1: x, y1: y, x2: x, y2: y })
     } else if (herramienta === 'flecha_curva') {
       setLineaTemp({ tipo: 'curva', x1: x, y1: y, x2: x, y2: y, cx: x, cy: y, color: estiloLineaActual.color, grosor: estiloLineaActual.grosor, trazo: estiloLineaActual.trazo })
     } else {
@@ -720,6 +793,12 @@ export default function PizarraTactica() {
           <input type="range" min="0.1" max="1" step="0.1" value={opacidadNuevaForma} onChange={(e) => setOpacidadNuevaForma(Number(e.target.value))} />
         </label>
         <button className="pizarra-boton" onClick={() => anadirElemento('forma')}>+ Forma</button>
+        <button
+          className={`pizarra-boton ${herramienta === 'rectangulo_libre' ? 'pizarra-boton-activo' : ''}`}
+          onClick={() => setHerramienta('rectangulo_libre')}
+        >
+          ▭ Rectángulo libre
+        </button>
 
         <div className="pizarra-separador" />
 
@@ -815,7 +894,14 @@ export default function PizarraTactica() {
             </g>
           ))}
 
-          {lineaTemp && herramienta !== 'mover' && (
+          {lineaTemp && herramienta === 'rectangulo_libre' && (
+            <rect
+              x={Math.min(lineaTemp.x1, lineaTemp.x2)} y={Math.min(lineaTemp.y1, lineaTemp.y2)}
+              width={Math.abs(lineaTemp.x2 - lineaTemp.x1)} height={Math.abs(lineaTemp.y2 - lineaTemp.y1)}
+              fill={colorNuevoElemento} fillOpacity={opacidadNuevaForma} stroke={colorNuevoElemento} strokeDasharray="6 4"
+            />
+          )}
+          {lineaTemp && herramienta !== 'mover' && herramienta !== 'rectangulo_libre' && (
             lineaTemp.tipo === 'recta' ? (
               <line x1={lineaTemp.x1} y1={lineaTemp.y1} x2={lineaTemp.x2} y2={lineaTemp.y2} stroke={lineaTemp.color} strokeWidth={lineaTemp.grosor} strokeDasharray="6 4" />
             ) : (
@@ -828,6 +914,20 @@ export default function PizarraTactica() {
               <ElementoSVG el={el} seleccionado={el.id === seleccionId} />
             </g>
           ))}
+
+          {seleccionId && herramienta === 'mover' && (() => {
+            const el = elementos.find((e) => e.id === seleccionId)
+            if (!el || el.tipo !== 'forma') return null
+            const hx = el.x + anchoMitad(el)
+            const hy = el.y + altoMitad(el)
+            return (
+              <rect
+                x={hx - 6} y={hy - 6} width="12" height="12" fill="var(--accent)" stroke="#0d1210" strokeWidth="1.5"
+                style={{ cursor: 'nwse-resize' }}
+                onPointerDown={(e) => iniciarRedimension(el.id, e)}
+              />
+            )
+          })()}
         </svg>
 
         <div className="pizarra-panel">
@@ -930,12 +1030,14 @@ export default function PizarraTactica() {
           ) : seleccionado.tipo === 'forma' ? (
             <>
               <h4>Forma</h4>
-              <label className="campo-sesion">
-                <span>Figura</span>
-                <select value={seleccionado.figura} onChange={(e) => actualizarSeleccionado({ figura: e.target.value })}>
-                  {tiposForma.map((f) => <option key={f} value={f}>{etiquetaForma[f]}</option>)}
-                </select>
-              </label>
+              {seleccionado.figura !== 'libre' && (
+                <label className="campo-sesion">
+                  <span>Figura</span>
+                  <select value={seleccionado.figura} onChange={(e) => actualizarSeleccionado({ figura: e.target.value })}>
+                    {tiposForma.map((f) => <option key={f} value={f}>{etiquetaForma[f]}</option>)}
+                  </select>
+                </label>
+              )}
               <label className="campo-sesion">
                 <span>Color</span>
                 <div className="pizarra-color-chips">
@@ -949,13 +1051,33 @@ export default function PizarraTactica() {
                   ))}
                 </div>
               </label>
-              <label className="campo-sesion">
-                <span>Tamaño</span>
-                <input
-                  type="range" min="0.5" max="3" step="0.1" value={seleccionado.tamano || 1}
-                  onChange={(e) => actualizarSeleccionado({ tamano: Number(e.target.value) })}
-                />
-              </label>
+              {seleccionado.figura === 'libre' ? (
+                <div className="fila-doble">
+                  <label className="campo-sesion">
+                    <span>Ancho</span>
+                    <input
+                      type="number" min="20" value={Math.round(seleccionado.anchoLibre || 100)}
+                      onChange={(e) => actualizarSeleccionado({ anchoLibre: Number(e.target.value) })}
+                    />
+                  </label>
+                  <label className="campo-sesion">
+                    <span>Alto</span>
+                    <input
+                      type="number" min="20" value={Math.round(seleccionado.altoLibre || 100)}
+                      onChange={(e) => actualizarSeleccionado({ altoLibre: Number(e.target.value) })}
+                    />
+                  </label>
+                </div>
+              ) : (
+                <label className="campo-sesion">
+                  <span>Tamaño</span>
+                  <input
+                    type="range" min="0.3" max="10" step="0.1" value={seleccionado.tamano || 1}
+                    onChange={(e) => actualizarSeleccionado({ tamano: Number(e.target.value) })}
+                  />
+                </label>
+              )}
+              <p className="texto-faint">También puedes arrastrar el tirador verde de la esquina para redimensionar sin límite.</p>
               <label className="campo-sesion">
                 <span>Opacidad ({Math.round((seleccionado.opacidad ?? 0.5) * 100)}%)</span>
                 <input
@@ -1166,10 +1288,22 @@ export default function PizarraTactica() {
             {ejerciciosGuardados.map((ej) => (
               <div className="pizarra-galeria-item" key={ej.id}>
                 {ej.tipo_origen === 'youtube' ? (
-                  <a href={ej.url_youtube} target="_blank" rel="noopener noreferrer" className="pizarra-galeria-youtube">
-                    <img src={`https://img.youtube.com/vi/${ej.youtube_id}/mqdefault.jpg`} alt={ej.nombre} />
-                    <span className="pizarra-galeria-play">▶</span>
-                  </a>
+                  reproduciendoId === ej.id ? (
+                    <div className="pizarra-galeria-youtube">
+                      <iframe
+                        src={`https://www.youtube.com/embed/${ej.youtube_id}?autoplay=1`}
+                        title={ej.nombre}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                      <button className="pizarra-galeria-cerrar" onClick={() => setReproduciendoId(null)} title="Cerrar vídeo">✕</button>
+                    </div>
+                  ) : (
+                    <button className="pizarra-galeria-youtube" onClick={() => setReproduciendoId(ej.id)}>
+                      <img src={`https://img.youtube.com/vi/${ej.youtube_id}/mqdefault.jpg`} alt={ej.nombre} />
+                      <span className="pizarra-galeria-play">▶</span>
+                    </button>
+                  )
                 ) : (
                   <img src={ej.imagen_base64} alt={ej.nombre} />
                 )}
