@@ -1,18 +1,22 @@
-// Índice de bienestar estilo Hooper: convierte cada escala a "malestar"
-// (donde un valor más alto siempre es peor), las promedia, y clasifica el
-// resultado en Óptimo / Bueno / Malo — igual que hace el Índice de Hooper
-// clásico (que sí sirve con esta escala: sueño, fatiga, dolor muscular, estrés).
+// Índice de bienestar: convierte cada escala en un único valor de 1 a 5,
+// donde 1 = peor posible y 5 = mejor posible — misma dirección que el
+// modelo de Readiness de Manu Sola Arjona, para que ambos "hablen el mismo
+// idioma" en toda la app. Basado en el Índice de Hooper clásico (sueño,
+// fatiga, dolor muscular, estrés), con el ánimo añadido.
 
 const CLAVES_BIENESTAR = ['sueno', 'fatiga', 'dolor_muscular', 'estres', 'animo']
-const ESCALAS_INVERTIDAS = ['sueno', 'animo'] // valor alto = bueno, hay que invertir
+// En estas tres, un valor alto en la pregunta original es malo (mucha
+// fatiga, mucho dolor, mucho estrés) — se invierten para que, en el
+// resultado final, un valor alto sea siempre bueno.
+const ESCALAS_A_INVERTIR = ['fatiga', 'dolor_muscular', 'estres']
 
-/** Convierte un registro diario en un "malestar" medio (1 = mejor posible, 5 = peor posible). */
-export function calcularMalestar(registro) {
+/** Bienestar medio del día (1 = peor posible, 5 = mejor posible). */
+export function calcularBienestar(registro) {
   const valores = CLAVES_BIENESTAR
     .map((clave) => {
       const v = registro[clave]
       if (v === null || v === undefined) return null
-      return ESCALAS_INVERTIDAS.includes(clave) ? 6 - v : v
+      return ESCALAS_A_INVERTIR.includes(clave) ? 6 - v : v
     })
     .filter((v) => v !== null)
 
@@ -20,10 +24,10 @@ export function calcularMalestar(registro) {
   return valores.reduce((a, b) => a + b, 0) / valores.length
 }
 
-/** Clasifica el malestar medio en 3 categorías, estilo Índice de Hooper. */
-export function clasificarBienestar(malestar) {
-  if (malestar === null || malestar === undefined) return 'sin_datos'
-  if (malestar <= 2) return 'optimo'
-  if (malestar <= 3) return 'bueno'
+/** Clasifica el bienestar medio en 3 categorías, estilo Índice de Hooper. */
+export function clasificarBienestar(bienestar) {
+  if (bienestar === null || bienestar === undefined) return 'sin_datos'
+  if (bienestar >= 4) return 'optimo'
+  if (bienestar >= 3) return 'bueno'
   return 'malo'
 }

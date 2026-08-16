@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { colorParaValor } from '../lib/colorEscalas'
-import { calcularMalestar, clasificarBienestar } from '../lib/bienestar'
+import { calcularBienestar, clasificarBienestar } from '../lib/bienestar'
 import './Calendario.css'
 
 const DIAS_SEMANA = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
@@ -13,11 +13,11 @@ const MESES = [
 const hoyISO = () => new Date().toISOString().slice(0, 10)
 
 function colorBienestarPromedio(registrosDia) {
-  const malestares = registrosDia
+  const bienestares = registrosDia
     .filter((r) => r.sueno !== null && r.sueno !== undefined)
-    .map((r) => calcularMalestar(r))
-  if (malestares.length === 0) return null
-  const media = malestares.reduce((a, b) => a + b, 0) / malestares.length
+    .map((r) => calcularBienestar(r))
+  if (bienestares.length === 0) return null
+  const media = bienestares.reduce((a, b) => a + b, 0) / bienestares.length
   const nivel = clasificarBienestar(media)
   return { optimo: 'var(--risk-low)', bueno: 'var(--risk-mid)', malo: 'var(--risk-high)' }[nivel] || null
 }

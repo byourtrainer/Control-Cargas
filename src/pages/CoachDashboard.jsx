@@ -5,7 +5,7 @@ import {
 } from 'recharts'
 import { supabase } from '../lib/supabaseClient'
 import { calcularMetricas, clasificarRiesgoACWR, clasificarMonotonia, diferenciaCarga } from '../lib/cargaMetrics'
-import { calcularMalestar, clasificarBienestar } from '../lib/bienestar'
+import { calcularBienestar, clasificarBienestar } from '../lib/bienestar'
 import { readinessPercibido, diferenciaReadiness, deltaReadinessDiario, clasificarDeltaDiario } from '../lib/readiness'
 import './CoachDashboard.css'
 
@@ -74,13 +74,13 @@ function calcularValorBucket(bucket, jugadoresGrafico, registros, variableGrafic
     return suma
   }
 
-  if (variableGrafico === 'malestar') {
+  if (variableGrafico === 'bienestar') {
     const valores = []
     jugadoresGrafico.forEach((j) => {
       registros
         .filter((r) => r.jugador_id === j.id && r.fecha >= inicioISO && r.fecha <= finISO)
         .forEach((r) => {
-          const m = calcularMalestar(r)
+          const m = calcularBienestar(r)
           if (m !== null && m !== undefined) valores.push(m)
         })
     })
@@ -112,7 +112,7 @@ const variablesGrafico = [
   { valor: 'acwr', etiqueta: 'ACWR Post' },
   { valor: 'monotonia', etiqueta: 'Monotonía' },
   { valor: 'fatiga', etiqueta: 'Fatiga (Strain)' },
-  { valor: 'malestar', etiqueta: 'Bienestar (malestar)' },
+  { valor: 'bienestar', etiqueta: 'Bienestar' },
   { valor: 'diferencia_readiness', etiqueta: 'Readiness (Diferencia)' },
   { valor: 'diferencia_carga', etiqueta: 'Carga (Diferencia Agudo-Crónico)' },
 ]
@@ -132,10 +132,10 @@ const bandasPorVariable = {
     { y1: 2, y2: 2.5, color: 'var(--risk-high-mid)' },
     { y1: 2.5, y2: 5, color: 'var(--risk-high)' },
   ],
-  malestar: [
-    { y1: 1, y2: 2, color: 'var(--risk-low)' },
-    { y1: 2, y2: 3, color: 'var(--risk-mid)' },
-    { y1: 3, y2: 5, color: 'var(--risk-high)' },
+  bienestar: [
+    { y1: 0, y2: 3, color: 'var(--risk-high)' },
+    { y1: 3, y2: 4, color: 'var(--risk-mid)' },
+    { y1: 4, y2: 5, color: 'var(--risk-low)' },
   ],
   diferencia_readiness: [
     { y1: -4, y2: -0.5, color: 'var(--risk-high)' },
@@ -327,9 +327,9 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
       const cargaTotal = registrosPeriodo.reduce((acc, r) => acc + (r.carga || 0), 0)
       const diasConRpe = registrosPeriodo.filter((r) => r.rpe !== null && r.rpe !== undefined).length
       const diasPeriodo = Math.round((periodoFinDate - buckets[0].inicio) / 86400000) + 1
-      const malestares = registrosPeriodo.map((r) => calcularMalestar(r)).filter((v) => v !== null && v !== undefined)
-      const malestarMedio = malestares.length ? malestares.reduce((a, b) => a + b, 0) / malestares.length : null
-      const nivelBienestar = clasificarBienestar(malestarMedio)
+      const bienestares = registrosPeriodo.map((r) => calcularBienestar(r)).filter((v) => v !== null && v !== undefined)
+      const bienestarMedio = bienestares.length ? bienestares.reduce((a, b) => a + b, 0) / bienestares.length : null
+      const nivelBienestar = clasificarBienestar(bienestarMedio)
       const metricasFin = calcularMetricas(suyos, metodoACWR, periodoFinDate)
       const riesgo = clasificarRiesgoACWR(metricasFin.acwrPost)
       const nivelMonot = clasificarMonotonia(metricasFin.monotonia)
@@ -367,9 +367,9 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
     const jugadoresConRegistro = jugadoresGrafico.filter((j) =>
       registrosPeriodo.some((r) => r.jugador_id === j.id && r.rpe !== null && r.rpe !== undefined)
     ).length
-    const malestares = registrosPeriodo.map((r) => calcularMalestar(r)).filter((v) => v !== null && v !== undefined)
-    const malestarMedio = malestares.length ? malestares.reduce((a, b) => a + b, 0) / malestares.length : null
-    const nivelBienestar = clasificarBienestar(malestarMedio)
+    const bienestares = registrosPeriodo.map((r) => calcularBienestar(r)).filter((v) => v !== null && v !== undefined)
+    const bienestarMedio = bienestares.length ? bienestares.reduce((a, b) => a + b, 0) / bienestares.length : null
+    const nivelBienestar = clasificarBienestar(bienestarMedio)
 
     const metricasPorJugador = jugadoresGrafico.map((j) => {
       const suyos = registros.filter((r) => r.jugador_id === j.id)
@@ -502,9 +502,9 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
           }
         }
         const registro = suyos.find((r) => r.fecha === fechaISO)
-        const malestar = registro ? calcularMalestar(registro) : null
-        const nivel = clasificarBienestar(malestar)
-        return { fechaISO, color: colorNivelBienestar[nivel], valor: malestar !== null ? traducirBienestar(nivel) : 'sin datos' }
+        const bienestar = registro ? calcularBienestar(registro) : null
+        const nivel = clasificarBienestar(bienestar)
+        return { fechaISO, color: colorNivelBienestar[nivel], valor: bienestar !== null ? traducirBienestar(nivel) : 'sin datos' }
       })
       return { nombre: j.nombre, celdas }
     })

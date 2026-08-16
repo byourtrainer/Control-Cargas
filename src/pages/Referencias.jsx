@@ -156,25 +156,27 @@ export default function Referencias() {
         <h2>5. Bienestar (estilo Índice de Hooper)</h2>
         <p>
           <strong>Definición:</strong> media de sueño, fatiga, dolor muscular, estrés y ánimo,
-          invirtiendo sueño y ánimo (donde un valor alto es bueno) antes de promediar.
+          invirtiendo fatiga, dolor muscular y estrés (donde un valor alto en la pregunta original
+          es malo) antes de promediar — así, en el resultado final, <strong>1 siempre es lo peor
+          y 5 siempre es lo mejor</strong>, en todas las variables de esta app por igual.
         </p>
         <table className="referencia-tabla">
           <thead>
-            <tr><th>Malestar medio (1-5)</th><th>Categoría</th><th>Qué significa</th></tr>
+            <tr><th>Bienestar medio (1-5)</th><th>Categoría</th><th>Qué significa</th></tr>
           </thead>
           <tbody>
             <tr>
-              <td className="mono">≤ 2</td>
+              <td className="mono">≥ 4</td>
               <td><span className="bienestar-badge bienestar-optimo">Óptimo</span></td>
               <td>El jugador se encuentra bien, buena recuperación</td>
             </tr>
             <tr>
-              <td className="mono">2 – 3</td>
+              <td className="mono">3 – 4</td>
               <td><span className="bienestar-badge bienestar-bueno">Bueno</span></td>
               <td>Estado aceptable, sin señales de alarma</td>
             </tr>
             <tr>
-              <td className="mono">&gt; 3</td>
+              <td className="mono">&lt; 3</td>
               <td><span className="bienestar-badge bienestar-malo">Malo</span></td>
               <td>Señales de mala recuperación — revisar carga, sueño o estrés del jugador</td>
             </tr>
@@ -197,10 +199,9 @@ export default function Referencias() {
           semana con la de la semana anterior).
         </p>
         <p>
-          En esta app, el "Readiness percibido" (escala 1-5, donde 5 es mejor) se calcula
-          directamente a partir del mismo cuestionario de bienestar que ya rellena el jugador —
-          no se le pregunta nada nuevo — invirtiendo el malestar (1=mejor·5=peor) a la escala de
-          Readiness (1=peor·5=mejor) que usa este modelo.
+          En esta app, el "Readiness percibido" es exactamente el mismo Bienestar de la sección
+          anterior — mismo cuestionario, misma escala (1=peor·5=mejor) — no se le pregunta nada
+          nuevo al jugador ni hace falta ninguna conversión entre uno y otro.
         </p>
         <table className="referencia-tabla">
           <thead>

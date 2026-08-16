@@ -1206,6 +1206,30 @@ basó enteramente en las fórmulas y el formato condicional (colores/umbrales)
 del propio Excel que subiste — que son la fuente más fiable posible, ya
 que es la lógica de cálculo real, no una interpretación de algo hablado.
 
+## Bienestar unificado: 1 siempre es malo, 5 siempre es bueno
+
+Detectado un problema real: el Bienestar (estilo Hooper) usaba 1=mejor·
+5=peor, mientras que el Readiness que añadimos hace poco usa la dirección
+contraria (1=peor·5=mejor) — ambos convivían en el mismo Resumen con
+polaridades opuestas, lo cual podía confundir al leer los gráficos.
+
+Ahora **toda la app usa una única dirección: 1 es siempre lo peor, 5 es
+siempre lo mejor** — en Bienestar, en Readiness, y en cualquier sitio
+donde se muestre. Como consecuencia directa de esto, "Readiness percibido"
+pasa a ser **literalmente el mismo dato** que "Bienestar" — mismo
+cuestionario, misma escala — así que el código quedó más simple (ya no
+hace falta ninguna conversión entre uno y otro, `readiness.js` reutiliza
+directamente el cálculo de `bienestar.js`).
+
+Cambios visibles:
+- La variable "Bienestar (malestar)" del gráfico de Resumen pasa a
+  llamarse simplemente **"Bienestar"**, con las bandas de color
+  invertidas (ahora rojo abajo, verde arriba, como el resto de variables).
+- La tabla del Índice de Hooper en Referencias tiene los umbrales
+  actualizados (antes ≤2 óptimo, ahora ≥4 óptimo).
+- Nada de esto cambia lo que el jugador rellena — solo cómo se interpreta
+  el resultado internamente.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

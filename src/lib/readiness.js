@@ -4,19 +4,18 @@
 // tendencia/momentum, no solo de "dónde estás ahora".
 //
 // No añadimos ninguna pregunta nueva al jugador: el "Readiness percibido"
-// se traduce directamente del índice de bienestar que ya rellena cada día
-// (calcularMalestar, 1=mejor·5=peor), invertido a la escala de Manu Sola
-// (1=peor·5=mejor: 1=rojo, 3=amarillo, 5=verde en su Excel original).
+// es exactamente el mismo Bienestar que ya calculamos a partir del
+// cuestionario diario — ambos usan la misma dirección (1=peor·5=mejor),
+// así que no hace falta ninguna conversión entre uno y otro.
 
-import { calcularMalestar } from './bienestar'
+import { calcularBienestar } from './bienestar'
 
 const fechaISO = (date) => date.toISOString().slice(0, 10)
 const media = (arr) => (arr.length === 0 ? null : arr.reduce((a, b) => a + b, 0) / arr.length)
 
-/** Traduce el malestar (1=mejor·5=peor) al Readiness percibido de Manu Sola (1=peor·5=mejor). */
+/** Readiness percibido del día — alias de calcularBienestar, mismo dato y misma escala. */
 export function readinessPercibido(registro) {
-  const malestar = calcularMalestar(registro)
-  return malestar === null ? null : 6 - malestar
+  return calcularBienestar(registro)
 }
 
 /**
