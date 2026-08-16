@@ -16,6 +16,44 @@
   margin-bottom: 10px;
 }
 
+.ciclo-boton-fecha-manual {
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  font-size: 12px;
+  text-decoration: underline;
+  padding: 0 0 10px;
+}
+
+.ciclo-boton-fecha-manual:hover { color: var(--text-dim); }
+
+.ciclo-fecha-manual {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.ciclo-fecha-manual input[type="date"] {
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 7px 10px;
+  font-size: 13px;
+}
+
+.ciclo-boton-confirmar {
+  background: var(--accent);
+  border: none;
+  color: #0d1210;
+  font-weight: 600;
+  border-radius: 6px;
+  padding: 7px 14px;
+  font-size: 13px;
+}
+
 .ciclo-sin-datos {
   font-size: 13px;
   line-height: 1.5;

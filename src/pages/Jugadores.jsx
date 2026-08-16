@@ -22,6 +22,7 @@ export default function Jugadores({ equipoActivo = 'todos' }) {
   const [editandoPeso, setEditandoPeso] = useState(null)
   const [pesoTemp, setPesoTemp] = useState('')
   const [ciclosPorJugadora, setCiclosPorJugadora] = useState({})
+  const [eliminandoId, setEliminandoId] = useState(null)
 
   useEffect(() => { cargarJugadores() }, [])
 
@@ -63,6 +64,36 @@ export default function Jugadores({ equipoActivo = 'todos' }) {
     cargarJugadores()
   }
 
+  async function eliminarJugador(j) {
+    const escrito = window.prompt(
+      `Esto eliminará PARA SIEMPRE la cuenta de ${j.nombre} y todos sus datos (registros diarios, tests, lesiones, ciclo...). No se puede deshacer.\n\nEscribe su nombre exacto para confirmar:`
+    )
+    if (escrito === null) return
+    if (escrito !== j.nombre) {
+      alert('El nombre no coincide exactamente. No se ha eliminado nada.')
+      return
+    }
+
+    setEliminandoId(j.id)
+    const { data: sesion } = await supabase.auth.getSession()
+    try {
+      const resp = await fetch('/api/eliminar-jugador', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sesion.session.access_token}` },
+        body: JSON.stringify({ jugadorId: j.id }),
+      })
+      const resultado = await resp.json()
+      if (!resp.ok) {
+        alert(resultado.error || 'No se pudo eliminar al jugador.')
+      } else {
+        cargarJugadores()
+      }
+    } catch {
+      alert('No se pudo conectar con el servidor. Inténtalo de nuevo.')
+    }
+    setEliminandoId(null)
+  }
+
   const jugadoresFiltrados = jugadores.filter((j) => {
     if (equipoActivo === 'todos') return true
     if (equipoActivo === 'sin_asignar') return !j.equipo_id
@@ -86,7 +117,7 @@ export default function Jugadores({ equipoActivo = 'todos' }) {
           <thead>
             <tr>
               <th>Jugador</th><th>Equipo</th><th>Peso corporal</th><th>Altura</th>
-              <th>Fecha nacimiento</th><th>Sexo</th><th>Ciclo</th><th>Dado de alta</th>
+              <th>Fecha nacimiento</th><th>Sexo</th><th>Ciclo</th><th>Dado de alta</th><th></th>
             </tr>
           </thead>
           <tbody>
@@ -146,6 +177,14 @@ export default function Jugadores({ equipoActivo = 'todos' }) {
                 </td>
                 <td className="mono texto-dim">
                   {j.creado_en ? new Date(j.creado_en).toLocaleDateString('es-ES') : '—'}
+                </td>
+                <td>
+                  <button
+                    className="btn-eliminar-fila" onClick={() => eliminarJugador(j)}
+                    disabled={eliminandoId === j.id} title="Eliminar jugador definitivamente"
+                  >
+                    {eliminandoId === j.id ? '…' : '✕'}
+                  </button>
                 </td>
               </tr>
             ))}

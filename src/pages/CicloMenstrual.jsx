@@ -10,6 +10,8 @@ export default function CicloMenstrual({ jugadorId, editable = true }) {
   const [cargando, setCargando] = useState(true)
   const [guardando, setGuardando] = useState(false)
   const [mensaje, setMensaje] = useState(null)
+  const [mostrarFechaManual, setMostrarFechaManual] = useState(false)
+  const [fechaManual, setFechaManual] = useState('')
 
   useEffect(() => { cargarCiclos() }, [jugadorId])
 
@@ -24,20 +26,38 @@ export default function CicloMenstrual({ jugadorId, editable = true }) {
     setCargando(false)
   }
 
-  async function marcarInicioHoy() {
+  async function marcarInicio(fecha) {
     setGuardando(true)
     setMensaje(null)
-    const { error } = await supabase.from('ciclos_menstruales').insert({ jugador_id: jugadorId, fecha_inicio: hoyISO() })
+    const { error } = await supabase.from('ciclos_menstruales').insert({ jugador_id: jugadorId, fecha_inicio: fecha })
     if (error) {
       setMensaje({
         tipo: 'error',
-        texto: error.code === '23505' ? 'Ya has marcado hoy como día de inicio.' : 'No se pudo guardar.',
+        texto: error.code === '23505' ? 'Ya tienes registrado ese día como inicio.' : 'No se pudo guardar.',
       })
     } else {
       setMensaje({ tipo: 'ok', texto: 'Registrado.' })
+      setFechaManual('')
+      setMostrarFechaManual(false)
       cargarCiclos()
     }
     setGuardando(false)
+  }
+
+  function marcarInicioHoy() {
+    marcarInicio(hoyISO())
+  }
+
+  function confirmarFechaManual() {
+    if (!fechaManual) {
+      setMensaje({ tipo: 'error', texto: 'Elige primero una fecha.' })
+      return
+    }
+    if (fechaManual > hoyISO()) {
+      setMensaje({ tipo: 'error', texto: 'Esa fecha todavía no ha llegado.' })
+      return
+    }
+    marcarInicio(fechaManual)
   }
 
   async function eliminarCiclo(id) {
@@ -59,6 +79,26 @@ export default function CicloMenstrual({ jugadorId, editable = true }) {
           <button className="btn-principal ciclo-boton-marcar" onClick={marcarInicioHoy} disabled={guardando}>
             {guardando ? 'Guardando…' : '+ Hoy me ha venido la regla'}
           </button>
+
+          {!mostrarFechaManual ? (
+            <button type="button" className="ciclo-boton-fecha-manual" onClick={() => setMostrarFechaManual(true)}>
+              ¿No fue hoy? Indica otra fecha
+            </button>
+          ) : (
+            <div className="ciclo-fecha-manual">
+              <input
+                type="date" value={fechaManual} max={hoyISO()}
+                onChange={(e) => setFechaManual(e.target.value)}
+              />
+              <button type="button" className="ciclo-boton-confirmar" onClick={confirmarFechaManual} disabled={guardando}>
+                {guardando ? 'Guardando…' : 'Confirmar'}
+              </button>
+              <button type="button" className="ciclo-boton-fecha-manual" onClick={() => { setMostrarFechaManual(false); setFechaManual('') }}>
+                Cancelar
+              </button>
+            </div>
+          )}
+
           {mensaje && <div className={mensaje.tipo === 'ok' ? 'aviso-ok' : 'aviso-error'}>{mensaje.texto}</div>}
         </>
       )}
@@ -66,7 +106,7 @@ export default function CicloMenstrual({ jugadorId, editable = true }) {
       {!estado ? (
         <p className="texto-dim ciclo-sin-datos">
           {editable
-            ? 'Todavía no hay ningún registro — marca el día que te empiece la regla para empezar a ver tu fase estimada.'
+            ? 'Todavía no hay ningún registro — marca el día que te empiece la regla (o, si tu última regla ya pasó, indica esa fecha) para empezar a ver tu fase estimada.'
             : 'Esta jugadora todavía no ha registrado ningún ciclo.'}
         </p>
       ) : (

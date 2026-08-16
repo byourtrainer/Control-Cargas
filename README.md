@@ -1230,6 +1230,47 @@ Cambios visibles:
 - Nada de esto cambia lo que el jugador rellena — solo cómo se interpreta
   el resultado internamente.
 
+## Eliminar jugador directamente desde la App
+
+Nuevo botón "✕" en la pestaña Jugadores, al final de cada fila. Pide
+escribir el nombre exacto del jugador para confirmar (es una acción
+**irreversible** — borra su cuenta y todos sus datos: registros diarios,
+tests, lesiones, ciclo...).
+
+### Por qué hizo falta una pieza nueva de "servidor"
+
+Borrar de verdad una cuenta de usuario (no solo su ficha) es algo que
+Supabase no permite hacer desde el navegador por seguridad — requiere una
+clave especial de administrador que nunca puede llegar al código que se
+ejecuta en tu ordenador. Se ha creado `api/eliminar-jugador.js`, una
+función que Vercel ejecuta en su propio servidor (no en el navegador),
+donde esa clave está a salvo.
+
+### Configuración necesaria en Vercel (una sola vez)
+
+1. Ve a tu proyecto de Supabase → **Project Settings → API**.
+2. Copia la clave **`service_role`** (la secreta, no la `anon` que ya
+   usas) — **nunca la compartas ni la subas a GitHub**.
+3. Ve a tu proyecto en Vercel → **Settings → Environment Variables**.
+4. Añade una nueva variable: nombre `SUPABASE_SERVICE_ROLE_KEY`, valor la
+   clave que copiaste. Aplícala a Production (y a Preview/Development si
+   las usas).
+5. Vuelve a desplegar (un nuevo `git push` ya lo dispara, o puedes forzar
+   un "Redeploy" desde el panel de Vercel).
+
+Sin este paso, el botón de eliminar dará un error claro pidiéndote que
+revises la configuración — no fallará en silencio.
+
+## Ciclo menstrual: indicar una fecha pasada, no solo "hoy"
+
+Junto al botón de "Hoy me ha venido la regla" hay ahora un enlace
+"¿No fue hoy? Indica otra fecha" — pensado para cuando una jugadora se da
+de alta y su última regla ya pasó hace unos días: puede introducir esa
+fecha directamente, sin esperar al siguiente ciclo, para que la
+estimación de fase empiece a funcionar desde el primer momento. También
+sirve para rellenar un día que se te haya olvidado marcar más adelante.
+No permite fechas futuras.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.
