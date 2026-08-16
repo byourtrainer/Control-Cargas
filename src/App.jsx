@@ -253,6 +253,7 @@ export default function App() {
               equipoActivo={equipoActivo}
               onCambiarEquipoActivo={alCambiarEquipoActivo}
               onEquiposActualizados={cargarEquipos}
+              perfil={perfil}
             />
           )
           : (

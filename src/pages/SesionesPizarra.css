@@ -192,10 +192,14 @@
 
 .sesiones-titulo-imprimir { display: none; }
 
-.sesiones-logo-imprimir {
+.sesiones-cabecera-fija-imprimir { display: none; }
+.sesiones-pie-fijo-imprimir { display: none; }
+.sesiones-barra-color-imprimir { display: none; }
+
+.sesiones-logo-fijo {
   display: none;
-  width: 56px;
-  height: 56px;
+  width: 42px;
+  height: 42px;
   object-fit: contain;
 }
 
@@ -309,11 +313,41 @@
 }
 
 @media print {
-  .sesiones-titulo-imprimir { display: block; margin-bottom: 20px; position: relative; padding: 0 68px; }
+  .sesiones-titulo-imprimir { display: block; margin-bottom: 20px; margin-top: 20mm; }
   .sesiones-titulo-imprimir h2 { font-size: 20px; }
-  .sesiones-logo-imprimir { display: block; position: absolute; top: 0; }
-  .sesiones-logo-izquierda { left: 0; }
-  .sesiones-logo-derecha { right: 0; }
+
+  /* Cabecera fija: se repite en todas las páginas del PDF (soportado por
+     Chrome/Firefox al imprimir; en Safari el comportamiento puede variar). */
+  .sesiones-cabecera-fija-imprimir {
+    display: block;
+    position: fixed;
+    top: 6mm;
+    left: 0;
+    right: 0;
+    height: 0;
+  }
+  .sesiones-logo-fijo { display: block; position: fixed; top: 6mm; }
+  .sesiones-logo-fijo-izq { left: 10mm; }
+  .sesiones-logo-fijo-der { right: 10mm; }
+  .sesiones-barra-color-imprimir {
+    display: block;
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 3mm;
+  }
+  .sesiones-pie-fijo-imprimir {
+    display: flex;
+    justify-content: space-between;
+    position: fixed;
+    bottom: 6mm;
+    left: 10mm;
+    right: 10mm;
+    font-size: 9px;
+    color: var(--text-faint);
+    border-top: 1px solid var(--line);
+    padding-top: 4px;
+  }
+
   .sesiones-cuerpo { display: block !important; }
   .sesiones-biblioteca-panel { display: none !important; }
   .sesiones-item-card {

@@ -17,6 +17,7 @@ export default function SesionesPizarra() {
   const [biblioteca, setBiblioteca] = useState([])
   const [equipos, setEquipos] = useState([])
   const [logoEntrenador, setLogoEntrenador] = useState(null)
+  const [nombreEntrenador, setNombreEntrenador] = useState(null)
   const [cargando, setCargando] = useState(true)
   const [sesionActivaId, setSesionActivaId] = useState(null)
   const [titulo, setTitulo] = useState('')
@@ -118,8 +119,9 @@ export default function SesionesPizarra() {
   }
 
   async function cargarLogoEntrenador() {
-    const { data } = await supabase.from('perfiles').select('logo_base64').eq('rol', 'entrenador').not('logo_base64', 'is', null).limit(1).maybeSingle()
+    const { data } = await supabase.from('perfiles').select('nombre, logo_base64').eq('rol', 'entrenador').limit(1).maybeSingle()
     setLogoEntrenador(data?.logo_base64 || null)
+    setNombreEntrenador(data?.nombre || null)
   }
 
   function nuevaSesion() {
@@ -321,9 +323,19 @@ export default function SesionesPizarra() {
 
   return (
     <div className="sesiones-layout">
+      <div className="sesiones-cabecera-fija-imprimir">
+        <div className="sesiones-barra-color-imprimir" style={{ background: equipoSeleccionado?.color || 'var(--accent)' }} />
+        {logoEntrenador && <img src={logoEntrenador} alt="Logo del entrenador" className="sesiones-logo-fijo sesiones-logo-fijo-izq" />}
+        {equipoSeleccionado?.logo_base64 && <img src={equipoSeleccionado.logo_base64} alt={`Escudo de ${equipoSeleccionado.nombre}`} className="sesiones-logo-fijo sesiones-logo-fijo-der" />}
+      </div>
+
+      <div className="sesiones-pie-fijo-imprimir">
+        {nombreEntrenador && <span>{nombreEntrenador}</span>}
+        <span>{titulo}</span>
+        <span>Generado el {new Date().toLocaleDateString('es-ES')}</span>
+      </div>
+
       <div className="sesiones-titulo-imprimir">
-        {logoEntrenador && <img src={logoEntrenador} alt="Logo del entrenador" className="sesiones-logo-imprimir sesiones-logo-izquierda" />}
-        {equipoSeleccionado?.logo_base64 && <img src={equipoSeleccionado.logo_base64} alt={`Escudo de ${equipoSeleccionado.nombre}`} className="sesiones-logo-imprimir sesiones-logo-derecha" />}
         <h2>{titulo || 'Sesión'}</h2>
         {equipoSeleccionado && <p className="texto-dim">{equipoSeleccionado.nombre}</p>}
         {fecha && <p className="texto-dim">{new Date(fecha + 'T00:00:00').toLocaleDateString('es-ES')}</p>}

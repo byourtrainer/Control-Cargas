@@ -1271,6 +1271,23 @@ estimación de fase empiece a funcionar desde el primer momento. También
 sirve para rellenar un día que se te haya olvidado marcar más adelante.
 No permite fechas futuras.
 
+## Logo personal completado, cabecera fija en todas las páginas, y más personalización
+
+- **Sitio para subir tu logo personal**: se había quedado a medio
+  construir (la base de datos existía, pero nunca llegó el formulario) —
+  ahora hay una tarjeta dedicada arriba del todo en la pestaña Equipos.
+- **Arreglada la página en blanco** al exportar sesiones a PDF — la causa
+  real era que los escudos estaban posicionados de forma que interferían
+  con el propio flujo del documento.
+- **El escudo y tu logo ahora se repiten en todas las páginas** del PDF
+  (no solo en la primera), usando una cabecera fija — funciona bien en
+  Chrome y Firefox; en Safari el comportamiento de este tipo de cabecera
+  fija al imprimir puede variar algo según la versión.
+- Dos detalles más de personalización, también repitiéndose en cada
+  página: una **barra de color** arriba con el color de identidad del
+  equipo destinatario, y un **pie de página** con tu nombre, el título de
+  la sesión, y la fecha de generación.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

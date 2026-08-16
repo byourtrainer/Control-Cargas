@@ -5,13 +5,15 @@ import './Equipos.css'
 const coloresSugeridos = ['#c8ff4d', '#4dc8ff', '#ff4d8f', '#ffb84d', '#a24dff', '#4dffb8', '#ff6b4d', '#4d6bff']
 const TAMANO_MAXIMO_MB = 1.5
 
-export default function Equipos({ equipos, equipoActivo, onCambiarEquipoActivo, onEquiposActualizados }) {
+export default function Equipos({ equipos, equipoActivo, onCambiarEquipoActivo, onEquiposActualizados, perfil }) {
   const [nuevoEquipo, setNuevoEquipo] = useState('')
   const [colorNuevo, setColorNuevo] = useState(coloresSugeridos[equipos.length % coloresSugeridos.length])
   const [guardando, setGuardando] = useState(false)
   const [mensaje, setMensaje] = useState(null)
   const [subiendoLogoId, setSubiendoLogoId] = useState(null)
   const [errorLogo, setErrorLogo] = useState(null)
+  const [subiendoLogoPersonal, setSubiendoLogoPersonal] = useState(false)
+  const [logoPersonal, setLogoPersonal] = useState(perfil?.logo_base64 || null)
 
   async function anadirEquipo(e) {
     e.preventDefault()
@@ -67,8 +69,71 @@ export default function Equipos({ equipos, equipoActivo, onCambiarEquipoActivo, 
     onEquiposActualizados()
   }
 
+  function subirLogoPersonal(archivo) {
+    if (!archivo || !perfil) return
+    setErrorLogo(null)
+
+    if (!archivo.type.startsWith('image/')) {
+      setErrorLogo('El archivo debe ser una imagen.')
+      return
+    }
+    if (archivo.size > TAMANO_MAXIMO_MB * 1024 * 1024) {
+      setErrorLogo(`La imagen es demasiado grande (máximo ${TAMANO_MAXIMO_MB} MB). Prueba con una versión más pequeña.`)
+      return
+    }
+
+    setSubiendoLogoPersonal(true)
+    const lector = new FileReader()
+    lector.onload = async () => {
+      const { error } = await supabase.from('perfiles').update({ logo_base64: lector.result }).eq('id', perfil.id)
+      if (error) setErrorLogo('No se pudo guardar tu logo.')
+      else setLogoPersonal(lector.result)
+      setSubiendoLogoPersonal(false)
+    }
+    lector.onerror = () => {
+      setErrorLogo('No se pudo leer la imagen.')
+      setSubiendoLogoPersonal(false)
+    }
+    lector.readAsDataURL(archivo)
+  }
+
+  async function quitarLogoPersonal() {
+    if (!perfil) return
+    await supabase.from('perfiles').update({ logo_base64: null }).eq('id', perfil.id)
+    setLogoPersonal(null)
+  }
+
   return (
     <div className="equipos-layout">
+      <section className="equipos-logo-personal-card">
+        <div>
+          <h3>Tu logo personal</h3>
+          <p className="equipos-sub">
+            Aparece en la cabecera de los documentos que exportes (informes, sesiones de pizarra…)
+            junto al escudo del equipo o club correspondiente.
+          </p>
+        </div>
+        <div className="equipos-logo-personal-controles">
+          <label className="equipo-logo-selector equipo-logo-selector-grande" title="Subir tu logo personal">
+            {logoPersonal ? (
+              <img src={logoPersonal} alt="Tu logo personal" className="equipo-logo-miniatura" />
+            ) : (
+              <span className="equipo-logo-vacio">+ Logo</span>
+            )}
+            <input
+              type="file" accept="image/*" className="equipo-logo-input-oculto"
+              onChange={(e) => subirLogoPersonal(e.target.files?.[0])}
+              disabled={subiendoLogoPersonal}
+            />
+          </label>
+          {logoPersonal && (
+            <button type="button" className="equipo-logo-quitar" onClick={quitarLogoPersonal} title="Quitar tu logo">
+              ✕
+            </button>
+          )}
+        </div>
+      </section>
+
       <section className="equipos-lista-card">
         <h2>¿Qué equipo quieres ver?</h2>
         <p className="equipos-sub">
