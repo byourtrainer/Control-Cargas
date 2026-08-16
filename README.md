@@ -1098,6 +1098,24 @@ propósitos distintos.
   como opción en la paleta de colores para poder elegirlo tú mismo cuando
   quieras, sea cual sea el campo.
 
+## Nueva pestaña "📋 Sesiones" — hojas de sesión desde la biblioteca de pizarra
+
+- **Crea una sesión**, ponle título y fecha, y ve añadiendo ejercicios
+  desde tu biblioteca (buscándolos por nombre o etiqueta) — puedes
+  reordenarlos con las flechas ↑↓ y quitar los que no quieras.
+- **Cada ejercicio tiene sus propias variables para esa sesión concreta**:
+  series, repeticiones, intensidad, tiempo de trabajo, tiempo de
+  descanso, y una nota — separadas de la descripción general del
+  ejercicio en la biblioteca, porque el mismo ejercicio puede usarse
+  distinto según la sesión.
+- **Exportar a PDF**: reutiliza el mismo tema claro de impresión de toda
+  la app — imagen/miniatura de cada ejercicio, su descripción, y las
+  variables de esa sesión en una hoja lista para imprimir o guardar.
+- **Ver como diapositivas**: una vista dentro de la propia app, un
+  ejercicio a pantalla completa con su vídeo/imagen grande, variables y
+  descripción, con botones Anterior/Siguiente — pensada para repasar la
+  sesión con el equipo o entrenador a distancia sin tener que imprimir nada.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.
