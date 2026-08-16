@@ -12,7 +12,15 @@ const fondos = [
   { valor: 'gimnasio', etiqueta: 'Gimnasio' },
 ]
 
-const paletaElementos = ['#c8ff4d', '#4dc8ff', '#ea5c4a', '#f2c14e', '#ff7a1a', '#f5f5f5', '#8a5cf6']
+const paletaElementos = ['#c8ff4d', '#4dc8ff', '#ea5c4a', '#f2c14e', '#ff7a1a', '#f5f5f5', '#8a5cf6', '#0d1210']
+
+function esColorClaro(hex) {
+  const c = hex.replace('#', '')
+  const r = parseInt(c.substr(0, 2), 16)
+  const g = parseInt(c.substr(2, 2), 16)
+  const b = parseInt(c.substr(4, 2), 16)
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.6
+}
 
 const tiposBalon = [
   { valor: 'hockey', etiqueta: 'Hockey patines' },
@@ -37,7 +45,7 @@ function slugColor(c) { return c.replace('#', '') }
 // Área de portero: rectángulo separado de la pared, con un semicírculo en
 // su borde más cercano a la pared (mitad discontinua hacia la pared,
 // mitad sólida hacia el campo) — según el modelo de pista de hockey patines.
-function AreaPorteria({ xPared, direccionCampo }) {
+function AreaPorteria({ xPared, direccionCampo, color }) {
   const gap = 75
   const anchoRect = 100
   const altoRect = 230
@@ -53,32 +61,37 @@ function AreaPorteria({ xPared, direccionCampo }) {
       <rect x={x1} y={260 - altoRect / 2} width={x2 - x1} height={altoRect} />
       <path d={`M ${xBordePared},${260 - r} A ${r} ${r} 0 0 ${sentidoHaciaCampo} ${xBordePared},${260 + r}`} />
       <path d={`M ${xBordePared},${260 - r} A ${r} ${r} 0 0 ${sentidoHaciaPared} ${xBordePared},${260 + r}`} strokeDasharray="5 4" />
-      <circle cx={xBordeCampo + direccionCampo * 65} cy="260" r="2.5" fill="rgba(255,255,255,0.6)" />
+      <circle cx={xBordeCampo + direccionCampo * 65} cy="260" r="2.5" fill={color} />
     </g>
   )
 }
 
-function FondoCampo({ fondo }) {
+function FondoCampo({ fondo, colorCampo }) {
+  const claro = esColorClaro(colorCampo)
+  const colorMarcas = claro ? 'rgba(13,18,16,0.65)' : 'rgba(255,255,255,0.6)'
+  const colorMarcasSuave = claro ? 'rgba(13,18,16,0.4)' : 'rgba(255,255,255,0.35)'
+  const colorMarcasGimnasio = claro ? 'rgba(13,18,16,0.35)' : 'rgba(255,255,255,0.3)'
+
   if (fondo === 'campo_completo' || fondo === 'medio_campo') {
     const soloDerecha = fondo === 'medio_campo'
     return (
-      <g stroke="rgba(255,255,255,0.6)" strokeWidth="2.5" fill="none">
+      <g stroke={colorMarcas} strokeWidth="2.5" fill="none">
         <rect x="20" y="20" width="760" height="480" rx="40" ry="40" />
         {!soloDerecha && (
           <>
             <line x1="400" y1="20" x2="400" y2="500" />
-            <AreaPorteria xPared={20} direccionCampo={1} />
+            <AreaPorteria xPared={20} direccionCampo={1} color={colorMarcas} />
           </>
         )}
         <circle cx="400" cy="260" r="60" />
-        <circle cx="400" cy="260" r="2.5" fill="rgba(255,255,255,0.6)" />
-        <AreaPorteria xPared={780} direccionCampo={-1} />
+        <circle cx="400" cy="260" r="2.5" fill={colorMarcas} />
+        <AreaPorteria xPared={780} direccionCampo={-1} color={colorMarcas} />
       </g>
     )
   }
   if (fondo === 'espacio_reducido') {
     return (
-      <g stroke="rgba(255,255,255,0.35)" strokeWidth="1.5" fill="none">
+      <g stroke={colorMarcasSuave} strokeWidth="1.5" fill="none">
         <rect x="20" y="20" width="760" height="480" strokeWidth="2" />
         {[1, 2, 3].map((i) => <line key={`v${i}`} x1={20 + i * 190} y1="20" x2={20 + i * 190} y2="500" />)}
         {[1, 2].map((i) => <line key={`h${i}`} x1="20" y1={20 + i * 160} x2="780" y2={20 + i * 160} />)}
@@ -86,7 +99,7 @@ function FondoCampo({ fondo }) {
     )
   }
   return (
-    <g stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" fill="none">
+    <g stroke={colorMarcasGimnasio} strokeWidth="1.5" fill="none">
       <rect x="20" y="20" width="760" height="480" strokeWidth="2" />
       {[1, 2, 3, 4, 5, 6].map((i) => <line key={i} x1={20 + i * 108.5} y1="20" x2={20 + i * 108.5} y2="500" />)}
     </g>
@@ -202,6 +215,11 @@ export default function PizarraTactica() {
   const [tipoBalonNuevo, setTipoBalonNuevo] = useState('hockey')
   const [estiloLineaActual, setEstiloLineaActual] = useState({ color: '#f5f5f5', grosor: 3, trazo: 'solida' })
 
+  useEffect(() => {
+    setEstiloLineaActual((s) => ({ ...s, color: esColorClaro(colorCampo) ? '#0d1210' : '#f5f5f5' }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [colorCampo])
+
   // --- Biblioteca de ejercicios de pizarra ---
   const [nombreEjercicio, setNombreEjercicio] = useState('')
   const [descripcionEjercicio, setDescripcionEjercicio] = useState('')
@@ -213,6 +231,18 @@ export default function PizarraTactica() {
   const [mensajeEjercicio, setMensajeEjercicio] = useState(null)
   const [ejerciciosGuardados, setEjerciciosGuardados] = useState([])
   const [borrandoEjercicioId, setBorrandoEjercicioId] = useState(null)
+
+  // --- Subir ejercicio externo (imagen o YouTube) ---
+  const [origenExterno, setOrigenExterno] = useState('imagen') // 'imagen' | 'youtube'
+  const [nombreExterno, setNombreExterno] = useState('')
+  const [urlYoutubeExterno, setUrlYoutubeExterno] = useState('')
+  const [imagenExternaBase64, setImagenExternaBase64] = useState(null)
+  const [etiquetasExterno, setEtiquetasExterno] = useState([])
+  const [etiquetaExternoInput, setEtiquetaExternoInput] = useState('')
+  const [descripcionExterno, setDescripcionExterno] = useState('')
+  const [variantesExterno, setVariantesExterno] = useState('')
+  const [guardandoExterno, setGuardandoExterno] = useState(false)
+  const [mensajeExterno, setMensajeExterno] = useState(null)
 
   useEffect(() => { cargarEjerciciosPizarra() }, [])
 
@@ -297,6 +327,94 @@ export default function PizarraTactica() {
     const { error } = await supabase.from('ejercicios_pizarra').delete().eq('id', id)
     if (!error) setEjerciciosGuardados((prev) => prev.filter((ej) => ej.id !== id))
     setBorrandoEjercicioId(null)
+  }
+
+  function extraerYoutubeIdExterno(url) {
+    const patronesUrl = [
+      /youtu\.be\/([a-zA-Z0-9_-]{11})/,
+      /youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/,
+      /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/,
+      /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+    ]
+    for (const p of patronesUrl) {
+      const m = url.match(p)
+      if (m) return m[1]
+    }
+    return null
+  }
+
+  function subirImagenExterna(archivo) {
+    if (!archivo) return
+    setMensajeExterno(null)
+    if (!archivo.type.startsWith('image/')) {
+      setMensajeExterno({ tipo: 'error', texto: 'El archivo debe ser una imagen.' })
+      return
+    }
+    if (archivo.size > 2 * 1024 * 1024) {
+      setMensajeExterno({ tipo: 'error', texto: 'La imagen es demasiado grande (máximo 2 MB).' })
+      return
+    }
+    const lector = new FileReader()
+    lector.onload = () => setImagenExternaBase64(lector.result)
+    lector.onerror = () => setMensajeExterno({ tipo: 'error', texto: 'No se pudo leer la imagen.' })
+    lector.readAsDataURL(archivo)
+  }
+
+  function anadirEtiquetaExterno() {
+    const valor = etiquetaExternoInput.trim()
+    if (!valor || etiquetasExterno.includes(valor)) { setEtiquetaExternoInput(''); return }
+    setEtiquetasExterno((prev) => [...prev, valor])
+    setEtiquetaExternoInput('')
+  }
+
+  function quitarEtiquetaExterno(et) {
+    setEtiquetasExterno((prev) => prev.filter((e) => e !== et))
+  }
+
+  async function guardarEjercicioExterno(e) {
+    e.preventDefault()
+    if (!nombreExterno.trim()) {
+      setMensajeExterno({ tipo: 'error', texto: 'Ponle un nombre al ejercicio.' })
+      return
+    }
+    let youtubeId = null
+    if (origenExterno === 'youtube') {
+      youtubeId = extraerYoutubeIdExterno(urlYoutubeExterno)
+      if (!youtubeId) {
+        setMensajeExterno({ tipo: 'error', texto: 'No reconozco ese enlace de YouTube.' })
+        return
+      }
+    } else if (!imagenExternaBase64) {
+      setMensajeExterno({ tipo: 'error', texto: 'Sube una imagen primero.' })
+      return
+    }
+
+    setGuardandoExterno(true)
+    setMensajeExterno(null)
+    const { error } = await supabase.from('ejercicios_pizarra').insert({
+      nombre: nombreExterno.trim(),
+      etiquetas: etiquetasExterno.length > 0 ? etiquetasExterno : null,
+      descripcion: descripcionExterno || null,
+      variantes: variantesExterno || null,
+      imagen_base64: origenExterno === 'imagen' ? imagenExternaBase64 : null,
+      tipo_origen: origenExterno,
+      youtube_id: origenExterno === 'youtube' ? youtubeId : null,
+      url_youtube: origenExterno === 'youtube' ? urlYoutubeExterno.trim() : null,
+    })
+
+    if (error) {
+      setMensajeExterno({ tipo: 'error', texto: 'No se pudo guardar el ejercicio.' })
+    } else {
+      setMensajeExterno({ tipo: 'ok', texto: 'Ejercicio añadido a la biblioteca.' })
+      setNombreExterno('')
+      setUrlYoutubeExterno('')
+      setImagenExternaBase64(null)
+      setEtiquetasExterno([])
+      setDescripcionExterno('')
+      setVariantesExterno('')
+      cargarEjerciciosPizarra()
+    }
+    setGuardandoExterno(false)
   }
 
   const seleccionado = elementos.find((e) => e.id === seleccionId)
@@ -577,7 +695,7 @@ export default function PizarraTactica() {
           onPointerDown={manejarPointerDownCanvas}
         >
           <rect x="0" y="0" width={ANCHO} height={ALTO} fill={colorCampo} />
-          <FondoCampo fondo={fondo} />
+          <FondoCampo fondo={fondo} colorCampo={colorCampo} />
 
           <defs>
             {coloresLineasUsados.map((c) => (
@@ -810,13 +928,105 @@ export default function PizarraTactica() {
         </form>
       </section>
 
+      <section className="pizarra-ejercicio-card">
+        <h3>Subir un ejercicio externo</h3>
+        <p className="texto-dim pizarra-ejercicio-nota">
+          Para material que no viene de la pizarra — una imagen de otra fuente, o un vídeo de YouTube.
+        </p>
+        <div className="pizarra-toolbar pizarra-toolbar-origen">
+          <button
+            type="button" className={`pizarra-boton ${origenExterno === 'imagen' ? 'pizarra-boton-activo' : ''}`}
+            onClick={() => setOrigenExterno('imagen')}
+          >
+            🖼 Imagen
+          </button>
+          <button
+            type="button" className={`pizarra-boton ${origenExterno === 'youtube' ? 'pizarra-boton-activo' : ''}`}
+            onClick={() => setOrigenExterno('youtube')}
+          >
+            ▶ YouTube
+          </button>
+        </div>
+
+        <form onSubmit={guardarEjercicioExterno}>
+          <label className="campo-sesion">
+            <span>Nombre del ejercicio</span>
+            <input type="text" value={nombreExterno} onChange={(e) => setNombreExterno(e.target.value)} placeholder="Ej. Rondo 4v2" required />
+          </label>
+
+          {origenExterno === 'imagen' ? (
+            <label className="campo-sesion">
+              <span>Imagen (máx. 2 MB)</span>
+              <input type="file" accept="image/*" onChange={(e) => subirImagenExterna(e.target.files?.[0])} />
+              {imagenExternaBase64 && (
+                <img src={imagenExternaBase64} alt="Vista previa" className="pizarra-preview-externa" />
+              )}
+            </label>
+          ) : (
+            <label className="campo-sesion">
+              <span>Enlace de YouTube</span>
+              <input type="text" value={urlYoutubeExterno} onChange={(e) => setUrlYoutubeExterno(e.target.value)} placeholder="https://youtube.com/watch?v=…" />
+              {extraerYoutubeIdExterno(urlYoutubeExterno) && (
+                <img src={`https://img.youtube.com/vi/${extraerYoutubeIdExterno(urlYoutubeExterno)}/mqdefault.jpg`} alt="Vista previa" className="pizarra-preview-externa" />
+              )}
+            </label>
+          )}
+
+          <label className="campo-sesion">
+            <span>Etiquetas</span>
+            <div className="pizarra-etiquetas-entrada">
+              <input
+                type="text" list="pizarra-etiquetas-disponibles" value={etiquetaExternoInput}
+                onChange={(e) => setEtiquetaExternoInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); anadirEtiquetaExterno() } }}
+                placeholder="Escribe una etiqueta y pulsa Enter…"
+              />
+              <button type="button" className="pizarra-boton" onClick={anadirEtiquetaExterno}>+ Añadir</button>
+            </div>
+            {etiquetasExterno.length > 0 && (
+              <div className="pizarra-etiquetas-chips">
+                {etiquetasExterno.map((et) => (
+                  <span key={et} className="pizarra-etiqueta-chip">
+                    {et}
+                    <button type="button" onClick={() => quitarEtiquetaExterno(et)}>✕</button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </label>
+
+          <label className="campo-sesion">
+            <span>Descripción del ejercicio</span>
+            <textarea value={descripcionExterno} onChange={(e) => setDescripcionExterno(e.target.value)} rows={3} placeholder="Explica en qué consiste, objetivo, consignas…" />
+          </label>
+
+          <label className="campo-sesion">
+            <span>Posibles variantes</span>
+            <textarea value={variantesExterno} onChange={(e) => setVariantesExterno(e.target.value)} rows={2} />
+          </label>
+
+          {mensajeExterno && <div className={mensajeExterno.tipo === 'ok' ? 'aviso-ok' : 'aviso-error'}>{mensajeExterno.texto}</div>}
+
+          <button type="submit" className="btn-principal" disabled={guardandoExterno}>
+            {guardandoExterno ? 'Guardando…' : '+ Añadir a la biblioteca'}
+          </button>
+        </form>
+      </section>
+
       {ejerciciosGuardados.length > 0 && (
         <section className="pizarra-ejercicio-card">
           <h3>Ejercicios guardados ({ejerciciosGuardados.length})</h3>
           <div className="pizarra-galeria">
             {ejerciciosGuardados.map((ej) => (
               <div className="pizarra-galeria-item" key={ej.id}>
-                <img src={ej.imagen_base64} alt={ej.nombre} />
+                {ej.tipo_origen === 'youtube' ? (
+                  <a href={ej.url_youtube} target="_blank" rel="noopener noreferrer" className="pizarra-galeria-youtube">
+                    <img src={`https://img.youtube.com/vi/${ej.youtube_id}/mqdefault.jpg`} alt={ej.nombre} />
+                    <span className="pizarra-galeria-play">▶</span>
+                  </a>
+                ) : (
+                  <img src={ej.imagen_base64} alt={ej.nombre} />
+                )}
                 <div className="pizarra-galeria-info">
                   <strong>{ej.nombre}</strong>
                   {ej.etiquetas && ej.etiquetas.length > 0 && (

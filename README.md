@@ -1079,6 +1079,25 @@ de vídeos de YouTube de "App Entrenamiento" — cada una guarda un tipo de
 contenido distinto (imagen de pizarra vs. vídeo), pensadas para
 propósitos distintos.
 
+## Ejercicios externos en la biblioteca, y líneas visibles en campos claros
+
+- **Subir ejercicios externos**: nueva sección junto al formulario de la
+  pizarra, con dos orígenes — **imagen** (subida desde tu ordenador, máx.
+  2 MB) o **enlace de YouTube** (reconoce el vídeo automáticamente, igual
+  que en "App Entrenamiento"). Mismo sistema de nombre, etiquetas
+  (compartiendo las sugerencias con los ejercicios creados desde la
+  pizarra), descripción y variantes. Todo queda en la misma galería,
+  distinguiendo visualmente los vídeos (con su botón de play hacia
+  YouTube) de las imágenes.
+- **Contraste automático en campos claros**: si eliges un color de campo
+  claro (blanco, por ejemplo), las marcas del terreno de juego (líneas,
+  círculos, áreas) pasan a dibujarse en negro en vez de blanco — antes
+  eran siempre blancas y se volvían invisibles sobre fondos claros. El
+  color por defecto de las flechas nuevas también se ajusta solo (blanco
+  sobre campo oscuro, negro sobre campo claro) — se añadió además el negro
+  como opción en la paleta de colores para poder elegirlo tú mismo cuando
+  quieras, sea cual sea el campo.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.
