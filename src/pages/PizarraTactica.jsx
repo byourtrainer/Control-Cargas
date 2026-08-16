@@ -36,7 +36,19 @@ const trazos = [
 ]
 
 const dasharrayPorTrazo = { solida: undefined, discontinua: '10 6', punteada: '2 7' }
-const tiposObstaculo = ['cono', 'valla', 'porteria']
+const tiposObstaculo = ['cono', 'valla', 'bidon', 'porteria']
+const etiquetaObstaculo = { cono: 'Cono', valla: 'Valla', bidon: 'Bidón', porteria: 'Portería' }
+const tiposForma = ['circulo', 'cuadrado', 'rectangulo', 'triangulo', 'pentagono']
+const etiquetaForma = { circulo: 'Círculo', cuadrado: 'Cuadrado', rectangulo: 'Rectángulo', triangulo: 'Triángulo', pentagono: 'Pentágono' }
+
+function puntosPoligono(cx, cy, radio, lados) {
+  const puntos = []
+  for (let i = 0; i < lados; i++) {
+    const angulo = (-90 + i * (360 / lados)) * (Math.PI / 180)
+    puntos.push(`${cx + radio * Math.cos(angulo)},${cy + radio * Math.sin(angulo)}`)
+  }
+  return puntos.join(' ')
+}
 
 function clamp(v, min, max) { return Math.min(max, Math.max(min, v)) }
 function idNuevo() { return Math.random().toString(36).slice(2, 10) }
@@ -144,6 +156,29 @@ function ElementoSVG({ el, seleccionado }) {
       </g>
     )
   }
+  if (el.tipo === 'bidon') {
+    return (
+      <g transform={transformRotacion}>
+        {anillo}
+        <rect x={el.x - 9 * t} y={el.y - 14 * t} width={18 * t} height={28 * t} rx={4 * t} fill={el.color} stroke="rgba(0,0,0,0.4)" strokeWidth="1" />
+        <ellipse cx={el.x} cy={el.y - 14 * t} rx={9 * t} ry={3 * t} fill="rgba(0,0,0,0.2)" />
+      </g>
+    )
+  }
+  if (el.tipo === 'forma') {
+    const op = el.opacidad ?? 0.5
+    const comun = { fill: el.color, fillOpacity: op, stroke: el.color, strokeWidth: 1.5, strokeOpacity: Math.min(1, op + 0.2) }
+    return (
+      <g transform={transformRotacion}>
+        {anillo}
+        {el.figura === 'circulo' && <circle cx={el.x} cy={el.y} r={22 * t} {...comun} />}
+        {el.figura === 'cuadrado' && <rect x={el.x - 20 * t} y={el.y - 20 * t} width={40 * t} height={40 * t} {...comun} />}
+        {el.figura === 'rectangulo' && <rect x={el.x - 32 * t} y={el.y - 18 * t} width={64 * t} height={36 * t} {...comun} />}
+        {el.figura === 'triangulo' && <polygon points={puntosPoligono(el.x, el.y, 24 * t, 3)} {...comun} />}
+        {el.figura === 'pentagono' && <polygon points={puntosPoligono(el.x, el.y, 24 * t, 5)} {...comun} />}
+      </g>
+    )
+  }
   if (el.tipo === 'porteria') {
     return (
       <g transform={transformRotacion}>
@@ -212,7 +247,10 @@ export default function PizarraTactica() {
   const [lineaTemp, setLineaTemp] = useState(null)
   const [colorNuevoElemento, setColorNuevoElemento] = useState(paletaElementos[0])
   const [tamanoNuevoElemento, setTamanoNuevoElemento] = useState(1)
+  const [tipoObstaculoNuevo, setTipoObstaculoNuevo] = useState('cono')
   const [tipoBalonNuevo, setTipoBalonNuevo] = useState('hockey')
+  const [figuraNueva, setFiguraNueva] = useState('circulo')
+  const [opacidadNuevaForma, setOpacidadNuevaForma] = useState(0.5)
   const [estiloLineaActual, setEstiloLineaActual] = useState({ color: '#f5f5f5', grosor: 3, trazo: 'solida' })
 
   useEffect(() => {
@@ -243,6 +281,27 @@ export default function PizarraTactica() {
   const [variantesExterno, setVariantesExterno] = useState('')
   const [guardandoExterno, setGuardandoExterno] = useState(false)
   const [mensajeExterno, setMensajeExterno] = useState(null)
+  const [buscandoTituloExterno, setBuscandoTituloExterno] = useState(false)
+
+  const youtubeIdExternoPreview = origenExterno === 'youtube' ? extraerYoutubeIdExterno(urlYoutubeExterno) : null
+
+  useEffect(() => {
+    if (!youtubeIdExternoPreview) return
+    if (nombreExterno.trim()) return // no pisar un nombre ya escrito
+
+    let cancelado = false
+    setBuscandoTituloExterno(true)
+    fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${youtubeIdExternoPreview}&format=json`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelado && data?.title) setNombreExterno((n) => (n.trim() ? n : data.title))
+      })
+      .catch(() => {})
+      .finally(() => { if (!cancelado) setBuscandoTituloExterno(false) })
+
+    return () => { cancelado = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [youtubeIdExternoPreview])
 
   useEffect(() => { cargarEjerciciosPizarra() }, [])
 
@@ -435,13 +494,18 @@ export default function PizarraTactica() {
     if (tipo === 'jugador') {
       base.color = colorNuevoElemento
       base.numero = elementos.filter((e) => e.tipo === 'jugador').length + 1
-    } else if (tipo === 'cono' || tipo === 'valla') {
+    } else if (tipo === 'cono' || tipo === 'valla' || tipo === 'bidon') {
       base.color = colorNuevoElemento
       base.tamano = tamanoNuevoElemento
     } else if (tipo === 'porteria') {
       base.tamano = tamanoNuevoElemento
     } else if (tipo === 'balon') {
       base.variante = tipoBalonNuevo
+    } else if (tipo === 'forma') {
+      base.figura = figuraNueva
+      base.color = colorNuevoElemento
+      base.tamano = tamanoNuevoElemento
+      base.opacidad = opacidadNuevaForma
     }
     setElementos((prev) => [...prev, base])
     setSeleccionId(base.id)
@@ -629,8 +693,10 @@ export default function PizarraTactica() {
         <div className="pizarra-separador" />
 
         <button className="pizarra-boton" onClick={() => anadirElemento('jugador')}>+ Jugador</button>
-        <button className="pizarra-boton" onClick={() => anadirElemento('cono')}>+ Cono</button>
-        <button className="pizarra-boton" onClick={() => anadirElemento('valla')}>+ Valla</button>
+        <select value={tipoObstaculoNuevo} onChange={(e) => setTipoObstaculoNuevo(e.target.value)}>
+          {['cono', 'valla', 'bidon'].map((t) => <option key={t} value={t}>{etiquetaObstaculo[t]}</option>)}
+        </select>
+        <button className="pizarra-boton" onClick={() => anadirElemento(tipoObstaculoNuevo)}>+ Añadir</button>
         <button className="pizarra-boton" onClick={() => anadirElemento('porteria')}>+ Portería</button>
         <select value={colorNuevoElemento} onChange={(e) => setColorNuevoElemento(e.target.value)} className="pizarra-color-select" style={{ background: colorNuevoElemento }}>
           {paletaElementos.map((c) => <option key={c} value={c}>●</option>)}
@@ -643,6 +709,17 @@ export default function PizarraTactica() {
           {tiposBalon.map((t) => <option key={t.valor} value={t.valor}>{t.etiqueta}</option>)}
         </select>
         <button className="pizarra-boton" onClick={() => anadirElemento('balon')}>+ Balón</button>
+
+        <div className="pizarra-separador" />
+
+        <select value={figuraNueva} onChange={(e) => setFiguraNueva(e.target.value)}>
+          {tiposForma.map((f) => <option key={f} value={f}>{etiquetaForma[f]}</option>)}
+        </select>
+        <label className="pizarra-linea-campo">
+          <span>Opacidad</span>
+          <input type="range" min="0.1" max="1" step="0.1" value={opacidadNuevaForma} onChange={(e) => setOpacidadNuevaForma(Number(e.target.value))} />
+        </label>
+        <button className="pizarra-boton" onClick={() => anadirElemento('forma')}>+ Forma</button>
 
         <div className="pizarra-separador" />
 
@@ -818,7 +895,7 @@ export default function PizarraTactica() {
             </>
           ) : tiposObstaculo.includes(seleccionado.tipo) ? (
             <>
-              <h4>{{ cono: 'Cono', valla: 'Valla', porteria: 'Portería' }[seleccionado.tipo]}</h4>
+              <h4>{etiquetaObstaculo[seleccionado.tipo]}</h4>
               {seleccionado.tipo !== 'porteria' && (
                 <label className="campo-sesion">
                   <span>Color</span>
@@ -839,6 +916,51 @@ export default function PizarraTactica() {
                 <input
                   type="range" min="0.5" max="2" step="0.1" value={seleccionado.tamano || 1}
                   onChange={(e) => actualizarSeleccionado({ tamano: Number(e.target.value) })}
+                />
+              </label>
+              <label className="campo-sesion">
+                <span>Rotación ({seleccionado.rotacion || 0}°)</span>
+                <input
+                  type="range" min="0" max="350" step="10" value={seleccionado.rotacion || 0}
+                  onChange={(e) => actualizarSeleccionado({ rotacion: Number(e.target.value) })}
+                />
+              </label>
+              <button className="btn-eliminar-sesion" onClick={eliminarSeleccionado}>Eliminar</button>
+            </>
+          ) : seleccionado.tipo === 'forma' ? (
+            <>
+              <h4>Forma</h4>
+              <label className="campo-sesion">
+                <span>Figura</span>
+                <select value={seleccionado.figura} onChange={(e) => actualizarSeleccionado({ figura: e.target.value })}>
+                  {tiposForma.map((f) => <option key={f} value={f}>{etiquetaForma[f]}</option>)}
+                </select>
+              </label>
+              <label className="campo-sesion">
+                <span>Color</span>
+                <div className="pizarra-color-chips">
+                  {paletaElementos.map((c) => (
+                    <button
+                      key={c} type="button"
+                      className={`pizarra-color-chip ${seleccionado.color === c ? 'pizarra-color-chip-activo' : ''}`}
+                      style={{ background: c }}
+                      onClick={() => actualizarSeleccionado({ color: c })}
+                    />
+                  ))}
+                </div>
+              </label>
+              <label className="campo-sesion">
+                <span>Tamaño</span>
+                <input
+                  type="range" min="0.5" max="3" step="0.1" value={seleccionado.tamano || 1}
+                  onChange={(e) => actualizarSeleccionado({ tamano: Number(e.target.value) })}
+                />
+              </label>
+              <label className="campo-sesion">
+                <span>Opacidad ({Math.round((seleccionado.opacidad ?? 0.5) * 100)}%)</span>
+                <input
+                  type="range" min="0.1" max="1" step="0.05" value={seleccionado.opacidad ?? 0.5}
+                  onChange={(e) => actualizarSeleccionado({ opacidad: Number(e.target.value) })}
                 />
               </label>
               <label className="campo-sesion">
@@ -890,6 +1012,18 @@ export default function PizarraTactica() {
               </datalist>
               <button type="button" className="pizarra-boton" onClick={anadirEtiqueta}>+ Añadir</button>
             </div>
+            {etiquetasDisponibles.filter((et) => !etiquetasSeleccionadas.includes(et)).length > 0 && (
+              <div className="pizarra-etiquetas-sugeridas">
+                {etiquetasDisponibles.filter((et) => !etiquetasSeleccionadas.includes(et)).map((et) => (
+                  <button
+                    key={et} type="button" className="pizarra-etiqueta-sugerida"
+                    onClick={() => setEtiquetasSeleccionadas((prev) => [...prev, et])}
+                  >
+                    {et}
+                  </button>
+                ))}
+              </div>
+            )}
             {etiquetasSeleccionadas.length > 0 && (
               <div className="pizarra-etiquetas-chips">
                 {etiquetasSeleccionadas.map((et) => (
@@ -950,7 +1084,7 @@ export default function PizarraTactica() {
 
         <form onSubmit={guardarEjercicioExterno}>
           <label className="campo-sesion">
-            <span>Nombre del ejercicio</span>
+            <span>Nombre del ejercicio {buscandoTituloExterno && <span className="texto-dim">(buscando título del vídeo…)</span>}</span>
             <input type="text" value={nombreExterno} onChange={(e) => setNombreExterno(e.target.value)} placeholder="Ej. Rondo 4v2" required />
           </label>
 
@@ -966,8 +1100,8 @@ export default function PizarraTactica() {
             <label className="campo-sesion">
               <span>Enlace de YouTube</span>
               <input type="text" value={urlYoutubeExterno} onChange={(e) => setUrlYoutubeExterno(e.target.value)} placeholder="https://youtube.com/watch?v=…" />
-              {extraerYoutubeIdExterno(urlYoutubeExterno) && (
-                <img src={`https://img.youtube.com/vi/${extraerYoutubeIdExterno(urlYoutubeExterno)}/mqdefault.jpg`} alt="Vista previa" className="pizarra-preview-externa" />
+              {youtubeIdExternoPreview && (
+                <img src={`https://img.youtube.com/vi/${youtubeIdExternoPreview}/mqdefault.jpg`} alt="Vista previa" className="pizarra-preview-externa" />
               )}
             </label>
           )}
@@ -983,6 +1117,18 @@ export default function PizarraTactica() {
               />
               <button type="button" className="pizarra-boton" onClick={anadirEtiquetaExterno}>+ Añadir</button>
             </div>
+            {etiquetasDisponibles.filter((et) => !etiquetasExterno.includes(et)).length > 0 && (
+              <div className="pizarra-etiquetas-sugeridas">
+                {etiquetasDisponibles.filter((et) => !etiquetasExterno.includes(et)).map((et) => (
+                  <button
+                    key={et} type="button" className="pizarra-etiqueta-sugerida"
+                    onClick={() => setEtiquetasExterno((prev) => [...prev, et])}
+                  >
+                    {et}
+                  </button>
+                ))}
+              </div>
+            )}
             {etiquetasExterno.length > 0 && (
               <div className="pizarra-etiquetas-chips">
                 {etiquetasExterno.map((et) => (

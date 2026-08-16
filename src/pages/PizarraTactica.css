@@ -151,6 +151,28 @@
   font-size: 13px;
 }
 
+.pizarra-etiquetas-sugeridas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.pizarra-etiqueta-sugerida {
+  background: var(--bg-elevated);
+  border: 1px dashed var(--line-strong);
+  color: var(--text-faint);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 11px;
+}
+
+.pizarra-etiqueta-sugerida:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  border-style: solid;
+}
+
 .pizarra-etiquetas-chips {
   display: flex;
   flex-wrap: wrap;

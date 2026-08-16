@@ -1116,6 +1116,24 @@ propósitos distintos.
   descripción, con botones Anterior/Siguiente — pensada para repasar la
   sesión con el equipo o entrenador a distancia sin tener que imprimir nada.
 
+## Etiquetas clicables, bidones y formas geométricas en la Pizarra
+
+- **Etiquetas ya usadas, ahora clicables**: en ambos formularios de la
+  biblioteca (pizarra y externos) aparece, debajo del campo de texto, la
+  lista de etiquetas que ya has creado antes — un clic las añade, sin
+  tener que volver a escribirlas.
+- **Bidones**: nuevo tipo de obstáculo, junto a conos y vallas, agrupados
+  ahora en un único desplegable con un botón "+ Añadir" (antes eran
+  botones sueltos).
+- **Formas geométricas**: círculo, cuadrado, rectángulo, triángulo y
+  pentágono, con su propio desplegable. Se pueden usar como marcadores
+  visuales de una zona del campo — tienen **tamaño y opacidad ajustables**
+  (además de color y rotación), pensadas para ponerlas de fondo delimitando
+  espacios sin taparlo todo.
+- El título automático desde YouTube y las etiquetas ya existían de una
+  pasada anterior de este mismo bloque de trabajo — confirmado que
+  funcionan correctamente.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.
