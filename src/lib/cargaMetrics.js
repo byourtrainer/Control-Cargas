@@ -158,3 +158,39 @@ export function clasificarMonotonia(valor) {
   if (valor <= 2.5) return 'elevada'
   return 'riesgo_elevado'
 }
+
+// =========================================================
+// Modelo de Diferencia Agudo−Crónico (Manu Sola Arjona), aplicado a la
+// carga como complemento del ACWR — mismo espíritu que el modelo de
+// readiness, pero con una RESTA en vez de un cociente, más sus dos
+// derivadas (delta diario y delta semanal) para ver la tendencia.
+// =========================================================
+
+/** Diferencia Agudo−Crónico de la carga (ambos en carga media diaria, no una suma). */
+export function diferenciaCarga(registros, fechaReferencia = new Date()) {
+  const agudoPromedioDiario = cargaAguda(registros, fechaReferencia) / DIAS_AGUDO
+  const cronico = cargaCronicaPromedio(registros, fechaReferencia)
+  return agudoPromedioDiario - cronico
+}
+
+/** Delta diario de la Diferencia de carga: hoy vs. ayer. */
+export function deltaCargaDiferenciaDiario(registros, fechaReferencia = new Date()) {
+  const hoy = diferenciaCarga(registros, fechaReferencia)
+  const ayer = new Date(fechaReferencia)
+  ayer.setDate(ayer.getDate() - 1)
+  const valorAyer = diferenciaCarga(registros, ayer)
+  return hoy - valorAyer
+}
+
+/** Delta semanal de la Diferencia de carga: media de los últimos 7 días vs. los 7 anteriores. */
+export function deltaCargaDiferenciaSemanal(registros, fechaReferencia = new Date()) {
+  const valoresPorDia = []
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(fechaReferencia)
+    d.setDate(d.getDate() - i)
+    valoresPorDia.push(diferenciaCarga(registros, d))
+  }
+  const anterior = media(valoresPorDia.slice(0, 7))
+  const actual = media(valoresPorDia.slice(7))
+  return actual - anterior
+}

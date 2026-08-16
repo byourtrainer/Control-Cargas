@@ -185,6 +185,41 @@ export default function Referencias() {
           <em> Sports Med.</em> 1995;20(5):321-327.
         </p>
       </section>
+
+      <section className="referencia-card">
+        <h2>6. Readiness — Diferencia Agudo-Basal (Manu Sola Arjona)</h2>
+        <p>
+          <strong>Definición:</strong> a diferencia del ACWR (un cociente agudo÷crónico), este
+          modelo usa una <strong>resta</strong> entre el Readiness Agudo (media de los últimos 7
+          días) y el Readiness Basal (media de los últimos 90 días) — y añade dos derivadas que
+          indican tendencia: el <strong>delta diario</strong> (cuánto cambia esa diferencia de un
+          día a otro) y el <strong>delta semanal</strong> (comparando la media de la última
+          semana con la de la semana anterior).
+        </p>
+        <p>
+          En esta app, el "Readiness percibido" (escala 1-5, donde 5 es mejor) se calcula
+          directamente a partir del mismo cuestionario de bienestar que ya rellena el jugador —
+          no se le pregunta nada nuevo — invirtiendo el malestar (1=mejor·5=peor) a la escala de
+          Readiness (1=peor·5=mejor) que usa este modelo.
+        </p>
+        <table className="referencia-tabla">
+          <thead>
+            <tr><th>Delta diario</th><th>Interpretación</th></tr>
+          </thead>
+          <tbody>
+            <tr><td className="mono">≤ -0.5</td><td>Caída notable respecto a ayer — vale la pena prestar atención</td></tr>
+            <tr><td className="mono">-0.5 a 0.5</td><td>Sin cambios relevantes de un día a otro</td></tr>
+            <tr><td className="mono">≥ 0.5</td><td>Mejora notable respecto a ayer</td></tr>
+          </tbody>
+        </table>
+        <p className="referencia-cita">
+          Metodología de Manu Sola Arjona (Graduado en Ciencias del Deporte, preparador físico de
+          ciclistas profesionales) — <em>Rendimiento Evolutivo</em>. A diferencia del resto de
+          variables de esta página, esto no proviene de un artículo científico revisado por pares,
+          sino de la metodología práctica de un preparador físico concreto — lo señalamos así de
+          claro para que sepas exactamente qué tipo de respaldo tiene cada dato que ves aquí.
+        </p>
+      </section>
     </div>
   )
 }

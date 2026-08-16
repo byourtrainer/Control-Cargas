@@ -4,8 +4,9 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts'
 import { supabase } from '../lib/supabaseClient'
-import { calcularMetricas, clasificarRiesgoACWR, clasificarMonotonia } from '../lib/cargaMetrics'
+import { calcularMetricas, clasificarRiesgoACWR, clasificarMonotonia, diferenciaCarga } from '../lib/cargaMetrics'
 import { calcularMalestar, clasificarBienestar } from '../lib/bienestar'
+import { readinessPercibido, diferenciaReadiness, deltaReadinessDiario, clasificarDeltaDiario } from '../lib/readiness'
 import './CoachDashboard.css'
 
 const diasAtras = (n) => {
@@ -93,6 +94,8 @@ function calcularValorBucket(bucket, jugadoresGrafico, registros, variableGrafic
     if (variableGrafico === 'acwr') return metricas.acwrPost
     if (variableGrafico === 'monotonia') return metricas.monotonia
     if (variableGrafico === 'fatiga') return metricas.fatiga
+    if (variableGrafico === 'diferencia_readiness') return diferenciaReadiness(suyos, bucket.fin)
+    if (variableGrafico === 'diferencia_carga') return diferenciaCarga(suyos, bucket.fin)
     return null
   }).filter((v) => v !== null && v !== undefined)
   if (valores.length === 0) return null
@@ -110,6 +113,8 @@ const variablesGrafico = [
   { valor: 'monotonia', etiqueta: 'Monotonía' },
   { valor: 'fatiga', etiqueta: 'Fatiga (Strain)' },
   { valor: 'malestar', etiqueta: 'Bienestar (malestar)' },
+  { valor: 'diferencia_readiness', etiqueta: 'Readiness (Diferencia)' },
+  { valor: 'diferencia_carga', etiqueta: 'Carga (Diferencia Agudo-Crónico)' },
 ]
 
 const bandasPorVariable = {
@@ -131,6 +136,11 @@ const bandasPorVariable = {
     { y1: 1, y2: 2, color: 'var(--risk-low)' },
     { y1: 2, y2: 3, color: 'var(--risk-mid)' },
     { y1: 3, y2: 5, color: 'var(--risk-high)' },
+  ],
+  diferencia_readiness: [
+    { y1: -4, y2: -0.5, color: 'var(--risk-high)' },
+    { y1: -0.5, y2: 0.5, color: 'var(--accent)' },
+    { y1: 0.5, y2: 4, color: 'var(--risk-low)' },
   ],
 }
 
@@ -407,6 +417,7 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
     const respuestaAtipica = []
     const huecosDatos = []
     const sesionInusual = []
+    const caidaReadiness = []
 
     // Sesiones de los últimos 7 días (para saber qué días hubo entreno/partido de verdad)
     const inicioSemana = diasAtras(6)
@@ -445,9 +456,14 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
       if (inusual) {
         sesionInusual.push(`${j.nombre} (${inusual.cargaHoy} vs media ${inusual.media}, ${inusual.alta ? '↑' : '↓'})`)
       }
+
+      const deltaHoy = deltaReadinessDiario(suyos, new Date(hoy + 'T00:00:00'))
+      if (clasificarDeltaDiario(deltaHoy) === 'alerta') {
+        caidaReadiness.push(`${j.nombre} (${deltaHoy.toFixed(1)})`)
+      }
     })
 
-    return { sinRpeAyer, enRiesgo, conMolestiaHoy, respuestaAtipica, huecosDatos, sesionInusual }
+    return { sinRpeAyer, enRiesgo, conMolestiaHoy, respuestaAtipica, huecosDatos, sesionInusual, caidaReadiness }
   }, [jugadoresFiltrados, registros, sesiones, metodoACWR])
 
   // --- Mapa de calor jugador × día ---
@@ -637,6 +653,16 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
               <span className="alerta-ok">✓ Cargas dentro de lo habitual</span>
             ) : (
               <span className="alerta-lista">{alertasHoy.sesionInusual.join(', ')}</span>
+            )}
+          </div>
+          <div className={`alerta-bloque ${alertasHoy.caidaReadiness.length ? 'alerta-activa' : ''}`}>
+            <span className="alerta-titulo" title="Caída de -0.5 o más en el delta diario de Readiness (modelo de Manu Sola Arjona: diferencia Agudo-Basal de hoy vs. la de ayer)">
+              Caída de Readiness hoy
+            </span>
+            {alertasHoy.caidaReadiness.length === 0 ? (
+              <span className="alerta-ok">✓ Sin caídas notables</span>
+            ) : (
+              <span className="alerta-lista">{alertasHoy.caidaReadiness.join(', ')}</span>
             )}
           </div>
         </div>

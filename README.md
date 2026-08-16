@@ -1170,6 +1170,42 @@ propósitos distintos.
   navegadores de móvil/tablet** (ninguna app puede saltarse esa
   limitación, es una restricción del propio sistema operativo).
 
+## Modelo de Readiness (Manu Sola Arjona), aplicado a bienestar y a carga
+
+Nueva librería `readiness.js` que implementa el modelo de Manu Sola
+Arjona — igual espíritu que el ACWR, pero con una **resta** (Agudo −
+Basal) en vez de un cociente, más dos derivadas de tendencia (delta
+diario y delta semanal). **No se añade ninguna pregunta nueva al
+jugador**: el "Readiness percibido" (1=peor·5=mejor, la escala de Manu
+Sola) se traduce directamente del índice de bienestar que ya rellena cada
+día, simplemente invertido de dirección.
+
+- **Readiness Agudo** = media de los últimos 7 días · **Readiness Basal**
+  = media de los últimos 90 días · **Diferencia** = Agudo − Basal.
+- **Delta diario** = cuánto cambia esa Diferencia de un día a otro (umbral
+  ±0.5, tal y como venía en el Excel original) · **Delta semanal** =
+  media de la Diferencia de la última semana vs. la semana anterior.
+- El mismo modelo (diferencia + deltas) también se aplicó a la
+  **carga/RPE**, como complemento del ACWR ya existente — nueva variable
+  "Carga (Diferencia Agudo-Crónico)".
+- Ambas ("Readiness (Diferencia)" y "Carga (Diferencia Agudo-Crónico)")
+  son dos nuevas opciones en el selector de variable del gráfico de
+  Resumen, con su hueco correspondiente en el informe de 5→7 gráficos y en
+  el PDF exportado.
+- Nueva alerta **"Caída de Readiness hoy"** en el bloque de Alertas,
+  usando el umbral fijo del propio Excel de Manu Sola (delta diario ≤ -0.5).
+- Nueva sección en **Referencias**, con un aviso honesto: a diferencia del
+  resto de variables de esa página (que citan artículos científicos
+  revisados por pares), este modelo viene de la metodología práctica de un
+  preparador físico concreto, no de un paper — se dice así de claro para
+  que sepas qué tipo de respaldo tiene cada dato.
+
+**Nota técnica**: no pude acceder a los dos vídeos de YouTube que
+compartiste (bloqueo temporal de acceso), así que la implementación se
+basó enteramente en las fórmulas y el formato condicional (colores/umbrales)
+del propio Excel que subiste — que son la fuente más fiable posible, ya
+que es la lógica de cálculo real, no una interpretación de algo hablado.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.
