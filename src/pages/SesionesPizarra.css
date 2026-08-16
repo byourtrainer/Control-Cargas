@@ -313,8 +313,9 @@
 }
 
 @media print {
-  .sesiones-titulo-imprimir { display: block; margin-bottom: 20px; margin-top: 20mm; }
-  .sesiones-titulo-imprimir h2 { font-size: 20px; }
+  .sesiones-titulo-imprimir { display: block; margin-bottom: 14px; margin-top: 18mm; }
+  .sesiones-titulo-imprimir h2 { font-size: 27px; margin-bottom: 2px; }
+  .sesiones-titulo-imprimir p { margin: 1px 0; font-size: 12px; }
 
   /* Cabecera fija: se repite en todas las páginas del PDF (soportado por
      Chrome/Firefox al imprimir; en Safari el comportamiento puede variar). */
@@ -329,12 +330,6 @@
   .sesiones-logo-fijo { display: block; position: fixed; top: 6mm; }
   .sesiones-logo-fijo-izq { left: 10mm; }
   .sesiones-logo-fijo-der { right: 10mm; }
-  .sesiones-barra-color-imprimir {
-    display: block;
-    position: fixed;
-    top: 0; left: 0; right: 0;
-    height: 3mm;
-  }
   .sesiones-pie-fijo-imprimir {
     display: flex;
     justify-content: space-between;
@@ -358,7 +353,7 @@
   .sesiones-item-imagen {
     width: 100% !important;
     height: auto !important;
-    max-height: 320px;
+    max-height: 480px;
     object-fit: contain !important;
     background: #eee;
   }

@@ -1288,6 +1288,21 @@ No permite fechas futuras.
   equipo destinatario, y un **pie de página** con tu nombre, el título de
   la sesión, y la fecha de generación.
 
+## Ajustes al PDF de sesión, a partir de una prueba real
+
+- **Franja verde eliminada** de la cabecera, tal y como pediste.
+- **Título más grande** (de 20px a 27px), recortando el espacio que
+  ocupaba debajo para que no reste sitio a la página.
+- **Imágenes mejor aprovechadas**: el motivo real por el que se veían
+  pequeñas, con mucho hueco gris a los lados, es que el alto máximo
+  estaba fijado en 320px — eso obligaba al ancho a encogerse mucho más de
+  lo necesario en una página bastante más ancha. Se amplió ese límite a
+  480px, así que ahora el ancho de la página es lo que manda, no el alto.
+- **Logo personal**: el código para mostrarlo ya estaba correcto (se
+  confirmó revisándolo) — lo que faltaba era subir la imagen desde la
+  nueva tarjeta "Tu logo personal" en Equipos, que se construyó en la
+  actualización anterior. En cuanto la subas, aparecerá solo.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.
