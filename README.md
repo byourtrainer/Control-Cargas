@@ -1387,6 +1387,22 @@ nunca a los dos a la vez — el atajo "Planificar la duración de este día"
 sigue apareciendo solo para equipos, ya que Planificación por jugador
 individual se hace directamente desde esa pestaña.
 
+## "Media pista" ya es un recorte real, como tu referencia
+
+Antes, "Media pista" mostraba el lienzo entero (con el círculo central
+completo) y solo quitaba una portería — no era un recorte de verdad.
+Ahora tiene su propia forma: esquinas redondeadas solo en el lado de la
+portería, el lado de la línea de medio campo queda recto (sin redondear),
+y el círculo central aparece cortado como una media luna, tal y como en
+tu foto de referencia.
+
+**Un matiz honesto**: para no arriesgar a desproporcionar el dibujo,
+mantuve la misma escala de coordenadas que "Pista completa" — así que la
+mitad izquierda del lienzo queda con el color de fondo pero sin marcas
+(no ocupa todo el ancho como en tu foto, que está pensada solo para media
+pista desde el principio). Si prefieres que la media pista se agrande
+para llenar todo el lienzo, dímelo y lo ajusto en otra pasada.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

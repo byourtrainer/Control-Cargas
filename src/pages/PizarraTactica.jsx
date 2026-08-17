@@ -87,18 +87,26 @@ function FondoCampo({ fondo, colorCampo }) {
   const colorMarcasSuave = claro ? 'rgba(13,18,16,0.4)' : 'rgba(255,255,255,0.35)'
   const colorMarcasGimnasio = claro ? 'rgba(13,18,16,0.35)' : 'rgba(255,255,255,0.3)'
 
-  if (fondo === 'campo_completo' || fondo === 'medio_campo') {
-    const soloDerecha = fondo === 'medio_campo'
+  if (fondo === 'campo_completo') {
     return (
       <g stroke={colorMarcas} strokeWidth="2.5" fill="none">
         <rect x="20" y="20" width="760" height="480" rx="40" ry="40" />
-        {!soloDerecha && (
-          <>
-            <line x1="400" y1="20" x2="400" y2="500" />
-            <AreaPorteria xPared={20} direccionCampo={1} color={colorMarcas} />
-          </>
-        )}
+        <line x1="400" y1="20" x2="400" y2="500" />
+        <AreaPorteria xPared={20} direccionCampo={1} color={colorMarcas} />
         <circle cx="400" cy="260" r="60" />
+        <circle cx="400" cy="260" r="2.5" fill={colorMarcas} />
+        <AreaPorteria xPared={780} direccionCampo={-1} color={colorMarcas} />
+      </g>
+    )
+  }
+  if (fondo === 'medio_campo') {
+    return (
+      <g stroke={colorMarcas} strokeWidth="2.5" fill="none">
+        {/* Contorno: esquinas redondeadas solo en el lado de la portería (derecha);
+            el lado de la línea de medio campo (izquierda) queda recto, sin redondear. */}
+        <path d="M 400,20 L 740,20 A 40,40 0 0 1 780,60 L 780,460 A 40,40 0 0 1 740,500 L 400,500 Z" />
+        {/* Círculo central cortado por la línea de medio campo: solo se ve su mitad derecha */}
+        <path d="M 400,200 A 60,60 0 0 1 400,320" />
         <circle cx="400" cy="260" r="2.5" fill={colorMarcas} />
         <AreaPorteria xPared={780} direccionCampo={-1} color={colorMarcas} />
       </g>
