@@ -1349,6 +1349,18 @@ Carga) siguen calculándose por dentro — la alerta "Caída de Bienestar
 hoy" sigue funcionando igual — solo se quitaron del desplegable y del PDF
 para no saturar la vista.
 
+## Leyenda del gráfico de Bienestar corregida
+
+La librería de gráficos posicionaba mal su leyenda automática dentro del
+hueco pequeño del mini-gráfico (se veía flotando en mitad del gráfico, tal
+y como se vio en un PDF exportado real). Arreglado de raíz: en vez de
+depender de ese posicionamiento automático, la leyenda (Percibido /
+Agudo / Basal, con una muestra del trazo de cada línea) se construye
+ahora como texto normal encima del gráfico — fiable tanto en pantalla
+como en el PDF, sin depender de cómo la librería decida colocarla en un
+espacio reducido. Aplicado tanto al gráfico principal como al mini-gráfico
+del informe/PDF.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

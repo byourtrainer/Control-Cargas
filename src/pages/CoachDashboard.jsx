@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
-  ResponsiveContainer, LineChart, Line, ReferenceArea, Legend,
+  ResponsiveContainer, LineChart, Line, ReferenceArea,
   XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts'
 import { supabase } from '../lib/supabaseClient'
@@ -796,7 +796,14 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
             </select>
           </div>
         </div>
-        <ResponsiveContainer width="100%" height={260}>
+        {variableGrafico === 'bienestar' && (
+          <div className="grafico-leyenda-principal">
+            <span><span className="mini-grafico-leyenda-linea mini-grafico-leyenda-percibido" />Percibido (del día)</span>
+            <span><span className="mini-grafico-leyenda-linea mini-grafico-leyenda-agudo" />Agudo (7 días)</span>
+            <span><span className="mini-grafico-leyenda-linea mini-grafico-leyenda-basal" />Basal (90 días)</span>
+          </div>
+        )}
+        <ResponsiveContainer width="100%" height={variableGrafico === 'bienestar' ? 240 : 260}>
           <LineChart data={datosGrafico}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
             <XAxis dataKey="fecha" stroke="var(--text-faint)" fontSize={12} />
@@ -813,10 +820,6 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
             ))}
             {variableGrafico === 'bienestar' ? (
               <>
-                <Legend
-                  verticalAlign="top" height={28}
-                  formatter={(valor) => ({ percibido: 'Percibido (del día)', agudo: 'Agudo (7 días)', basal: 'Basal (90 días)' }[valor] || valor)}
-                />
                 <Line type="monotone" dataKey="percibido" stroke="var(--text-faint)" strokeWidth={1.5} strokeDasharray="3 3" dot={false} connectNulls />
                 <Line type="monotone" dataKey="agudo" stroke="var(--accent)" strokeWidth={2} dot={<PuntoPartido />} connectNulls />
                 <Line type="monotone" dataKey="basal" stroke="var(--risk-mid)" strokeWidth={2} strokeDasharray="6 3" dot={false} connectNulls />
@@ -868,7 +871,14 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
             {variablesGrafico.map((v) => (
               <div className="mini-grafico-card" key={v.valor}>
                 <h4>{v.etiqueta}</h4>
-                <ResponsiveContainer width={modoImpresion ? 300 : '100%'} height={130}>
+                {v.valor === 'bienestar' && (
+                  <div className="mini-grafico-leyenda">
+                    <span><span className="mini-grafico-leyenda-linea mini-grafico-leyenda-percibido" />Percibido</span>
+                    <span><span className="mini-grafico-leyenda-linea mini-grafico-leyenda-agudo" />Agudo</span>
+                    <span><span className="mini-grafico-leyenda-linea mini-grafico-leyenda-basal" />Basal</span>
+                  </div>
+                )}
+                <ResponsiveContainer width={modoImpresion ? 300 : '100%'} height={v.valor === 'bienestar' ? 112 : 130}>
                   <LineChart data={datosInformeCompleto[v.valor]} margin={{ top: 5, right: 10, bottom: 0, left: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
                     <XAxis dataKey="fecha" stroke="var(--text-faint)" fontSize={11} />
@@ -879,10 +889,6 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
                     ))}
                     {v.valor === 'bienestar' ? (
                       <>
-                        <Legend
-                          verticalAlign="top" height={18} wrapperStyle={{ fontSize: 10 }}
-                          formatter={(valor) => ({ percibido: 'Percibido', agudo: 'Agudo', basal: 'Basal' }[valor] || valor)}
-                        />
                         <Line type="monotone" dataKey="percibido" stroke="var(--text-faint)" strokeWidth={1} strokeDasharray="3 3" dot={false} connectNulls />
                         <Line type="monotone" dataKey="agudo" stroke="var(--accent)" strokeWidth={2} dot={false} connectNulls />
                         <Line type="monotone" dataKey="basal" stroke="var(--risk-mid)" strokeWidth={1.5} strokeDasharray="6 3" dot={false} connectNulls />

@@ -377,6 +377,48 @@
   margin: 0 0 8px;
 }
 
+.mini-grafico-leyenda {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+.mini-grafico-leyenda span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+.mini-grafico-leyenda-linea {
+  display: inline-block;
+  width: 12px;
+  height: 0;
+  border-top-width: 2px;
+  border-top-style: solid;
+}
+
+.mini-grafico-leyenda-percibido { border-color: var(--text-faint); border-top-style: dotted; border-top-width: 1.5px; }
+.mini-grafico-leyenda-agudo { border-color: var(--accent); }
+.mini-grafico-leyenda-basal { border-color: var(--risk-mid); border-top-style: dashed; }
+
+.grafico-leyenda-principal {
+  display: flex;
+  gap: 18px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.grafico-leyenda-principal span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
 .comentario-grafico {
   width: 100%;
   margin-top: 10px;
