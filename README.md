@@ -1403,6 +1403,19 @@ mitad izquierda del lienzo queda con el color de fondo pero sin marcas
 pista desde el principio). Si prefieres que la media pista se agrande
 para llenar todo el lienzo, dímelo y lo ajusto en otra pasada.
 
+## Nuevas zonas en el muñeco de molestias/lesiones
+
+- **Pectoral** (izquierdo/derecho) — nueva zona en la vista frontal.
+- **Escapular** (izquierdo/derecho) — nueva zona en la vista posterior.
+- **Aductor**: antes era una única zona central ("Aductores") — ahora se
+  distingue izquierdo/derecho, igual que el resto de zonas con lado
+  (cuádriceps, isquiotibiales, etc.).
+
+Todo esto funciona igual que las zonas ya existentes: selección múltiple
+para el jugador, y el mapa de calor del entrenador las cuenta y colorea
+por separado automáticamente, sin necesitar ningún cambio adicional en el
+resto de la app.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

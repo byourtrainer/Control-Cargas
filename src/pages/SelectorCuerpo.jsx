@@ -3,12 +3,12 @@ import './SelectorCuerpo.css'
 // Silueta corporal (frontal + posterior) con dos modos:
 // - modo="seleccion": el jugador toca todas las zonas (y lados) donde tiene molestia — selección múltiple.
 // - modo="mapa": el entrenador ve cada zona coloreada según cuántas veces se ha reportado.
-// No es anatómicamente exacta (es esquemática), pero cubre las 19 zonas del club.
-// Las zonas duplicadas (hombro, brazo, codo, antebrazo, muñeca, cuádriceps,
-// rodilla, tibiales, tobillo, pie, isquiotibiales, gemelos) distinguen lado
-// izquierdo/derecho tal y como se ven en el propio dibujo (sin espejo).
-// Las zonas centrales (cuello, cadera, psoas, aductores, dorsal, lumbar,
-// glúteos) no tienen lado.
+// No es anatómicamente exacta (es esquemática), pero cubre las zonas del club.
+// Las zonas con lado (hombro, brazo, codo, antebrazo, muñeca, pectoral,
+// cuádriceps, aductor, rodilla, tibiales, tobillo, pie, escapular,
+// isquiotibiales, gemelos) distinguen lado izquierdo/derecho tal y como
+// se ven en el propio dibujo (sin espejo). Las zonas centrales (cuello,
+// cadera, psoas, dorsal, lumbar, glúteos) no tienen lado.
 
 function colorMapa(count, max) {
   if (!count) return 'var(--bg-elevated)'
@@ -70,6 +70,13 @@ export default function SelectorCuerpo({
 
           <rect x="42" y="40" width="36" height="60" rx="12" fill="var(--bg-elevated)" fillOpacity="0.5" stroke="var(--line)" strokeWidth="1" />
 
+          <rect x="44" y="42" width="14" height="18" rx="4" {...propsZona('Pectoral', 'Izquierdo')}>
+            {modo === 'mapa' && <title>{tituloZona('Pectoral', 'Izquierdo')}</title>}
+          </rect>
+          <rect x="62" y="42" width="14" height="18" rx="4" {...propsZona('Pectoral', 'Derecho')}>
+            {modo === 'mapa' && <title>{tituloZona('Pectoral', 'Derecho')}</title>}
+          </rect>
+
           <path d="M14,50 C10,60 8,80 10,98 L22,100 C24,82 26,64 30,52 Z" {...propsZona('Brazo', 'Izquierdo')}>
             {modo === 'mapa' && <title>{tituloZona('Brazo', 'Izquierdo')}</title>}
           </path>
@@ -111,8 +118,11 @@ export default function SelectorCuerpo({
           <path d="M82,120 C84,140 84,158 80,176 L62,176 C62,156 64,138 64,122 Z" {...propsZona('Cuádriceps', 'Derecho')}>
             {modo === 'mapa' && <title>{tituloZona('Cuádriceps', 'Derecho')}</title>}
           </path>
-          <rect x="55" y="126" width="10" height="46" rx="4" {...propsZona('Aductores')}>
-            {modo === 'mapa' && <title>{tituloZona('Aductores')}</title>}
+          <rect x="51" y="126" width="8" height="46" rx="4" {...propsZona('Aductor', 'Izquierdo')}>
+            {modo === 'mapa' && <title>{tituloZona('Aductor', 'Izquierdo')}</title>}
+          </rect>
+          <rect x="61" y="126" width="8" height="46" rx="4" {...propsZona('Aductor', 'Derecho')}>
+            {modo === 'mapa' && <title>{tituloZona('Aductor', 'Derecho')}</title>}
           </rect>
 
           <circle cx="46" cy="184" r="9" {...propsZona('Rodilla', 'Izquierdo')}>
@@ -166,6 +176,12 @@ export default function SelectorCuerpo({
 
           <path d="M42,40 C42,36 78,36 78,40 L80,72 C66,78 54,78 40,72 Z" {...propsZona('Zona dorsal (espalda alta)')}>
             {modo === 'mapa' && <title>{tituloZona('Zona dorsal (espalda alta)')}</title>}
+          </path>
+          <path d="M40,46 C40,43 52,42 55,44 L54,62 C48,64 41,60 39,55 Z" {...propsZona('Escapular', 'Izquierdo')}>
+            {modo === 'mapa' && <title>{tituloZona('Escapular', 'Izquierdo')}</title>}
+          </path>
+          <path d="M80,46 C80,43 68,42 65,44 L66,62 C72,64 79,60 81,55 Z" {...propsZona('Escapular', 'Derecho')}>
+            {modo === 'mapa' && <title>{tituloZona('Escapular', 'Derecho')}</title>}
           </path>
           <path d="M41,74 C41,70 79,70 79,74 L80,98 C66,102 54,102 40,98 Z" {...propsZona('Zona lumbar')}>
             {modo === 'mapa' && <title>{tituloZona('Zona lumbar')}</title>}
