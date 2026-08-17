@@ -42,8 +42,15 @@ export default function App() {
   const [pestana, setPestana] = useState('resumen')
   const [equipos, setEquipos] = useState([])
   const [equipoActivo, setEquipoActivo] = useState('todos')
+  const [saltoPlanificacion, setSaltoPlanificacion] = useState(null) // { fecha, ts } | null
   const [menuAbierto, setMenuAbierto] = useState(false)
   const menuRef = useRef(null)
+
+  function irAPlanificar(fecha, equipoId) {
+    setEquipoActivo(equipoId)
+    setSaltoPlanificacion({ fecha, ts: Date.now() })
+    setPestana('sesion')
+  }
 
   // --- Contexto único: jugador + rango de fechas, compartido entre pestañas ---
   const [jugadoresContexto, setJugadoresContexto] = useState([])
@@ -233,7 +240,13 @@ export default function App() {
 
       <main className="contenido">
         {perfil.rol === 'entrenador' ? (
-          pestana === 'sesion' ? <SesionDia equipoActivo={equipoActivo} />
+          pestana === 'sesion' ? (
+            <SesionDia
+              equipoActivo={equipoActivo}
+              fechaInicial={saltoPlanificacion?.fecha}
+              key={saltoPlanificacion?.ts || 'sesion-default'}
+            />
+          )
           : pestana === 'lesiones' ? (
             <Lesiones
               equipos={equipos} equipoActivo={equipoActivo}
@@ -241,7 +254,7 @@ export default function App() {
             />
           )
           : pestana === 'referencias' ? <Referencias />
-          : pestana === 'calendario' ? <CalendarioClub equipoActivo={equipoActivo} equipos={equipos} />
+          : pestana === 'calendario' ? <CalendarioClub equipoActivo={equipoActivo} equipos={equipos} onIrAPlanificar={irAPlanificar} />
           : pestana === 'entrenamiento' ? <BibliotecaEjercicios />
           : pestana === 'pizarra' ? <PizarraTactica />
           : pestana === 'sesiones_pizarra' ? <SesionesPizarra />

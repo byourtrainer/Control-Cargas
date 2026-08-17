@@ -82,6 +82,14 @@
   margin: 2px 0 18px;
 }
 
+.calendario-club-boton-planificar {
+  width: 100%;
+  margin-bottom: 16px;
+  justify-content: center;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .calendario-club-subtitulo {
   font-size: 13px;
   color: var(--text-dim);

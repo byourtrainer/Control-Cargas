@@ -51,7 +51,7 @@ function eventoIncluyeFecha(ev, fecha) {
   return fecha >= ev.fecha && fecha <= fin
 }
 
-export default function CalendarioClub({ equipoActivo = 'todos', equipos = [] }) {
+export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], onIrAPlanificar }) {
   const equipoValido = equipoActivo !== 'todos' && equipoActivo !== 'sin_asignar'
   const nombreEquipoActivo = equipos.find((e) => e.id === equipoActivo)?.nombre
 
@@ -261,6 +261,15 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [] })
           {new Date(fechaSeleccionada + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
         </h2>
         <p className="texto-dim calendario-club-equipo">{nombreEquipoActivo}</p>
+
+        {eventosDelDiaSeleccionado.length > 0 && (
+          <button
+            type="button" className="pizarra-boton calendario-club-boton-planificar"
+            onClick={() => onIrAPlanificar?.(fechaSeleccionada, equipoActivo)}
+          >
+            → Planificar la duración de este día
+          </button>
+        )}
 
         {eventosDelDiaSeleccionado.length > 0 && (
           <ul className="calendario-club-lista">

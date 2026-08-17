@@ -13,8 +13,8 @@ function formatearFechaLarga(fechaISO) {
   return d.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-export default function SesionDia({ equipoActivo = 'todos' }) {
-  const [fecha, setFecha] = useState(hoyISO())
+export default function SesionDia({ equipoActivo = 'todos', fechaInicial }) {
+  const [fecha, setFecha] = useState(fechaInicial || hoyISO())
   const [modoAsignacion, setModoAsignacion] = useState('grupo') // 'grupo' | 'individual'
   const [jugadores, setJugadores] = useState([])
   const [sesionesDelDia, setSesionesDelDia] = useState({}) // jugador_id -> fila de sesiones

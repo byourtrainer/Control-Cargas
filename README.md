@@ -1329,6 +1329,15 @@ No permite fechas futuras.
   (restos de una anomalía de hace tiempo en el repositorio) eliminados —
   no afectaban al funcionamiento, pero ensuciaban el proyecto.
 
+## Atajo Calendario → Planificación
+
+En el panel de un día con algún evento (Calendario de club), nuevo botón
+**"→ Planificar la duración de este día"** — te lleva directo a
+Planificación, con esa misma fecha y ese mismo equipo ya seleccionados,
+lista de jugadores esperando. No une los dos sistemas (el Calendario
+sigue sin afectar a los cálculos de carga, como ya sabes) — es solo un
+atajo de navegación para no tener que buscar la misma fecha dos veces.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.
