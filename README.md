@@ -1361,6 +1361,16 @@ como en el PDF, sin depender de cómo la librería decida colocarla en un
 espacio reducido. Aplicado tanto al gráfico principal como al mini-gráfico
 del informe/PDF.
 
+## Editar eventos del Calendario
+
+Cada evento del día seleccionado tiene ahora un botón **"Editar"** además
+del de eliminar — abre el mismo formulario ya relleno con sus datos
+(tipo, título, rival, hora, lugar, notas, fecha fin, intensidad), listo
+para corregir lo que haga falta y pulsar "Guardar cambios". El formulario
+se marca como "Editar evento" mientras estás en ese modo, con un enlace
+"Cancelar" para volver al modo normal de añadir uno nuevo sin guardar
+nada.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

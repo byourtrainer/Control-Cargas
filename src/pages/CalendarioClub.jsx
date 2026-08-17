@@ -63,6 +63,7 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], o
   const [guardando, setGuardando] = useState(false)
   const [mensaje, setMensaje] = useState(null)
   const [borrandoId, setBorrandoId] = useState(null)
+  const [editandoId, setEditandoId] = useState(null)
 
   useEffect(() => { if (equipoValido) cargarMes() }, [mesVisible, equipoActivo])
 
@@ -97,6 +98,28 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], o
   function seleccionarDia(fecha) {
     setFechaSeleccionada(fecha)
     setForm(vacio)
+    setEditandoId(null)
+    setMensaje(null)
+  }
+
+  function empezarEdicion(ev) {
+    setForm({
+      tipo: ev.tipo,
+      titulo: ev.titulo || '',
+      hora: ev.hora || '',
+      rival: ev.rival || '',
+      lugar: ev.lugar || '',
+      notas: ev.notas || '',
+      fechaFin: ev.fecha_fin || '',
+      intensidad: ev.intensidad || [],
+    })
+    setEditandoId(ev.id)
+    setMensaje(null)
+  }
+
+  function cancelarEdicion() {
+    setForm(vacio)
+    setEditandoId(null)
     setMensaje(null)
   }
 
@@ -119,7 +142,7 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], o
 
     setGuardando(true)
     setMensaje(null)
-    const { error } = await supabase.from('eventos_calendario').insert({
+    const datos = {
       equipo_id: equipoActivo,
       fecha: fechaSeleccionada,
       fecha_fin: form.fechaFin || null,
@@ -130,12 +153,17 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], o
       lugar: form.lugar || null,
       notas: form.notas || null,
       intensidad: form.intensidad.length > 0 ? form.intensidad : null,
-    })
+    }
+    const { error } = editandoId
+      ? await supabase.from('eventos_calendario').update(datos).eq('id', editandoId)
+      : await supabase.from('eventos_calendario').insert(datos)
+
     if (error) {
       setMensaje({ tipo: 'error', texto: 'No se pudo guardar el evento.' })
     } else {
       setForm(vacio)
-      setMensaje({ tipo: 'ok', texto: 'Evento añadido.' })
+      setEditandoId(null)
+      setMensaje({ tipo: 'ok', texto: editandoId ? 'Evento actualizado.' : 'Evento añadido.' })
       cargarMes()
     }
     setGuardando(false)
@@ -298,18 +326,33 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], o
                   )}
                   {ev.notas && <p className="calendario-club-evento-notas">{ev.notas}</p>}
                 </div>
-                <button
-                  className="btn-eliminar-fila" onClick={() => eliminarEvento(ev.id)}
-                  disabled={borrandoId === ev.id} title="Eliminar evento"
-                >
-                  {borrandoId === ev.id ? '…' : '✕'}
-                </button>
+                <div className="calendario-club-evento-acciones">
+                  <button
+                    className="equipo-cambiar-link" onClick={() => empezarEdicion(ev)}
+                    title="Editar evento"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    className="btn-eliminar-fila" onClick={() => eliminarEvento(ev.id)}
+                    disabled={borrandoId === ev.id} title="Eliminar evento"
+                  >
+                    {borrandoId === ev.id ? '…' : '✕'}
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
         )}
 
-        <h3 className="calendario-club-subtitulo">+ Añadir evento este día</h3>
+        <h3 className="calendario-club-subtitulo">
+          {editandoId ? 'Editar evento' : '+ Añadir evento este día'}
+          {editandoId && (
+            <button type="button" className="equipo-cambiar-link calendario-club-cancelar-edicion" onClick={cancelarEdicion}>
+              Cancelar
+            </button>
+          )}
+        </h3>
         <form onSubmit={guardarEvento}>
           <label className="campo-sesion">
             <span>Tipo</span>
@@ -403,7 +446,7 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], o
           {mensaje && <div className={mensaje.tipo === 'ok' ? 'aviso-ok' : 'aviso-error'}>{mensaje.texto}</div>}
 
           <button type="submit" className="btn-principal" disabled={guardando}>
-            {guardando ? 'Guardando…' : '+ Añadir evento'}
+            {guardando ? 'Guardando…' : editandoId ? 'Guardar cambios' : '+ Añadir evento'}
           </button>
         </form>
       </section>
