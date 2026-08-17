@@ -1371,6 +1371,22 @@ se marca como "Editar evento" mientras estás en ese modo, con un enlace
 "Cancelar" para volver al modo normal de añadir uno nuevo sin guardar
 nada.
 
+## Calendario también para deportistas sin club
+
+Hasta ahora el Calendario solo funcionaba con un equipo concreto — un
+deportista "Sin asignar" se quedaba sin poder tener su propia agenda.
+Ahora, seleccionando "Sin asignar" en el "◎", la app te pide elegir a qué
+deportista individual le quieres llevar el calendario (con un selector
+para cambiar de jugador sin salir de la pantalla), y a partir de ahí
+funciona exactamente igual que con un equipo: mismos tipos de evento,
+misma intensidad, y el mismo campo de **notas** para detallar el
+contenido de la sesión.
+
+Un evento ahora pertenece a un equipo **o** a un jugador individual,
+nunca a los dos a la vez — el atajo "Planificar la duración de este día"
+sigue apareciendo solo para equipos, ya que Planificación por jugador
+individual se hace directamente desde esa pestaña.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

@@ -52,8 +52,16 @@ function eventoIncluyeFecha(ev, fecha) {
 }
 
 export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], onIrAPlanificar }) {
-  const equipoValido = equipoActivo !== 'todos' && equipoActivo !== 'sin_asignar'
-  const nombreEquipoActivo = equipos.find((e) => e.id === equipoActivo)?.nombre
+  const esSinAsignar = equipoActivo === 'sin_asignar'
+  const esEquipoConcreto = equipoActivo !== 'todos' && !esSinAsignar
+
+  const [jugadoresSinAsignar, setJugadoresSinAsignar] = useState([])
+  const [jugadorSeleccionado, setJugadorSeleccionado] = useState('')
+
+  const modoDestino = esEquipoConcreto ? 'equipo' : (esSinAsignar && jugadorSeleccionado ? 'jugador' : null)
+  const nombreDestino = esEquipoConcreto
+    ? equipos.find((e) => e.id === equipoActivo)?.nombre
+    : jugadoresSinAsignar.find((j) => j.id === jugadorSeleccionado)?.nombre
 
   const [mesVisible, setMesVisible] = useState(() => { const d = new Date(); d.setDate(1); return d })
   const [eventos, setEventos] = useState([])
@@ -65,20 +73,33 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], o
   const [borrandoId, setBorrandoId] = useState(null)
   const [editandoId, setEditandoId] = useState(null)
 
-  useEffect(() => { if (equipoValido) cargarMes() }, [mesVisible, equipoActivo])
+  useEffect(() => {
+    if (esSinAsignar) cargarJugadoresSinAsignar()
+    else setJugadorSeleccionado('')
+  }, [esSinAsignar])
+
+  useEffect(() => { if (modoDestino) cargarMes() }, [mesVisible, modoDestino, equipoActivo, jugadorSeleccionado])
+
+  async function cargarJugadoresSinAsignar() {
+    const { data } = await supabase
+      .from('perfiles').select('id, nombre')
+      .eq('rol', 'jugador').is('equipo_id', null).order('nombre')
+    setJugadoresSinAsignar(data || [])
+  }
 
   async function cargarMes() {
     setCargando(true)
     const inicio = new Date(mesVisible.getFullYear(), mesVisible.getMonth(), 1)
     const fin = new Date(mesVisible.getFullYear(), mesVisible.getMonth() + 1, 0).toISOString().slice(0, 10)
     const inicioConsulta = new Date(inicio); inicioConsulta.setDate(inicioConsulta.getDate() - 45)
-    const { data } = await supabase
+    let consulta = supabase
       .from('eventos_calendario')
       .select('*')
-      .eq('equipo_id', equipoActivo)
       .gte('fecha', inicioConsulta.toISOString().slice(0, 10))
       .lte('fecha', fin)
       .order('hora', { ascending: true })
+    consulta = modoDestino === 'equipo' ? consulta.eq('equipo_id', equipoActivo) : consulta.eq('jugador_id', jugadorSeleccionado)
+    const { data } = await consulta
     setEventos(data || [])
     setCargando(false)
   }
@@ -143,7 +164,8 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], o
     setGuardando(true)
     setMensaje(null)
     const datos = {
-      equipo_id: equipoActivo,
+      equipo_id: modoDestino === 'equipo' ? equipoActivo : null,
+      jugador_id: modoDestino === 'jugador' ? jugadorSeleccionado : null,
       fecha: fechaSeleccionada,
       fecha_fin: form.fechaFin || null,
       tipo: form.tipo,
@@ -176,16 +198,38 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], o
     setBorrandoId(null)
   }
 
-  if (!equipoValido) {
+  if (equipoActivo === 'todos') {
     return (
       <div className="calendario-club-layout">
         <section className="calendario-club-sin-equipo">
-          <h2>Selecciona un club</h2>
+          <h2>Selecciona un club o un jugador</h2>
           <p className="texto-dim">
-            El calendario es por club/equipo. Usa el selector <strong>◎</strong> de la cabecera
-            y elige un equipo concreto (no "Todos los equipos" ni "Sin asignar") para ver o
-            gestionar su calendario.
+            El calendario es siempre de un destino concreto. Usa el selector <strong>◎</strong> de la
+            cabecera y elige un equipo, o "Sin asignar" si quieres llevar el calendario de un
+            deportista individual sin club.
           </p>
+        </section>
+      </div>
+    )
+  }
+
+  if (esSinAsignar && !jugadorSeleccionado) {
+    return (
+      <div className="calendario-club-layout">
+        <section className="calendario-club-sin-equipo">
+          <h2>Elige un deportista</h2>
+          <p className="texto-dim">
+            Los deportistas sin equipo tienen su calendario individual — elige a quién le quieres
+            llevar la agenda.
+          </p>
+          {jugadoresSinAsignar.length === 0 ? (
+            <p className="texto-dim">No hay ningún jugador marcado como "Sin asignar" ahora mismo.</p>
+          ) : (
+            <select value={jugadorSeleccionado} onChange={(e) => setJugadorSeleccionado(e.target.value)} className="calendario-club-selector-jugador">
+              <option value="">Elige un jugador…</option>
+              {jugadoresSinAsignar.map((j) => <option key={j.id} value={j.id}>{j.nombre}</option>)}
+            </select>
+          )}
         </section>
       </div>
     )
@@ -210,7 +254,7 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], o
   return (
     <div className="calendario-club-layout">
       <div className="calendario-club-titulo-imprimir">
-        <h2>Calendario — {nombreEquipoActivo}</h2>
+        <h2>Calendario — {nombreDestino}</h2>
         <p className="texto-dim">{MESES[mesVisible.getMonth()]} {mesVisible.getFullYear()}</p>
       </div>
 
@@ -223,6 +267,15 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], o
           <button className="calendario-nav no-imprimir" onClick={() => cambiarMes(1)}>→</button>
           <button className="btn-exportar no-imprimir" onClick={() => window.print()}>Imprimir / Guardar PDF</button>
         </div>
+
+        {esSinAsignar && (
+          <div className="calendario-club-cambiar-jugador no-imprimir">
+            <span className="texto-dim">Deportista:</span>
+            <select value={jugadorSeleccionado} onChange={(e) => setJugadorSeleccionado(e.target.value)}>
+              {jugadoresSinAsignar.map((j) => <option key={j.id} value={j.id}>{j.nombre}</option>)}
+            </select>
+          </div>
+        )}
 
         <div className="calendario-dias-semana">
           {DIAS_SEMANA.map((d) => <span key={d}>{d}</span>)}
@@ -288,9 +341,9 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], o
         <h2 className="capitalizada">
           {new Date(fechaSeleccionada + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
         </h2>
-        <p className="texto-dim calendario-club-equipo">{nombreEquipoActivo}</p>
+        <p className="texto-dim calendario-club-equipo">{nombreDestino}</p>
 
-        {eventosDelDiaSeleccionado.length > 0 && (
+        {eventosDelDiaSeleccionado.length > 0 && modoDestino === 'equipo' && (
           <button
             type="button" className="pizarra-boton calendario-club-boton-planificar"
             onClick={() => onIrAPlanificar?.(fechaSeleccionada, equipoActivo)}
@@ -439,8 +492,8 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], o
           </label>
 
           <label className="campo-sesion">
-            <span>Notas (opcional)</span>
-            <textarea value={form.notas} onChange={(e) => setForm({ ...form, notas: e.target.value })} rows={2} />
+            <span>Notas (opcional) — aquí puedes detallar el contenido de la sesión</span>
+            <textarea value={form.notas} onChange={(e) => setForm({ ...form, notas: e.target.value })} rows={3} />
           </label>
 
           {mensaje && <div className={mensaje.tipo === 'ok' ? 'aviso-ok' : 'aviso-error'}>{mensaje.texto}</div>}

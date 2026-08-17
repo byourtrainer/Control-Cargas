@@ -19,6 +19,34 @@
 
 .calendario-club-sin-equipo strong { color: var(--accent); }
 
+.calendario-club-selector-jugador {
+  margin-top: 12px;
+  width: 100%;
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+
+.calendario-club-cambiar-jugador {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  margin: 12px 0 -4px;
+}
+
+.calendario-club-cambiar-jugador select {
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
 .calendario-club-card {
   position: sticky;
   top: 88px;
