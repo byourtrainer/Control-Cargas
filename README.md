@@ -1338,6 +1338,17 @@ lista de jugadores esperando. No une los dos sistemas (el Calendario
 sigue sin afectar a los cálculos de carga, como ya sabes) — es solo un
 atajo de navegación para no tener que buscar la misma fecha dos veces.
 
+## Desplegable de Resumen recortado a 5 variables
+
+El desplegable del gráfico principal (y el informe de 5 gráficos que se
+exporta a PDF, ya que comparten el mismo listado) se quedan solo con:
+**Carga, ACWR Post, Monotonía, Fatiga (Strain) y Bienestar** (el
+combinado con Percibido/Agudo/Basal). Las 4 variables derivadas que
+habíamos ido añadiendo (Diferencia y Deltas de Bienestar, Diferencia de
+Carga) siguen calculándose por dentro — la alerta "Caída de Bienestar
+hoy" sigue funcionando igual — solo se quitaron del desplegable y del PDF
+para no saturar la vista.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

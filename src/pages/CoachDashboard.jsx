@@ -142,10 +142,6 @@ const variablesGrafico = [
   { valor: 'monotonia', etiqueta: 'Monotonía' },
   { valor: 'fatiga', etiqueta: 'Fatiga (Strain)' },
   { valor: 'bienestar', etiqueta: 'Bienestar' },
-  { valor: 'diferencia_bienestar', etiqueta: 'Bienestar (Diferencia Agudo-Basal)' },
-  { valor: 'delta_bienestar_diario', etiqueta: 'Bienestar (Delta Diario)' },
-  { valor: 'delta_bienestar_semanal', etiqueta: 'Bienestar (Delta Semanal)' },
-  { valor: 'diferencia_carga', etiqueta: 'Carga (Diferencia Agudo-Crónico)' },
 ]
 
 const bandasPorVariable = {
