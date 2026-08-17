@@ -162,7 +162,7 @@ export function clasificarMonotonia(valor) {
 // =========================================================
 // Modelo de Diferencia Agudo−Crónico (Manu Sola Arjona), aplicado a la
 // carga como complemento del ACWR — mismo espíritu que el modelo de
-// readiness, pero con una RESTA en vez de un cociente, más sus dos
+// bienestar, pero con una RESTA en vez de un cociente, más sus dos
 // derivadas (delta diario y delta semanal) para ver la tendencia.
 // =========================================================
 

@@ -1303,6 +1303,32 @@ No permite fechas futuras.
   nueva tarjeta "Tu logo personal" en Equipos, que se construyó en la
   actualización anterior. En cuanto la subas, aparecerá solo.
 
+## Gráfico combinado de Bienestar + nomenclatura unificada + limpieza
+
+- **"Readiness" renombrado a "Bienestar" en toda la app** — variables,
+  alertas, gráfico y Referencias. Como quedó explicado hace unas
+  actualizaciones, "Readiness percibido" y "Bienestar" son literalmente el
+  mismo dato, así que ya no tenía sentido usar dos palabras distintas.
+- **Nuevo gráfico combinado**: al elegir "Bienestar" en el desplegable del
+  Resumen (tanto en el gráfico principal como en el informe de 5→9
+  variables), ahora se ven **3 líneas juntas con leyenda**, igual que
+  plantea el propio Excel de Manu Sola Arjona:
+  - **Percibido** (gris, punteada): el dato de ese día en concreto.
+  - **Agudo** (verde lima, sólida): su media de los últimos 7 días.
+  - **Basal** (ámbar, discontinua): su media de los últimos 90 días — su
+    normalidad de fondo.
+  
+  Con una nota explicando cómo leerlas: cuando el Agudo se aleja
+  claramente por debajo del Basal varios días seguidos, suele merecer la
+  pena prestar atención.
+- **Delta Diario y Delta Semanal de Bienestar**, que ya estaban calculados
+  pero nunca se habían conectado a ninguna pantalla, ahora son dos
+  opciones más del desplegable — con las bandas de color del umbral fijo
+  original (±0.5) en el caso del diario.
+- Limpieza de paso: varios archivos sueltos huérfanos en `src/lib/`
+  (restos de una anomalía de hace tiempo en el repositorio) eliminados —
+  no afectaban al funcionamiento, pero ensuciaban el proyecto.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

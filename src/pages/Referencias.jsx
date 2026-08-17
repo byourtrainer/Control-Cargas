@@ -189,19 +189,21 @@ export default function Referencias() {
       </section>
 
       <section className="referencia-card">
-        <h2>6. Readiness — Diferencia Agudo-Basal (Manu Sola Arjona)</h2>
+        <h2>6. Bienestar — Tendencia Agudo-Basal (Manu Sola Arjona)</h2>
         <p>
           <strong>Definición:</strong> a diferencia del ACWR (un cociente agudo÷crónico), este
-          modelo usa una <strong>resta</strong> entre el Readiness Agudo (media de los últimos 7
-          días) y el Readiness Basal (media de los últimos 90 días) — y añade dos derivadas que
+          modelo usa una <strong>resta</strong> entre el Bienestar Agudo (media de los últimos 7
+          días) y el Bienestar Basal (media de los últimos 90 días) — y añade dos derivadas que
           indican tendencia: el <strong>delta diario</strong> (cuánto cambia esa diferencia de un
           día a otro) y el <strong>delta semanal</strong> (comparando la media de la última
           semana con la de la semana anterior).
         </p>
         <p>
-          En esta app, el "Readiness percibido" es exactamente el mismo Bienestar de la sección
-          anterior — mismo cuestionario, misma escala (1=peor·5=mejor) — no se le pregunta nada
-          nuevo al jugador ni hace falta ninguna conversión entre uno y otro.
+          Todas estas variables parten exactamente del mismo Bienestar de la sección anterior —
+          mismo cuestionario, misma escala (1=peor·5=mejor) — no se le pregunta nada nuevo al
+          jugador. En el gráfico de Resumen, seleccionando "Bienestar" se ven las tres líneas
+          relacionadas juntas (Percibido del día, Agudo y Basal) para poder comparar de un
+          vistazo el dato diario con sus dos tendencias de fondo.
         </p>
         <table className="referencia-tabla">
           <thead>

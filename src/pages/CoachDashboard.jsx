@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
-  ResponsiveContainer, LineChart, Line, ReferenceArea,
+  ResponsiveContainer, LineChart, Line, ReferenceArea, Legend,
   XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts'
 import { supabase } from '../lib/supabaseClient'
 import { calcularMetricas, clasificarRiesgoACWR, clasificarMonotonia, diferenciaCarga } from '../lib/cargaMetrics'
 import { calcularBienestar, clasificarBienestar } from '../lib/bienestar'
-import { readinessPercibido, diferenciaReadiness, deltaReadinessDiario, clasificarDeltaDiario } from '../lib/readiness'
+import { diferenciaBienestar, deltaBienestarDiario, deltaBienestarSemanal, clasificarDeltaDiario, bienestarAgudo, bienestarBasal } from '../lib/bienestarTendencia'
 import './CoachDashboard.css'
 
 const diasAtras = (n) => {
@@ -60,6 +60,33 @@ function construirBuckets(tipoVista, fechaDesde, fechaHasta) {
 }
 
 /** Calcula el valor de la variable seleccionada para un cubo de fechas concreto. */
+/** Para el gráfico combinado de Bienestar: percibido (del propio periodo del bucket),
+ * agudo y basal (calculados a fecha del final del bucket) — media del grupo en los tres casos. */
+function calcularBienestarCombinadoBucket(bucket, jugadoresGrafico, registros) {
+  const inicioISO = bucket.inicio.toISOString().slice(0, 10)
+  const finISO = bucket.fin.toISOString().slice(0, 10)
+
+  const percibidos = []
+  const agudos = []
+  const basales = []
+  jugadoresGrafico.forEach((j) => {
+    const suyos = registros.filter((r) => r.jugador_id === j.id)
+    suyos
+      .filter((r) => r.fecha >= inicioISO && r.fecha <= finISO)
+      .forEach((r) => {
+        const b = calcularBienestar(r)
+        if (b !== null && b !== undefined) percibidos.push(b)
+      })
+    const a = bienestarAgudo(suyos, bucket.fin)
+    const bs = bienestarBasal(suyos, bucket.fin)
+    if (a !== null && a !== undefined) agudos.push(a)
+    if (bs !== null && bs !== undefined) basales.push(bs)
+  })
+
+  const mediaDe = (arr) => (arr.length === 0 ? null : arr.reduce((a, b) => a + b, 0) / arr.length)
+  return { percibido: mediaDe(percibidos), agudo: mediaDe(agudos), basal: mediaDe(basales) }
+}
+
 function calcularValorBucket(bucket, jugadoresGrafico, registros, variableGrafico, metodoACWR) {
   const inicioISO = bucket.inicio.toISOString().slice(0, 10)
   const finISO = bucket.fin.toISOString().slice(0, 10)
@@ -94,8 +121,10 @@ function calcularValorBucket(bucket, jugadoresGrafico, registros, variableGrafic
     if (variableGrafico === 'acwr') return metricas.acwrPost
     if (variableGrafico === 'monotonia') return metricas.monotonia
     if (variableGrafico === 'fatiga') return metricas.fatiga
-    if (variableGrafico === 'diferencia_readiness') return diferenciaReadiness(suyos, bucket.fin)
+    if (variableGrafico === 'diferencia_bienestar') return diferenciaBienestar(suyos, bucket.fin)
     if (variableGrafico === 'diferencia_carga') return diferenciaCarga(suyos, bucket.fin)
+    if (variableGrafico === 'delta_bienestar_diario') return deltaBienestarDiario(suyos, bucket.fin)
+    if (variableGrafico === 'delta_bienestar_semanal') return deltaBienestarSemanal(suyos, bucket.fin)
     return null
   }).filter((v) => v !== null && v !== undefined)
   if (valores.length === 0) return null
@@ -113,7 +142,9 @@ const variablesGrafico = [
   { valor: 'monotonia', etiqueta: 'Monotonía' },
   { valor: 'fatiga', etiqueta: 'Fatiga (Strain)' },
   { valor: 'bienestar', etiqueta: 'Bienestar' },
-  { valor: 'diferencia_readiness', etiqueta: 'Readiness (Diferencia)' },
+  { valor: 'diferencia_bienestar', etiqueta: 'Bienestar (Diferencia Agudo-Basal)' },
+  { valor: 'delta_bienestar_diario', etiqueta: 'Bienestar (Delta Diario)' },
+  { valor: 'delta_bienestar_semanal', etiqueta: 'Bienestar (Delta Semanal)' },
   { valor: 'diferencia_carga', etiqueta: 'Carga (Diferencia Agudo-Crónico)' },
 ]
 
@@ -137,9 +168,14 @@ const bandasPorVariable = {
     { y1: 3, y2: 4, color: 'var(--risk-mid)' },
     { y1: 4, y2: 5, color: 'var(--risk-low)' },
   ],
-  diferencia_readiness: [
+  diferencia_bienestar: [
     { y1: -4, y2: -0.5, color: 'var(--risk-high)' },
     { y1: -0.5, y2: 0.5, color: 'var(--accent)' },
+    { y1: 0.5, y2: 4, color: 'var(--risk-low)' },
+  ],
+  delta_bienestar_diario: [
+    { y1: -4, y2: -0.5, color: 'var(--risk-high)' },
+    { y1: -0.5, y2: 0.5, color: 'var(--text-faint)' },
     { y1: 0.5, y2: 4, color: 'var(--risk-low)' },
   ],
 }
@@ -288,12 +324,23 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
 
   function construirDatosVariable(variable) {
     return buckets.map((b) => {
-      const valor = calcularValorBucket(b, jugadoresGrafico, registros, variable, metodoACWR)
       const fechaISO = b.fin.toISOString().slice(0, 10)
+      const esPartido = tipoVistaGrafico === 'diario' && diasPartido.has(fechaISO)
+      if (variable === 'bienestar') {
+        const { percibido, agudo, basal } = calcularBienestarCombinadoBucket(b, jugadoresGrafico, registros)
+        return {
+          fecha: b.etiqueta,
+          percibido: percibido !== null ? Number(percibido.toFixed(2)) : null,
+          agudo: agudo !== null ? Number(agudo.toFixed(2)) : null,
+          basal: basal !== null ? Number(basal.toFixed(2)) : null,
+          esPartido,
+        }
+      }
+      const valor = calcularValorBucket(b, jugadoresGrafico, registros, variable, metodoACWR)
       return {
         fecha: b.etiqueta,
         valor: valor !== null ? Number(valor.toFixed(2)) : null,
-        esPartido: tipoVistaGrafico === 'diario' && diasPartido.has(fechaISO),
+        esPartido,
       }
     })
   }
@@ -417,7 +464,7 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
     const respuestaAtipica = []
     const huecosDatos = []
     const sesionInusual = []
-    const caidaReadiness = []
+    const caidaBienestar = []
 
     // Sesiones de los últimos 7 días (para saber qué días hubo entreno/partido de verdad)
     const inicioSemana = diasAtras(6)
@@ -457,13 +504,13 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
         sesionInusual.push(`${j.nombre} (${inusual.cargaHoy} vs media ${inusual.media}, ${inusual.alta ? '↑' : '↓'})`)
       }
 
-      const deltaHoy = deltaReadinessDiario(suyos, new Date(hoy + 'T00:00:00'))
+      const deltaHoy = deltaBienestarDiario(suyos, new Date(hoy + 'T00:00:00'))
       if (clasificarDeltaDiario(deltaHoy) === 'alerta') {
-        caidaReadiness.push(`${j.nombre} (${deltaHoy.toFixed(1)})`)
+        caidaBienestar.push(`${j.nombre} (${deltaHoy.toFixed(1)})`)
       }
     })
 
-    return { sinRpeAyer, enRiesgo, conMolestiaHoy, respuestaAtipica, huecosDatos, sesionInusual, caidaReadiness }
+    return { sinRpeAyer, enRiesgo, conMolestiaHoy, respuestaAtipica, huecosDatos, sesionInusual, caidaBienestar }
   }, [jugadoresFiltrados, registros, sesiones, metodoACWR])
 
   // --- Mapa de calor jugador × día ---
@@ -536,7 +583,7 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
     const cabeceras = ['Periodo', ...variablesGrafico.map((v) => v.etiqueta)]
     const columnas = variablesGrafico.map((v) => datosInformeCompleto[v.valor])
     const filas = buckets.map((b, i) => [
-      b.etiqueta, ...columnas.map((col) => col[i].valor ?? ''),
+      b.etiqueta, ...columnas.map((col) => (col[i].valor ?? col[i].agudo ?? '')),
     ])
     const csv = [cabeceras, ...filas]
       .map((fila) => fila.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(','))
@@ -655,14 +702,14 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
               <span className="alerta-lista">{alertasHoy.sesionInusual.join(', ')}</span>
             )}
           </div>
-          <div className={`alerta-bloque ${alertasHoy.caidaReadiness.length ? 'alerta-activa' : ''}`}>
-            <span className="alerta-titulo" title="Caída de -0.5 o más en el delta diario de Readiness (modelo de Manu Sola Arjona: diferencia Agudo-Basal de hoy vs. la de ayer)">
-              Caída de Readiness hoy
+          <div className={`alerta-bloque ${alertasHoy.caidaBienestar.length ? 'alerta-activa' : ''}`}>
+            <span className="alerta-titulo" title="Caída de -0.5 o más en el delta diario de Bienestar (modelo de Manu Sola Arjona: diferencia Agudo-Basal de hoy vs. la de ayer)">
+              Caída de Bienestar hoy
             </span>
-            {alertasHoy.caidaReadiness.length === 0 ? (
+            {alertasHoy.caidaBienestar.length === 0 ? (
               <span className="alerta-ok">✓ Sin caídas notables</span>
             ) : (
-              <span className="alerta-lista">{alertasHoy.caidaReadiness.join(', ')}</span>
+              <span className="alerta-lista">{alertasHoy.caidaBienestar.join(', ')}</span>
             )}
           </div>
         </div>
@@ -757,7 +804,7 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
           <LineChart data={datosGrafico}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
             <XAxis dataKey="fecha" stroke="var(--text-faint)" fontSize={12} />
-            <YAxis stroke="var(--text-faint)" fontSize={12} />
+            <YAxis stroke="var(--text-faint)" fontSize={12} domain={variableGrafico === 'bienestar' ? [1, 5] : undefined} />
             <Tooltip
               contentStyle={{ background: 'var(--bg-elevated)', border: '1px solid var(--line-strong)', borderRadius: 8 }}
               labelStyle={{ color: 'var(--text)' }}
@@ -768,9 +815,29 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
                 strokeOpacity={0} ifOverflow="extendDomain"
               />
             ))}
-            <Line type="monotone" dataKey="valor" stroke="var(--accent)" strokeWidth={2} dot={<PuntoPartido />} connectNulls />
+            {variableGrafico === 'bienestar' ? (
+              <>
+                <Legend
+                  verticalAlign="top" height={28}
+                  formatter={(valor) => ({ percibido: 'Percibido (del día)', agudo: 'Agudo (7 días)', basal: 'Basal (90 días)' }[valor] || valor)}
+                />
+                <Line type="monotone" dataKey="percibido" stroke="var(--text-faint)" strokeWidth={1.5} strokeDasharray="3 3" dot={false} connectNulls />
+                <Line type="monotone" dataKey="agudo" stroke="var(--accent)" strokeWidth={2} dot={<PuntoPartido />} connectNulls />
+                <Line type="monotone" dataKey="basal" stroke="var(--risk-mid)" strokeWidth={2} strokeDasharray="6 3" dot={false} connectNulls />
+              </>
+            ) : (
+              <Line type="monotone" dataKey="valor" stroke="var(--accent)" strokeWidth={2} dot={<PuntoPartido />} connectNulls />
+            )}
           </LineChart>
         </ResponsiveContainer>
+        {variableGrafico === 'bienestar' && (
+          <p className="grafico-nota texto-dim">
+            <strong>Percibido</strong>: su bienestar de ese día en concreto (por eso salta más) ·{' '}
+            <strong>Agudo</strong>: su media de los últimos 7 días (tendencia reciente) ·{' '}
+            <strong>Basal</strong>: su media de los últimos 90 días (su normalidad de fondo). Cuando el Agudo se aleja
+            claramente por debajo del Basal durante varios días seguidos, suele merecer la pena prestar atención.
+          </p>
+        )}
         <p className="grafico-nota texto-dim">
           Del {new Date(fechaDesde + 'T00:00:00').toLocaleDateString('es-ES')} al{' '}
           {new Date(fechaHasta + 'T00:00:00').toLocaleDateString('es-ES')}
@@ -809,12 +876,24 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
                   <LineChart data={datosInformeCompleto[v.valor]} margin={{ top: 5, right: 10, bottom: 0, left: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
                     <XAxis dataKey="fecha" stroke="var(--text-faint)" fontSize={11} />
-                    <YAxis stroke="var(--text-faint)" fontSize={11} width={32} />
+                    <YAxis stroke="var(--text-faint)" fontSize={11} width={32} domain={v.valor === 'bienestar' ? [1, 5] : undefined} />
                     <Tooltip contentStyle={{ background: 'var(--bg-elevated)', border: '1px solid var(--line-strong)', borderRadius: 8, fontSize: 12 }} />
                     {(bandasPorVariable[v.valor] || []).map((b, i) => (
                       <ReferenceArea key={i} y1={b.y1} y2={b.y2} fill={b.color} fillOpacity={0.1} strokeOpacity={0} ifOverflow="extendDomain" />
                     ))}
-                    <Line type="monotone" dataKey="valor" stroke="var(--accent)" strokeWidth={2} dot={false} connectNulls />
+                    {v.valor === 'bienestar' ? (
+                      <>
+                        <Legend
+                          verticalAlign="top" height={18} wrapperStyle={{ fontSize: 10 }}
+                          formatter={(valor) => ({ percibido: 'Percibido', agudo: 'Agudo', basal: 'Basal' }[valor] || valor)}
+                        />
+                        <Line type="monotone" dataKey="percibido" stroke="var(--text-faint)" strokeWidth={1} strokeDasharray="3 3" dot={false} connectNulls />
+                        <Line type="monotone" dataKey="agudo" stroke="var(--accent)" strokeWidth={2} dot={false} connectNulls />
+                        <Line type="monotone" dataKey="basal" stroke="var(--risk-mid)" strokeWidth={1.5} strokeDasharray="6 3" dot={false} connectNulls />
+                      </>
+                    ) : (
+                      <Line type="monotone" dataKey="valor" stroke="var(--accent)" strokeWidth={2} dot={false} connectNulls />
+                    )}
                   </LineChart>
                 </ResponsiveContainer>
               </div>

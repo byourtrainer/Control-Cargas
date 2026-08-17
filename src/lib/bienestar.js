@@ -1,6 +1,6 @@
 // Índice de bienestar: convierte cada escala en un único valor de 1 a 5,
 // donde 1 = peor posible y 5 = mejor posible — misma dirección que el
-// modelo de Readiness de Manu Sola Arjona, para que ambos "hablen el mismo
+// modelo de Bienestar de Manu Sola Arjona, para que ambos "hablen el mismo
 // idioma" en toda la app. Basado en el Índice de Hooper clásico (sueño,
 // fatiga, dolor muscular, estrés), con el ánimo añadido.
 
