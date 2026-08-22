@@ -1416,6 +1416,22 @@ para el jugador, y el mapa de calor del entrenador las cuenta y colorea
 por separado automáticamente, sin necesitar ningún cambio adicional en el
 resto de la app.
 
+## Varias sesiones el mismo día (Pista + Gimnasio) y contenido con modo lectura
+
+- **Un jugador ya puede tener más de una sesión el mismo día**, siempre
+  que sean de tipo distinto — planificas "Pista, 45 min", guardas,
+  cambias el desplegable a "Gimnasio, 30 min" y guardas otra vez: ahora
+  conviven las dos en vez de que la segunda borre la primera. La carga
+  del día **suma automáticamente ambas duraciones** para el cálculo de
+  RPE × duración — no hace falta que sumes tú nada a mano.
+- Al cambiar el desplegable de tipo de sesión, los campos se rellenan
+  solos con los datos YA guardados de ese tipo concreto (o en blanco si
+  todavía no hay ninguna).
+- **Contenido de la sesión**: una vez guardado, se muestra como texto de
+  lectura completo (con saltos de línea conservados), con un botón
+  **"✎ Editar contenido de sesión"** para volver a modificarlo — en vez de
+  tener siempre el cuadro de texto abierto, evitando tocarlo sin querer.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

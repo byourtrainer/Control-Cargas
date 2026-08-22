@@ -13,11 +13,14 @@ function formatearFechaLarga(fechaISO) {
   return d.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 }
 
+// Clave interna para agrupar sesiones por tipo dentro del mapa (el tipo puede venir en blanco)
+const claveTipo = (tipo) => tipo || '__sin_tipo__'
+
 export default function SesionDia({ equipoActivo = 'todos', fechaInicial }) {
   const [fecha, setFecha] = useState(fechaInicial || hoyISO())
   const [modoAsignacion, setModoAsignacion] = useState('grupo') // 'grupo' | 'individual'
   const [jugadores, setJugadores] = useState([])
-  const [sesionesDelDia, setSesionesDelDia] = useState({}) // jugador_id -> fila de sesiones
+  const [sesionesDelDia, setSesionesDelDia] = useState({}) // jugador_id -> { claveTipo: fila }
 
   const [duracionGrupo, setDuracionGrupo] = useState(60)
   const [duracionesIndividuales, setDuracionesIndividuales] = useState({}) // jugador_id -> string
@@ -25,6 +28,7 @@ export default function SesionDia({ equipoActivo = 'todos', fechaInicial }) {
   const [mdx, setMdx] = useState('')
   const [tipoSesion, setTipoSesion] = useState('')
   const [contenido, setContenido] = useState('')
+  const [editandoContenido, setEditandoContenido] = useState(false)
 
   const [guardando, setGuardando] = useState(false)
   const [mensaje, setMensaje] = useState(null)
@@ -32,6 +36,30 @@ export default function SesionDia({ equipoActivo = 'todos', fechaInicial }) {
   const [recargarCalendario, setRecargarCalendario] = useState(0)
 
   useEffect(() => { cargarJugadoresYSesion() }, [fecha, equipoActivo])
+
+  // Cada vez que cambia el tipo de sesión seleccionado (o se recarga el día),
+  // se recalculan los valores de partida a partir de las sesiones YA
+  // guardadas de ese tipo concreto — así, si cambias de "Pista" a
+  // "Gimnasio", ves los datos de esa sesión en vez de los de la otra.
+  useEffect(() => {
+    const clave = claveTipo(tipoSesion)
+    const filas = jugadores.map((j) => sesionesDelDia[j.id]?.[clave]).filter(Boolean)
+    const primera = filas[0]
+
+    setDuracionGrupo(primera ? primera.duracion_min : 60)
+    setMicrociclo(primera?.microciclo || '')
+    setMdx(primera?.mdx || '')
+    setContenido(primera?.contenido || '')
+    setEditandoContenido(false)
+
+    const indivInicial = {}
+    jugadores.forEach((j) => {
+      const fila = sesionesDelDia[j.id]?.[clave]
+      indivInicial[j.id] = fila ? String(fila.duracion_min) : ''
+    })
+    setDuracionesIndividuales(indivInicial)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tipoSesion, sesionesDelDia, jugadores])
 
   async function cargarJugadoresYSesion() {
     setCargandoSesion(true)
@@ -51,20 +79,11 @@ export default function SesionDia({ equipoActivo = 'todos', fechaInicial }) {
       : { data: [] }
 
     const mapa = {}
-    ;(sesionesData || []).forEach((s) => { mapa[s.jugador_id] = s })
+    ;(sesionesData || []).forEach((s) => {
+      if (!mapa[s.jugador_id]) mapa[s.jugador_id] = {}
+      mapa[s.jugador_id][claveTipo(s.tipo_sesion)] = s
+    })
     setSesionesDelDia(mapa)
-
-    const primeraSesion = Object.values(mapa)[0]
-    setDuracionGrupo(primeraSesion ? primeraSesion.duracion_min : 60)
-    setMicrociclo(primeraSesion?.microciclo || '')
-    setMdx(primeraSesion?.mdx || '')
-    setTipoSesion(primeraSesion?.tipo_sesion || '')
-    setContenido(primeraSesion?.contenido || '')
-
-    const indivInicial = {}
-    filtrados.forEach((j) => { indivInicial[j.id] = mapa[j.id] ? String(mapa[j.id].duracion_min) : '' })
-    setDuracionesIndividuales(indivInicial)
-
     setCargandoSesion(false)
   }
 
@@ -83,7 +102,7 @@ export default function SesionDia({ equipoActivo = 'todos', fechaInicial }) {
       microciclo: microciclo || null, mdx: mdx || null,
       tipo_sesion: tipoSesion || null, contenido: contenido || null,
     }))
-    const { error } = await supabase.from('sesiones').upsert(filas, { onConflict: 'fecha,jugador_id' })
+    const { error } = await supabase.from('sesiones').upsert(filas, { onConflict: 'fecha,jugador_id,tipo_sesion' })
 
     if (error) {
       setMensaje({ tipo: 'error', texto: 'No se pudo guardar la sesión.' })
@@ -112,7 +131,7 @@ export default function SesionDia({ equipoActivo = 'todos', fechaInicial }) {
 
     setGuardando(true)
     setMensaje(null)
-    const { error } = await supabase.from('sesiones').upsert(filas, { onConflict: 'fecha,jugador_id' })
+    const { error } = await supabase.from('sesiones').upsert(filas, { onConflict: 'fecha,jugador_id,tipo_sesion' })
 
     if (error) {
       setMensaje({ tipo: 'error', texto: 'No se pudo guardar la sesión.' })
@@ -126,7 +145,8 @@ export default function SesionDia({ equipoActivo = 'todos', fechaInicial }) {
 
   async function eliminarSesionJugador(jugadorId) {
     setGuardando(true)
-    const { error } = await supabase.from('sesiones').delete().eq('fecha', fecha).eq('jugador_id', jugadorId)
+    const { error } = await supabase.from('sesiones').delete()
+      .eq('fecha', fecha).eq('jugador_id', jugadorId).eq('tipo_sesion', tipoSesion || null)
     if (!error) {
       cargarJugadoresYSesion()
       setRecargarCalendario((n) => n + 1)
@@ -135,10 +155,11 @@ export default function SesionDia({ equipoActivo = 'todos', fechaInicial }) {
   }
 
   async function eliminarSesionGrupo() {
-    if (!window.confirm(`¿Eliminar la sesión de este día para los ${jugadores.length} jugadores del grupo activo?`)) return
+    if (!window.confirm(`¿Eliminar la sesión${tipoSesion ? ` de ${tipoSesion}` : ''} de este día para los ${jugadores.length} jugadores del grupo activo?`)) return
     setGuardando(true)
     const ids = jugadores.map((j) => j.id)
-    const { error } = await supabase.from('sesiones').delete().eq('fecha', fecha).in('jugador_id', ids)
+    const { error } = await supabase.from('sesiones').delete()
+      .eq('fecha', fecha).in('jugador_id', ids).eq('tipo_sesion', tipoSesion || null)
     if (!error) {
       setMensaje({ tipo: 'ok', texto: 'Sesión eliminada.' })
       cargarJugadoresYSesion()
@@ -147,7 +168,12 @@ export default function SesionDia({ equipoActivo = 'todos', fechaInicial }) {
     setGuardando(false)
   }
 
-  const jugadoresConSesion = jugadores.filter((j) => sesionesDelDia[j.id]).length
+  const claveActual = claveTipo(tipoSesion)
+  const jugadoresConSesion = jugadores.filter((j) => sesionesDelDia[j.id]?.[claveActual]).length
+  // Para el aviso "ya hay sesiones guardadas hoy" (de cualquier tipo, para que no se olvide de las otras)
+  const tiposGuardadosHoy = [...new Set(
+    jugadores.flatMap((j) => Object.values(sesionesDelDia[j.id] || {}).map((s) => s.tipo_sesion || 'Sin tipo'))
+  )]
 
   return (
     <div className="sesion-layout">
@@ -164,9 +190,11 @@ export default function SesionDia({ equipoActivo = 'todos', fechaInicial }) {
         <h2 className="capitalizada">{formatearFechaLarga(fecha)}</h2>
         <p className="sesion-sub">
           {jugadoresConSesion > 0
-            ? `${jugadoresConSesion} de ${jugadores.length} jugador(es) del grupo activo ya tienen sesión guardada este día.`
-            : `Ningún jugador del grupo activo tiene sesión guardada este día todavía.`}
-          {tipoSesion && <span className="tipo-sesion-badge"> · {tipoSesion}</span>}
+            ? `${jugadoresConSesion} de ${jugadores.length} jugador(es) ya tienen sesión${tipoSesion ? ` de ${tipoSesion}` : ''} guardada este día.`
+            : `Ningún jugador del grupo activo tiene sesión${tipoSesion ? ` de ${tipoSesion}` : ''} guardada este día todavía.`}
+          {tiposGuardadosHoy.length > 0 && (
+            <span className="tipo-sesion-badge"> · Ya guardado hoy: {tiposGuardadosHoy.join(', ')}</span>
+          )}
         </p>
 
         <div className="informe-modo">
@@ -188,20 +216,22 @@ export default function SesionDia({ equipoActivo = 'todos', fechaInicial }) {
           <p className="mono texto-dim">Cargando…</p>
         ) : jugadores.length === 0 ? (
           <p className="texto-dim">No hay jugadores en el grupo activo.</p>
-        ) : modoAsignacion === 'grupo' ? (
-          <form onSubmit={guardarGrupo}>
-            <label className="campo-sesion">
-              <span>Duración (minutos) — se aplica a los {jugadores.length} jugadores del grupo activo</span>
-              <input
-                type="number" min="0" max="300" value={duracionGrupo}
-                onChange={(e) => setDuracionGrupo(Number(e.target.value))}
-                required
-              />
-            </label>
+        ) : (
+          <form onSubmit={modoAsignacion === 'grupo' ? guardarGrupo : guardarIndividual}>
+            {modoAsignacion === 'grupo' && (
+              <label className="campo-sesion">
+                <span>Duración (minutos) — se aplica a los {jugadores.length} jugadores del grupo activo</span>
+                <input
+                  type="number" min="0" max="300" value={duracionGrupo}
+                  onChange={(e) => setDuracionGrupo(Number(e.target.value))}
+                  required
+                />
+              </label>
+            )}
 
             <div className="fila-doble">
               <label className="campo-sesion">
-                <span>Microciclo (opcional)</span>
+                <span>Microciclo (opcional{modoAsignacion === 'individual' ? ', se aplica a quien rellenes' : ''})</span>
                 <input
                   type="text" value={microciclo} onChange={(e) => setMicrociclo(e.target.value)}
                   placeholder="Ej. Largo 7, Corto 2"
@@ -219,7 +249,7 @@ export default function SesionDia({ equipoActivo = 'todos', fechaInicial }) {
             </div>
 
             <label className="campo-sesion">
-              <span>Lugar / tipo de trabajo</span>
+              <span>Lugar / tipo de trabajo — puedes guardar una sesión distinta por cada tipo el mismo día</span>
               <select value={tipoSesion} onChange={(e) => setTipoSesion(e.target.value)}>
                 <option value="">Sin especificar</option>
                 {opcionesTipoSesion.map((op) => (
@@ -228,95 +258,59 @@ export default function SesionDia({ equipoActivo = 'todos', fechaInicial }) {
               </select>
             </label>
 
-            <label className="campo-sesion">
+            <div className="campo-sesion">
               <span>Contenido de la sesión (solo lo ves tú)</span>
-              <textarea
-                value={contenido} onChange={(e) => setContenido(e.target.value)}
-                rows={4} placeholder="Ej. Series de velocidad 6x30m, fuerza tren inferior, técnica de carrera…"
-              />
-            </label>
+              {contenido && !editandoContenido ? (
+                <div className="contenido-sesion-lectura">
+                  <p>{contenido}</p>
+                  <button type="button" className="equipo-cambiar-link" onClick={() => setEditandoContenido(true)}>
+                    ✎ Editar contenido de sesión
+                  </button>
+                </div>
+              ) : (
+                <textarea
+                  value={contenido} onChange={(e) => setContenido(e.target.value)}
+                  rows={4} placeholder="Ej. Series de velocidad 6x30m, fuerza tren inferior, técnica de carrera…"
+                />
+              )}
+            </div>
+
+            {modoAsignacion === 'individual' && (
+              <div className="duraciones-individuales">
+                {jugadores.map((j) => (
+                  <div className="duracion-individual-fila" key={j.id}>
+                    <span className="duracion-individual-nombre">{j.nombre}</span>
+                    <input
+                      type="number" min="0" max="300" placeholder="—"
+                      value={duracionesIndividuales[j.id] ?? ''}
+                      onChange={(e) => setDuracionesIndividuales({ ...duracionesIndividuales, [j.id]: e.target.value })}
+                    />
+                    <span className="duracion-individual-min">min</span>
+                    {sesionesDelDia[j.id]?.[claveActual] && (
+                      <button
+                        type="button" className="btn-eliminar-fila" title="Eliminar sesión de este jugador"
+                        onClick={() => eliminarSesionJugador(j.id)} disabled={guardando}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
 
             {mensaje && (
               <div className={mensaje.tipo === 'ok' ? 'aviso-ok' : 'aviso-error'}>{mensaje.texto}</div>
             )}
 
             <button type="submit" className="btn-principal" disabled={guardando}>
-              {guardando ? 'Guardando…' : 'Guardar para todo el grupo'}
+              {guardando ? 'Guardando…' : modoAsignacion === 'grupo' ? 'Guardar para todo el grupo' : 'Guardar duraciones individuales'}
             </button>
-            {jugadoresConSesion > 0 && (
+            {modoAsignacion === 'grupo' && jugadoresConSesion > 0 && (
               <button type="button" className="btn-eliminar-sesion" onClick={eliminarSesionGrupo} disabled={guardando}>
-                Eliminar sesión del grupo
+                Eliminar sesión{tipoSesion ? ` de ${tipoSesion}` : ''} del grupo
               </button>
             )}
-          </form>
-        ) : (
-          <form onSubmit={guardarIndividual}>
-            <div className="fila-doble">
-              <label className="campo-sesion">
-                <span>Microciclo (opcional, se aplica a quien rellenes)</span>
-                <input
-                  type="text" value={microciclo} onChange={(e) => setMicrociclo(e.target.value)}
-                  placeholder="Ej. Largo 7, Corto 2"
-                />
-              </label>
-              <label className="campo-sesion">
-                <span>Tipo de sesión (MDx)</span>
-                <select value={mdx} onChange={(e) => setMdx(e.target.value)}>
-                  <option value="">Sin especificar</option>
-                  {opcionesMDx.map((op) => (
-                    <option key={op} value={op}>{op}</option>
-                  ))}
-                </select>
-              </label>
-            </div>
-
-            <label className="campo-sesion">
-              <span>Lugar / tipo de trabajo</span>
-              <select value={tipoSesion} onChange={(e) => setTipoSesion(e.target.value)}>
-                <option value="">Sin especificar</option>
-                {opcionesTipoSesion.map((op) => (
-                  <option key={op} value={op}>{op}</option>
-                ))}
-              </select>
-            </label>
-
-            <label className="campo-sesion">
-              <span>Contenido de la sesión (solo lo ves tú)</span>
-              <textarea
-                value={contenido} onChange={(e) => setContenido(e.target.value)}
-                rows={4} placeholder="Ej. Series de velocidad 6x30m, fuerza tren inferior, técnica de carrera…"
-              />
-            </label>
-
-            <div className="duraciones-individuales">
-              {jugadores.map((j) => (
-                <div className="duracion-individual-fila" key={j.id}>
-                  <span className="duracion-individual-nombre">{j.nombre}</span>
-                  <input
-                    type="number" min="0" max="300" placeholder="—"
-                    value={duracionesIndividuales[j.id] ?? ''}
-                    onChange={(e) => setDuracionesIndividuales({ ...duracionesIndividuales, [j.id]: e.target.value })}
-                  />
-                  <span className="duracion-individual-min">min</span>
-                  {sesionesDelDia[j.id] && (
-                    <button
-                      type="button" className="btn-eliminar-fila" title="Eliminar sesión de este jugador"
-                      onClick={() => eliminarSesionJugador(j.id)} disabled={guardando}
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {mensaje && (
-              <div className={mensaje.tipo === 'ok' ? 'aviso-ok' : 'aviso-error'}>{mensaje.texto}</div>
-            )}
-
-            <button type="submit" className="btn-principal" disabled={guardando}>
-              {guardando ? 'Guardando…' : 'Guardar duraciones individuales'}
-            </button>
           </form>
         )}
       </section>
