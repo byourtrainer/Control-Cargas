@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { hoyISOLocal } from '../lib/fechas'
 import './PizarraTactica.css'
 
 const ANCHO = 800
@@ -734,7 +735,7 @@ export default function PizarraTactica() {
       URL.revokeObjectURL(url)
       canvas.toBlob((blob) => {
         const enlace = document.createElement('a')
-        enlace.download = `pizarra-tactica-${new Date().toISOString().slice(0, 10)}.png`
+        enlace.download = `pizarra-tactica-${hoyISOLocal()}.png`
         enlace.href = URL.createObjectURL(blob)
         enlace.click()
       })

@@ -7,8 +7,8 @@
 // mismo Bienestar que ya calculamos a partir del cuestionario diario.
 
 import { calcularBienestar } from './bienestar'
+import { fechaISOLocal as fechaISO } from './fechas'
 
-const fechaISO = (date) => date.toISOString().slice(0, 10)
 const media = (arr) => (arr.length === 0 ? null : arr.reduce((a, b) => a + b, 0) / arr.length)
 
 /**

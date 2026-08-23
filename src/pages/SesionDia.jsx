@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabaseClient'
 import CalendarioEntrenador from './CalendarioEntrenador'
 import './SesionDia.css'
 
-const hoyISO = () => new Date().toISOString().slice(0, 10)
+import { hoyISOLocal as hoyISO } from '../lib/fechas'
 
 const opcionesMDx = ['MD', 'MD+1', 'MD+2', 'MD+/-3', 'MD-2', 'MD-1']
 const opcionesTipoSesion = ['Pista', 'Gimnasio', 'Recuperación']

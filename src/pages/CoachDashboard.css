@@ -240,6 +240,86 @@
 
 .alertas-card h3 { font-size: 14px; color: var(--text-dim); font-weight: 500; margin-bottom: 14px; }
 
+.bienestar-hoy-card {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 20px 24px;
+  margin-bottom: 16px;
+}
+
+.bienestar-hoy-card h3 { font-size: 14px; color: var(--text-dim); font-weight: 500; margin-bottom: 2px; }
+
+.bienestar-hoy-sub {
+  font-size: 12px;
+  margin-bottom: 16px;
+}
+
+.bienestar-hoy-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 10px;
+}
+
+.bienestar-hoy-tarjeta {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 16px 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line-strong);
+  background: var(--bg-elevated);
+  text-align: center;
+}
+
+.bienestar-hoy-punto {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  margin-bottom: 4px;
+}
+
+.bienestar-hoy-optimo { border-color: var(--risk-low); background: color-mix(in srgb, var(--risk-low) 10%, var(--bg-elevated)); }
+.bienestar-hoy-optimo .bienestar-hoy-punto { background: var(--risk-low); }
+.bienestar-hoy-optimo .bienestar-hoy-etiqueta { color: var(--risk-low); }
+
+.bienestar-hoy-bueno { border-color: var(--risk-mid); background: color-mix(in srgb, var(--risk-mid) 10%, var(--bg-elevated)); }
+.bienestar-hoy-bueno .bienestar-hoy-punto { background: var(--risk-mid); }
+.bienestar-hoy-bueno .bienestar-hoy-etiqueta { color: var(--risk-mid); }
+
+.bienestar-hoy-malo { border-color: var(--risk-high); background: color-mix(in srgb, var(--risk-high) 10%, var(--bg-elevated)); }
+.bienestar-hoy-malo .bienestar-hoy-punto { background: var(--risk-high); }
+.bienestar-hoy-malo .bienestar-hoy-etiqueta { color: var(--risk-high); }
+
+.bienestar-hoy-sin_datos { opacity: 0.55; }
+.bienestar-hoy-sin_datos .bienestar-hoy-punto { background: var(--line-strong); }
+
+.bienestar-hoy-nombre {
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.bienestar-hoy-etiqueta {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.bienestar-hoy-numero {
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.bienestar-hoy-molestia {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 13px;
+}
+
 .alertas-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));

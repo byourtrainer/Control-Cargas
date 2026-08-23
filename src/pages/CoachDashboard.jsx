@@ -4,6 +4,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts'
 import { supabase } from '../lib/supabaseClient'
+import { fechaISOLocal } from '../lib/fechas'
 import { calcularMetricas, clasificarRiesgoACWR, clasificarMonotonia, diferenciaCarga } from '../lib/cargaMetrics'
 import { calcularBienestar, clasificarBienestar } from '../lib/bienestar'
 import { diferenciaBienestar, deltaBienestarDiario, deltaBienestarSemanal, clasificarDeltaDiario, bienestarAgudo, bienestarBasal } from '../lib/bienestarTendencia'
@@ -12,7 +13,7 @@ import './CoachDashboard.css'
 const diasAtras = (n) => {
   const d = new Date()
   d.setDate(d.getDate() - n)
-  return d.toISOString().slice(0, 10)
+  return fechaISOLocal(d)
 }
 
 const tiposVistaGrafico = [
@@ -32,7 +33,7 @@ function construirBuckets(tipoVista, fechaDesde, fechaHasta) {
   if (tipoVista === 'diario') {
     const cursor = new Date(inicio)
     while (cursor <= fin) {
-      buckets.push({ inicio: new Date(cursor), fin: new Date(cursor), etiqueta: cursor.toISOString().slice(5, 10) })
+      buckets.push({ inicio: new Date(cursor), fin: new Date(cursor), etiqueta: fechaISOLocal(cursor).slice(5, 10) })
       cursor.setDate(cursor.getDate() + 1)
     }
   } else if (tipoVista === 'semanal') {
@@ -40,7 +41,7 @@ function construirBuckets(tipoVista, fechaDesde, fechaHasta) {
     while (cursor <= fin) {
       const finBucket = new Date(cursor); finBucket.setDate(finBucket.getDate() + 6)
       const finReal = finBucket > fin ? new Date(fin) : finBucket
-      buckets.push({ inicio: new Date(cursor), fin: finReal, etiqueta: cursor.toISOString().slice(5, 10) })
+      buckets.push({ inicio: new Date(cursor), fin: finReal, etiqueta: fechaISOLocal(cursor).slice(5, 10) })
       cursor.setDate(cursor.getDate() + 7)
     }
   } else {
@@ -63,8 +64,8 @@ function construirBuckets(tipoVista, fechaDesde, fechaHasta) {
 /** Para el gráfico combinado de Bienestar: percibido (del propio periodo del bucket),
  * agudo y basal (calculados a fecha del final del bucket) — media del grupo en los tres casos. */
 function calcularBienestarCombinadoBucket(bucket, jugadoresGrafico, registros) {
-  const inicioISO = bucket.inicio.toISOString().slice(0, 10)
-  const finISO = bucket.fin.toISOString().slice(0, 10)
+  const inicioISO = fechaISOLocal(bucket.inicio)
+  const finISO = fechaISOLocal(bucket.fin)
 
   const percibidos = []
   const agudos = []
@@ -88,8 +89,8 @@ function calcularBienestarCombinadoBucket(bucket, jugadoresGrafico, registros) {
 }
 
 function calcularValorBucket(bucket, jugadoresGrafico, registros, variableGrafico, metodoACWR) {
-  const inicioISO = bucket.inicio.toISOString().slice(0, 10)
-  const finISO = bucket.fin.toISOString().slice(0, 10)
+  const inicioISO = fechaISOLocal(bucket.inicio)
+  const finISO = fechaISOLocal(bucket.fin)
 
   if (variableGrafico === 'carga') {
     let suma = 0
@@ -240,7 +241,7 @@ function detectarSesionInusual(suyos, hoyISO) {
 
   const inicioVentana = new Date(hoyISO + 'T00:00:00')
   inicioVentana.setDate(inicioVentana.getDate() - 21) // últimas 3 semanas
-  const inicioVentanaISO = inicioVentana.toISOString().slice(0, 10)
+  const inicioVentanaISO = fechaISOLocal(inicioVentana)
 
   const recientes = suyos
     .filter((r) => r.fecha < hoyISO && r.fecha >= inicioVentanaISO && r.carga && r.carga > 0)
@@ -320,7 +321,7 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
 
   function construirDatosVariable(variable) {
     return buckets.map((b) => {
-      const fechaISO = b.fin.toISOString().slice(0, 10)
+      const fechaISO = fechaISOLocal(b.fin)
       const esPartido = tipoVistaGrafico === 'diario' && diasPartido.has(fechaISO)
       if (variable === 'bienestar') {
         const { percibido, agudo, basal } = calcularBienestarCombinadoBucket(b, jugadoresGrafico, registros)
@@ -358,9 +359,9 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
 
   const resumenTarjetas = useMemo(() => {
     if (buckets.length === 0) return null
-    const periodoInicio = buckets[0].inicio.toISOString().slice(0, 10)
+    const periodoInicio = fechaISOLocal(buckets[0].inicio)
     const periodoFinDate = buckets[buckets.length - 1].fin
-    const periodoFin = periodoFinDate.toISOString().slice(0, 10)
+    const periodoFin = fechaISOLocal(periodoFinDate)
 
     if (jugadorActivo !== 'equipo') {
       const jugador = jugadoresGrafico[0]
@@ -450,6 +451,25 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
     }
   }, [jugadorActivo, jugadoresGrafico, registros, metodoACWR, buckets])
 
+  // --- Bienestar de hoy: vistazo rápido antes de empezar la sesión, independiente del rango elegido ---
+  const bienestarHoy = useMemo(() => {
+    const hoy = diasAtras(0)
+    const orden = { malo: 0, bueno: 1, optimo: 2, sin_datos: 3 }
+    return jugadoresFiltrados
+      .map((j) => {
+        const registroHoy = registros.find((r) => r.jugador_id === j.id && r.fecha === hoy)
+        const valor = registroHoy ? calcularBienestar(registroHoy) : null
+        return {
+          id: j.id,
+          nombre: j.nombre,
+          valor,
+          nivel: clasificarBienestar(valor),
+          molestia: !!registroHoy?.tiene_molestia,
+        }
+      })
+      .sort((a, b) => orden[a.nivel] - orden[b.nivel])
+  }, [jugadoresFiltrados, registros])
+
   // --- Alertas de hoy: control diario, independiente del rango/vista elegidos ---
   const alertasHoy = useMemo(() => {
     const hoy = diasAtras(0)
@@ -525,7 +545,7 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
     return jugadoresGrafico.map((j) => {
       const suyos = registros.filter((r) => r.jugador_id === j.id)
       const celdas = diasMapaCalor.map((fecha) => {
-        const fechaISO = fecha.toISOString().slice(0, 10)
+        const fechaISO = fechaISOLocal(fecha)
         if (variableMapaCalor === 'acwr') {
           const metricas = calcularMetricas(suyos, metodoACWR, fecha)
           const nivel = clasificarRiesgoACWR(metricas.acwrPost)
@@ -641,6 +661,26 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
         </p>
       </div>
 
+      <section className="bienestar-hoy-card no-imprimir">
+        <h3>Bienestar de hoy</h3>
+        <p className="texto-dim bienestar-hoy-sub">Antes de empezar la sesión — cómo llega cada jugador hoy.</p>
+        {bienestarHoy.length === 0 ? (
+          <p className="texto-dim">No hay jugadores en el grupo activo.</p>
+        ) : (
+          <div className="bienestar-hoy-grid">
+            {bienestarHoy.map((j) => (
+              <div key={j.id} className={`bienestar-hoy-tarjeta bienestar-hoy-${j.nivel}`}>
+                {j.molestia && <span className="bienestar-hoy-molestia" title="Molestia reportada hoy">⚠</span>}
+                <span className="bienestar-hoy-punto" />
+                <strong className="bienestar-hoy-nombre">{j.nombre}</strong>
+                <span className="bienestar-hoy-etiqueta">{traducirBienestar(j.nivel)}</span>
+                {j.valor !== null && <span className="bienestar-hoy-numero mono">{j.valor.toFixed(1)}</span>}
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
       <section className="alertas-card no-imprimir">
         <h3>Alertas de hoy</h3>
         <div className="alertas-grid">
@@ -736,7 +776,7 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
               <tr>
                 <th className="mapa-calor-th-jugador">Jugador</th>
                 {diasMapaCalor.map((d) => (
-                  <th key={d.toISOString()} className={diasPartido.has(d.toISOString().slice(0, 10)) ? 'mapa-calor-th-partido' : ''}>
+                  <th key={fechaISOLocal(d)} className={diasPartido.has(fechaISOLocal(d)) ? 'mapa-calor-th-partido' : ''}>
                     {d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' })}
                   </th>
                 ))}

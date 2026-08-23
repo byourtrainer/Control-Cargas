@@ -1432,6 +1432,36 @@ resto de la app.
   **"✎ Editar contenido de sesión"** para volver a modificarlo — en vez de
   tener siempre el cuadro de texto abierto, evitando tocarlo sin querer.
 
+## Arreglo de raíz: desfase de fechas en toda la app
+
+Encontrado el motivo real del "23/08 en vez de 22/08" del mapa de calor:
+`toISOString()` convierte la fecha a hora UTC antes de darla — eso
+desplaza el día para cualquier usuario que no esté exactamente en ese
+huso horario (España, por ejemplo, siempre va por delante). Y no era solo
+el mapa de calor: **este mismo patrón aparecía en 15 archivos de toda la
+app** — el "hoy" de Planificación, Calendario, Tests, Lesiones, Ciclo
+menstrual, y las ventanas de 7/28/90 días de ACWR y Bienestar en las
+propias librerías de cálculo.
+
+Se creó una única función compartida (`fechaISOLocal`, en
+`src/lib/fechas.js`) que da la fecha tal y como la ve el usuario en su
+propio reloj, y se sustituyó **cada** uso del patrón problemático por
+esta función, en los 15 archivos afectados — incluidas las dos librerías
+de cálculo (`cargaMetrics.js`, `bienestarTendencia.js`), así que esto
+también corrige de raíz cualquier pequeño desajuste que pudiera haber
+habido en las ventanas de ACWR, Monotonía o Bienestar Agudo/Basal por el
+mismo motivo.
+
+## Bienestar de hoy — vistazo rápido antes de la sesión
+
+Esta parte ya estaba construida (de un paso anterior de este mismo
+bloque que no tenía completamente a la vista) — la revisé a fondo y
+confirmé que está bien hecha: nueva tarjeta arriba del Resumen, con una
+ficha de color por jugador (verde/ámbar/rojo, igual que el resto de la
+app), ordenadas mostrando primero a quien peor está — pensada exactamente
+para el vistazo rápido antes de empezar la sesión que pedías. Con el
+arreglo de fechas de arriba, ahora muestra el día correcto de verdad.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

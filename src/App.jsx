@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from './lib/supabaseClient'
+import { fechaISOLocal } from './lib/fechas'
 import Login from './pages/Login'
 import PlayerForm from './pages/PlayerForm'
 import CoachDashboard from './pages/CoachDashboard'
@@ -32,7 +33,7 @@ const pestanasEntrenador = [
 const diasAtras = (n) => {
   const d = new Date()
   d.setDate(d.getDate() - n)
-  return d.toISOString().slice(0, 10)
+  return fechaISOLocal(d)
 }
 
 export default function App() {

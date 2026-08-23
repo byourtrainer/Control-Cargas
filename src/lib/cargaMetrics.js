@@ -1,7 +1,7 @@
 // Cálculos de carga: Training Load, Carga Aguda/Crónica, ACWR clásico y EWMA
 // (Pre/Post), Monotonía, Fatiga (Strain), y cambios diario/semanal.
 
-const fechaISO = (date) => date.toISOString().slice(0, 10)
+import { fechaISOLocal as fechaISO } from './fechas'
 
 /** Construye una serie diaria continua de los últimos `dias` días (rellena huecos con carga 0). */
 export function construirSerieDiaria(registros, dias, fechaReferencia = new Date()) {

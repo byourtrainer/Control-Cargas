@@ -4,7 +4,7 @@ import { calcularMetricas } from '../lib/cargaMetrics'
 import SelectorCuerpo from './SelectorCuerpo'
 import './Lesiones.css'
 
-const hoyISO = () => new Date().toISOString().slice(0, 10)
+import { hoyISOLocal as hoyISO } from '../lib/fechas'
 
 const tipologias = ['Muscular', 'Osteo-articular', 'Ligamentosa', 'Tendinosa', 'Otro']
 const momentos = ['Entrenamiento', 'Partido']

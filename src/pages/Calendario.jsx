@@ -10,7 +10,7 @@ const MESES = [
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
 ]
 
-const hoyISO = () => new Date().toISOString().slice(0, 10)
+import { fechaISOLocal, hoyISOLocal as hoyISO } from '../lib/fechas'
 
 function colorBienestarDia(registro) {
   if (!registro || registro.sueno === null || registro.sueno === undefined) return null
@@ -37,8 +37,8 @@ export default function Calendario({ jugadorId, onSeleccionarDia }) {
 
   async function cargarMes() {
     setCargando(true)
-    const inicio = new Date(mesVisible.getFullYear(), mesVisible.getMonth(), 1).toISOString().slice(0, 10)
-    const fin = new Date(mesVisible.getFullYear(), mesVisible.getMonth() + 1, 0).toISOString().slice(0, 10)
+    const inicio = fechaISOLocal(new Date(mesVisible.getFullYear(), mesVisible.getMonth(), 1))
+    const fin = fechaISOLocal(new Date(mesVisible.getFullYear(), mesVisible.getMonth() + 1, 0))
     const [{ data: regs }, { data: sess }] = await Promise.all([
       supabase.from('registros_diarios').select('*')
         .eq('jugador_id', jugadorId).gte('fecha', inicio).lte('fecha', fin),

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { hoyISOLocal } from '../lib/fechas'
 import './SesionesPizarra.css'
 
 const itemVacio = {
@@ -80,7 +81,7 @@ export default function SesionesPizarra() {
         const blob = new Blob(trozosRef.current, { type: 'video/webm' })
         const enlace = document.createElement('a')
         enlace.href = URL.createObjectURL(blob)
-        enlace.download = `sesion-${titulo || 'grabacion'}-${new Date().toISOString().slice(0, 10)}.webm`
+        enlace.download = `sesion-${titulo || 'grabacion'}-${hoyISOLocal()}.webm`
         enlace.click()
         streamMic?.getTracks().forEach((t) => t.stop())
         setGrabando(false)

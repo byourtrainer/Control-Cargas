@@ -7,7 +7,7 @@ import PerfilDeportivo from './PerfilDeportivo'
 import CicloMenstrual from './CicloMenstrual'
 import './PlayerForm.css'
 
-const hoyISO = () => new Date().toISOString().slice(0, 10)
+import { hoyISOLocal as hoyISO } from '../lib/fechas'
 
 function calcularEdad(fechaNacimiento) {
   if (!fechaNacimiento) return null

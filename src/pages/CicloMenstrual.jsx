@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabaseClient'
 import { calcularEstadoCiclo, infoFase, avisoEstimacionCiclo } from '../lib/ciclosMenstruales'
 import './CicloMenstrual.css'
 
-const hoyISO = () => new Date().toISOString().slice(0, 10)
+import { hoyISOLocal as hoyISO } from '../lib/fechas'
 
 export default function CicloMenstrual({ jugadorId, editable = true }) {
   const [ciclos, setCiclos] = useState([])

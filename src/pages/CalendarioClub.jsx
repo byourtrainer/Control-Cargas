@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import './CalendarioClub.css'
 
-const hoyISO = () => new Date().toISOString().slice(0, 10)
+import { fechaISOLocal, hoyISOLocal as hoyISO } from '../lib/fechas'
 
 const DIAS_SEMANA = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
 const MESES = [
@@ -90,12 +90,12 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], o
   async function cargarMes() {
     setCargando(true)
     const inicio = new Date(mesVisible.getFullYear(), mesVisible.getMonth(), 1)
-    const fin = new Date(mesVisible.getFullYear(), mesVisible.getMonth() + 1, 0).toISOString().slice(0, 10)
+    const fin = fechaISOLocal(new Date(mesVisible.getFullYear(), mesVisible.getMonth() + 1, 0))
     const inicioConsulta = new Date(inicio); inicioConsulta.setDate(inicioConsulta.getDate() - 45)
     let consulta = supabase
       .from('eventos_calendario')
       .select('*')
-      .gte('fecha', inicioConsulta.toISOString().slice(0, 10))
+      .gte('fecha', fechaISOLocal(inicioConsulta))
       .lte('fecha', fin)
       .order('hora', { ascending: true })
     consulta = modoDestino === 'equipo' ? consulta.eq('equipo_id', equipoActivo) : consulta.eq('jugador_id', jugadorSeleccionado)

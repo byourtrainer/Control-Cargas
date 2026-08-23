@@ -10,7 +10,7 @@ const MESES = [
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
 ]
 
-const hoyISO = () => new Date().toISOString().slice(0, 10)
+import { fechaISOLocal, hoyISOLocal as hoyISO } from '../lib/fechas'
 
 function colorBienestarPromedio(registrosDia) {
   const bienestares = registrosDia
@@ -44,8 +44,8 @@ export default function CalendarioEntrenador({ equipoActivo = 'todos', onSelecci
 
   async function cargarMes() {
     setCargando(true)
-    const inicio = new Date(mesVisible.getFullYear(), mesVisible.getMonth(), 1).toISOString().slice(0, 10)
-    const fin = new Date(mesVisible.getFullYear(), mesVisible.getMonth() + 1, 0).toISOString().slice(0, 10)
+    const inicio = fechaISOLocal(new Date(mesVisible.getFullYear(), mesVisible.getMonth(), 1))
+    const fin = fechaISOLocal(new Date(mesVisible.getFullYear(), mesVisible.getMonth() + 1, 0))
 
     const { data: perfiles } = await supabase
       .from('perfiles').select('id, equipo_id').eq('rol', 'jugador')
