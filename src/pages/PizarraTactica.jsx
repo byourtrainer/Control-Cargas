@@ -316,10 +316,17 @@ export default function PizarraTactica() {
 
   // --- Captura de fotogramas y grabación del movimiento entre ellos ---
   const [fotogramas, setFotogramas] = useState([]) // [{ elementos, lineas }]
+  const [fotogramaActivo, setFotogramaActivo] = useState(null) // índice que se está viendo/corrigiendo, o null
   const [reproduciendoAnimacion, setReproduciendoAnimacion] = useState(false)
-  const [grabandoAnimacion, setGrabandoAnimacion] = useState(false)
+  const [videoGenerado, setVideoGenerado] = useState(null) // { blob, url, extension }
   const [mensajeAnimacion, setMensajeAnimacion] = useState(null)
   const estadoAntesDeAnimarRef = useRef(null)
+  const [mostrarGuardarVideo, setMostrarGuardarVideo] = useState(false)
+  const [nombreVideo, setNombreVideo] = useState('')
+  const [etiquetasVideo, setEtiquetasVideo] = useState([])
+  const [etiquetaVideoInput, setEtiquetaVideoInput] = useState('')
+  const [descripcionVideo, setDescripcionVideo] = useState('')
+  const [guardandoVideo, setGuardandoVideo] = useState(false)
 
   useEffect(() => {
     setEstiloLineaActual((s) => ({ ...s, color: esColorClaro(colorCampo) ? '#0d1210' : '#f5f5f5' }))
@@ -452,6 +459,11 @@ export default function PizarraTactica() {
   async function eliminarEjercicioPizarra(id) {
     if (!window.confirm('¿Eliminar este ejercicio de la biblioteca?')) return
     setBorrandoEjercicioId(id)
+    const ejercicio = ejerciciosGuardados.find((ej) => ej.id === id)
+    if (ejercicio?.tipo_origen === 'video_grabado' && ejercicio.video_url) {
+      const nombreArchivo = ejercicio.video_url.split('/videos-pizarra/')[1]
+      if (nombreArchivo) await supabase.storage.from('videos-pizarra').remove([nombreArchivo])
+    }
     const { error } = await supabase.from('ejercicios_pizarra').delete().eq('id', id)
     if (!error) setEjerciciosGuardados((prev) => prev.filter((ej) => ej.id !== id))
     setBorrandoEjercicioId(null)
@@ -778,20 +790,35 @@ export default function PizarraTactica() {
   }
 
   function capturarFotograma() {
-    setFotogramas((prev) => [...prev, {
-      elementos: JSON.parse(JSON.stringify(elementos)),
-      lineas: JSON.parse(JSON.stringify(lineas)),
-    }])
+    const nuevo = { elementos: JSON.parse(JSON.stringify(elementos)), lineas: JSON.parse(JSON.stringify(lineas)) }
+    if (fotogramaActivo !== null) {
+      // Estábamos viendo/corrigiendo un fotograma ya existente: lo sobrescribe en su sitio
+      setFotogramas((prev) => prev.map((f, i) => (i === fotogramaActivo ? nuevo : f)))
+    } else {
+      setFotogramas((prev) => [...prev, nuevo])
+      setFotogramaActivo(fotogramas.length) // pasa a "viendo" el que se acaba de crear
+    }
     setMensajeAnimacion(null)
+  }
+
+  function irAFotograma(indice) {
+    if (indice < 0 || indice >= fotogramas.length) return
+    setFotogramaActivo(indice)
+    setElementos(JSON.parse(JSON.stringify(fotogramas[indice].elementos)))
+    setLineas(JSON.parse(JSON.stringify(fotogramas[indice].lineas)))
+    setSeleccionId(null)
   }
 
   function eliminarFotograma(indice) {
     setFotogramas((prev) => prev.filter((_, i) => i !== indice))
+    if (fotogramaActivo === indice) setFotogramaActivo(null)
+    else if (fotogramaActivo !== null && indice < fotogramaActivo) setFotogramaActivo((f) => f - 1)
   }
 
   function vaciarFotogramas() {
     if (!window.confirm('¿Borrar todos los fotogramas capturados?')) return
     setFotogramas([])
+    setFotogramaActivo(null)
   }
 
   // Mezcla la posición (y tamaño/rotación) de los elementos que existen en
@@ -812,41 +839,38 @@ export default function PizarraTactica() {
       })
   }
 
-  // Reproduce la animación tramo a tramo (interpolando entre cada par de
-  // fotogramas consecutivos) actualizando el propio estado de la pizarra —
-  // así se reutiliza el mismo dibujo de siempre, sin duplicar nada.
-  function reproducirFotogramas({ duracionTramoMs = 1200, fps = 30 } = {}) {
-    return new Promise((resolve) => {
-      setReproduciendoAnimacion(true)
-      const pasosPorTramo = Math.round(duracionTramoMs / (1000 / fps))
+  function esperarPintado() {
+    return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+  }
 
-      function siguienteTramo(indiceTramo) {
-        if (indiceTramo >= fotogramas.length - 1) {
-          const ultimo = fotogramas[fotogramas.length - 1]
-          setElementos(ultimo.elementos)
-          setLineas(ultimo.lineas)
-          setReproduciendoAnimacion(false)
-          resolve()
-          return
-        }
-        const frameA = fotogramas[indiceTramo]
-        const frameB = fotogramas[indiceTramo + 1]
-        setLineas(frameA.lineas)
-        let paso = 0
-        const intervalo = setInterval(() => {
-          paso++
-          const t = paso / pasosPorTramo
-          if (t >= 1) {
-            setElementos(frameB.elementos)
-            clearInterval(intervalo)
-            siguienteTramo(indiceTramo + 1)
-          } else {
-            setElementos(interpolarElementos(frameA.elementos, frameB.elementos, t))
-          }
-        }, 1000 / fps)
+  function esperar(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms))
+  }
+
+  async function dibujarSvgActualEnCanvas(ctx) {
+    const svg = svgRef.current
+    const serializer = new XMLSerializer()
+    const svgString = serializer.serializeToString(svg)
+    const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' })
+    const url = URL.createObjectURL(svgBlob)
+    await new Promise((resolve, reject) => {
+      const img = new Image()
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0, ANCHO, ALTO)
+        URL.revokeObjectURL(url)
+        resolve()
       }
-      siguienteTramo(0)
+      img.onerror = reject
+      img.src = url
     })
+  }
+
+  function elegirMimeTypeVideo() {
+    if (typeof MediaRecorder === 'undefined') return null
+    if (MediaRecorder.isTypeSupported('video/mp4')) return 'video/mp4'
+    if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) return 'video/webm;codecs=vp9'
+    if (MediaRecorder.isTypeSupported('video/webm')) return 'video/webm'
+    return null
   }
 
   async function generarVideoAnimacion() {
@@ -854,45 +878,128 @@ export default function PizarraTactica() {
       setMensajeAnimacion('Captura al menos 2 fotogramas para poder generar un vídeo del movimiento.')
       return
     }
-    if (!navigator.mediaDevices?.getDisplayMedia) {
-      setMensajeAnimacion('Tu navegador no permite grabar la pantalla.')
+    const mimeType = elegirMimeTypeVideo()
+    if (!mimeType) {
+      setMensajeAnimacion('Tu navegador no permite grabar vídeo.')
       return
     }
     setMensajeAnimacion(null)
-    try {
-      const streamPantalla = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false })
-      const grabador = new MediaRecorder(streamPantalla, { mimeType: 'video/webm' })
-      const trozos = []
-      grabador.ondataavailable = (e) => { if (e.data.size > 0) trozos.push(e.data) }
-      const promesaFinal = new Promise((resolveGrabacion) => {
-        grabador.onstop = () => {
-          const blob = new Blob(trozos, { type: 'video/webm' })
-          const enlace = document.createElement('a')
-          enlace.href = URL.createObjectURL(blob)
-          enlace.download = `pizarra-movimiento-${hoyISOLocal()}.webm`
-          enlace.click()
-          streamPantalla.getTracks().forEach((t) => t.stop())
-          resolveGrabacion()
-        }
-      })
+    setVideoGenerado(null)
 
-      // Guarda el estado actual de la pizarra para restaurarlo cuando termine
-      estadoAntesDeAnimarRef.current = { elementos, lineas }
-      setGrabandoAnimacion(true)
-      grabador.start()
+    const canvasGrabacion = document.createElement('canvas')
+    canvasGrabacion.width = ANCHO
+    canvasGrabacion.height = ALTO
+    const ctx = canvasGrabacion.getContext('2d')
+    const fps = 30
+    const streamCanvas = canvasGrabacion.captureStream(fps)
+    const grabador = new MediaRecorder(streamCanvas, { mimeType })
+    const trozos = []
+    grabador.ondataavailable = (e) => { if (e.data.size > 0) trozos.push(e.data) }
 
-      await reproducirFotogramas()
-      grabador.stop()
-      await promesaFinal
-
-      if (estadoAntesDeAnimarRef.current) {
-        setElementos(estadoAntesDeAnimarRef.current.elementos)
-        setLineas(estadoAntesDeAnimarRef.current.lineas)
+    const promesaFinal = new Promise((resolveGrabacion) => {
+      grabador.onstop = () => {
+        const blob = new Blob(trozos, { type: mimeType })
+        resolveGrabacion(blob)
       }
-    } catch {
-      setMensajeAnimacion('No se pudo grabar (¿cancelaste el permiso de compartir pantalla?).')
+    })
+
+    estadoAntesDeAnimarRef.current = { elementos, lineas }
+    setFotogramaActivo(null)
+    setReproduciendoAnimacion(true)
+    grabador.start()
+
+    const duracionTramoMs = 1200
+    const pasosPorTramo = Math.round(duracionTramoMs / (1000 / fps))
+
+    for (let indiceTramo = 0; indiceTramo < fotogramas.length - 1; indiceTramo++) {
+      const frameA = fotogramas[indiceTramo]
+      const frameB = fotogramas[indiceTramo + 1]
+      setLineas(frameA.lineas)
+      for (let paso = 0; paso <= pasosPorTramo; paso++) {
+        const t = paso / pasosPorTramo
+        setElementos(t >= 1 ? frameB.elementos : interpolarElementos(frameA.elementos, frameB.elementos, t))
+        await esperarPintado()
+        await dibujarSvgActualEnCanvas(ctx)
+        await esperar(1000 / fps)
+      }
     }
-    setGrabandoAnimacion(false)
+
+    grabador.stop()
+    const blobFinal = await promesaFinal
+    setReproduciendoAnimacion(false)
+
+    if (estadoAntesDeAnimarRef.current) {
+      setElementos(estadoAntesDeAnimarRef.current.elementos)
+      setLineas(estadoAntesDeAnimarRef.current.lineas)
+    }
+
+    const extension = mimeType.startsWith('video/mp4') ? 'mp4' : 'webm'
+    setVideoGenerado({ blob: blobFinal, url: URL.createObjectURL(blobFinal), extension })
+  }
+
+  function descargarVideoGenerado() {
+    if (!videoGenerado) return
+    const enlace = document.createElement('a')
+    enlace.href = videoGenerado.url
+    enlace.download = `pizarra-movimiento-${hoyISOLocal()}.${videoGenerado.extension}`
+    enlace.click()
+  }
+
+  function anadirEtiquetaVideo() {
+    const valor = etiquetaVideoInput.trim()
+    if (!valor || etiquetasVideo.includes(valor)) { setEtiquetaVideoInput(''); return }
+    setEtiquetasVideo((prev) => [...prev, valor])
+    setEtiquetaVideoInput('')
+  }
+
+  function quitarEtiquetaVideo(et) {
+    setEtiquetasVideo((prev) => prev.filter((e) => e !== et))
+  }
+
+  async function guardarVideoEnBiblioteca(e) {
+    e.preventDefault()
+    if (!nombreVideo.trim()) {
+      setMensajeAnimacion('Ponle un nombre al ejercicio antes de guardarlo.')
+      return
+    }
+    if (!videoGenerado) return
+
+    setGuardandoVideo(true)
+    setMensajeAnimacion(null)
+
+    const nombreArchivo = `${Date.now()}-${idNuevo()}.${videoGenerado.extension}`
+    const { error: errorSubida } = await supabase.storage
+      .from('videos-pizarra')
+      .upload(nombreArchivo, videoGenerado.blob, { contentType: videoGenerado.blob.type })
+
+    if (errorSubida) {
+      setMensajeAnimacion('No se pudo subir el vídeo. Inténtalo de nuevo.')
+      setGuardandoVideo(false)
+      return
+    }
+
+    const { data: urlPublica } = supabase.storage.from('videos-pizarra').getPublicUrl(nombreArchivo)
+
+    const { error: errorInsercion } = await supabase.from('ejercicios_pizarra').insert({
+      nombre: nombreVideo.trim(),
+      etiquetas: etiquetasVideo.length > 0 ? etiquetasVideo : null,
+      descripcion: descripcionVideo || null,
+      tipo_origen: 'video_grabado',
+      video_url: urlPublica.publicUrl,
+      fondo,
+    })
+
+    if (errorInsercion) {
+      setMensajeAnimacion('El vídeo se subió, pero no se pudo guardar en la biblioteca.')
+    } else {
+      setMensajeAnimacion(null)
+      setMostrarGuardarVideo(false)
+      setNombreVideo('')
+      setEtiquetasVideo([])
+      setDescripcionVideo('')
+      cargarEjerciciosPizarra()
+    }
+    setGuardandoVideo(false)
   }
 
   function pathDeLinea(l) {
@@ -1009,21 +1116,22 @@ export default function PizarraTactica() {
             <h3>🎬 Movimiento de jugadores</h3>
             <p className="texto-dim">
               Coloca a los jugadores, captura un fotograma, muévelos a la siguiente posición, captura
-              otro… con 2 o más fotogramas puedes generar un vídeo donde se les vea desplazarse.
+              otro… con 2 o más fotogramas puedes generar un vídeo donde se les vea desplazarse. Usa
+              las flechas para revisar y corregir un fotograma ya capturado.
             </p>
           </div>
           <div className="pizarra-animacion-botones">
-            <button className="pizarra-boton" onClick={capturarFotograma} disabled={reproduciendoAnimacion || grabandoAnimacion}>
-              📷 Capturar fotograma
+            <button className="pizarra-boton" onClick={capturarFotograma} disabled={reproduciendoAnimacion}>
+              {fotogramaActivo !== null ? `📷 Actualizar fotograma ${fotogramaActivo + 1}` : '📷 Capturar fotograma'}
             </button>
             <button
               className="btn-principal" onClick={generarVideoAnimacion}
-              disabled={fotogramas.length < 2 || reproduciendoAnimacion || grabandoAnimacion}
+              disabled={fotogramas.length < 2 || reproduciendoAnimacion}
             >
-              {grabandoAnimacion ? '⏺ Grabando…' : '▶ Generar vídeo del movimiento'}
+              {reproduciendoAnimacion ? '⏺ Generando…' : '▶ Generar vídeo del movimiento'}
             </button>
             {fotogramas.length > 0 && (
-              <button className="pizarra-boton" onClick={vaciarFotogramas} disabled={reproduciendoAnimacion || grabandoAnimacion}>
+              <button className="pizarra-boton" onClick={vaciarFotogramas} disabled={reproduciendoAnimacion}>
                 Vaciar fotogramas
               </button>
             )}
@@ -1031,17 +1139,88 @@ export default function PizarraTactica() {
         </div>
 
         {fotogramas.length > 0 && (
-          <div className="pizarra-fotogramas-lista">
-            {fotogramas.map((_, i) => (
-              <span key={i} className="pizarra-fotograma-chip">
-                Fotograma {i + 1}
-                <button type="button" onClick={() => eliminarFotograma(i)} disabled={reproduciendoAnimacion || grabandoAnimacion}>✕</button>
-              </span>
-            ))}
+          <div className="pizarra-fotogramas-nav">
+            <button
+              type="button" className="pizarra-boton" disabled={fotogramaActivo === null || fotogramaActivo === 0 || reproduciendoAnimacion}
+              onClick={() => irAFotograma((fotogramaActivo ?? 0) - 1)}
+            >
+              ◀
+            </button>
+            <div className="pizarra-fotogramas-lista">
+              {fotogramas.map((_, i) => (
+                <span key={i} className={`pizarra-fotograma-chip ${fotogramaActivo === i ? 'pizarra-fotograma-chip-activo' : ''}`}>
+                  <button type="button" onClick={() => irAFotograma(i)} disabled={reproduciendoAnimacion}>
+                    Fotograma {i + 1}
+                  </button>
+                  <button type="button" onClick={() => eliminarFotograma(i)} disabled={reproduciendoAnimacion} title="Eliminar este fotograma">✕</button>
+                </span>
+              ))}
+            </div>
+            <button
+              type="button" className="pizarra-boton" disabled={fotogramaActivo === null || fotogramaActivo >= fotogramas.length - 1 || reproduciendoAnimacion}
+              onClick={() => irAFotograma((fotogramaActivo ?? 0) + 1)}
+            >
+              ▶
+            </button>
           </div>
         )}
 
         {mensajeAnimacion && <div className="aviso-error">{mensajeAnimacion}</div>}
+
+        {videoGenerado && (
+          <div className="pizarra-video-generado">
+            <video src={videoGenerado.url} controls loop className="pizarra-video-preview" />
+            <div className="pizarra-video-botones">
+              <button className="pizarra-boton" onClick={descargarVideoGenerado}>⬇ Descargar</button>
+              {!mostrarGuardarVideo && (
+                <button className="pizarra-boton" onClick={() => setMostrarGuardarVideo(true)}>+ Guardar en la biblioteca</button>
+              )}
+              <button className="pizarra-boton" onClick={() => { setVideoGenerado(null); setMostrarGuardarVideo(false) }}>Descartar</button>
+            </div>
+
+            {mostrarGuardarVideo && (
+              <form onSubmit={guardarVideoEnBiblioteca} className="pizarra-video-form">
+                <label className="campo-sesion">
+                  <span>Nombre del ejercicio</span>
+                  <input type="text" value={nombreVideo} onChange={(e) => setNombreVideo(e.target.value)} placeholder="Ej. Desmarque y apoyo 2v1" required />
+                </label>
+                <label className="campo-sesion">
+                  <span>Etiquetas</span>
+                  <div className="pizarra-etiquetas-entrada">
+                    <input
+                      type="text" list="pizarra-etiquetas-disponibles" value={etiquetaVideoInput}
+                      onChange={(e) => setEtiquetaVideoInput(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); anadirEtiquetaVideo() } }}
+                      placeholder="Escribe una etiqueta y pulsa Enter…"
+                    />
+                    <button type="button" className="pizarra-boton" onClick={anadirEtiquetaVideo}>+ Añadir</button>
+                  </div>
+                  {etiquetasDisponibles.filter((et) => !etiquetasVideo.includes(et)).length > 0 && (
+                    <div className="pizarra-etiquetas-sugeridas">
+                      {etiquetasDisponibles.filter((et) => !etiquetasVideo.includes(et)).map((et) => (
+                        <button key={et} type="button" className="pizarra-etiqueta-sugerida" onClick={() => setEtiquetasVideo((prev) => [...prev, et])}>{et}</button>
+                      ))}
+                    </div>
+                  )}
+                  {etiquetasVideo.length > 0 && (
+                    <div className="pizarra-etiquetas-chips">
+                      {etiquetasVideo.map((et) => (
+                        <span key={et} className="pizarra-etiqueta-chip">{et}<button type="button" onClick={() => quitarEtiquetaVideo(et)}>✕</button></span>
+                      ))}
+                    </div>
+                  )}
+                </label>
+                <label className="campo-sesion">
+                  <span>Descripción (opcional)</span>
+                  <textarea value={descripcionVideo} onChange={(e) => setDescripcionVideo(e.target.value)} rows={2} />
+                </label>
+                <button type="submit" className="btn-principal" disabled={guardandoVideo}>
+                  {guardandoVideo ? 'Guardando…' : 'Guardar vídeo en la biblioteca'}
+                </button>
+              </form>
+            )}
+          </div>
+        )}
       </section>
 
       <div className="pizarra-cuerpo">
@@ -1548,6 +1727,8 @@ export default function PizarraTactica() {
                       <span className="pizarra-galeria-play">▶</span>
                     </button>
                   )
+                ) : ej.tipo_origen === 'video_grabado' ? (
+                  <video src={ej.video_url} controls className="pizarra-galeria-video" />
                 ) : (
                   <img src={ej.imagen_base64} alt={ej.nombre} />
                 )}

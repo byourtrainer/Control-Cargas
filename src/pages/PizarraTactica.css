@@ -365,3 +365,65 @@
 }
 
 .pizarra-fotograma-chip button:hover { color: var(--risk-high); }
+
+.pizarra-fotogramas-nav {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.pizarra-fotogramas-nav .pizarra-fotogramas-lista { margin-top: 0; flex: 1; }
+
+.pizarra-fotograma-chip button:first-child {
+  background: none;
+  border: none;
+  color: inherit;
+  border-radius: 0;
+  width: auto;
+  height: auto;
+  font-size: 12px;
+  padding: 0;
+}
+
+.pizarra-fotograma-chip-activo {
+  border-color: var(--accent);
+  background: rgba(200,255,77,0.12);
+  color: var(--accent);
+}
+
+.pizarra-video-generado {
+  margin-top: 16px;
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+}
+
+.pizarra-video-preview {
+  width: 100%;
+  max-width: 480px;
+  border-radius: 10px;
+  display: block;
+  background: #000;
+}
+
+.pizarra-video-botones {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.pizarra-video-form {
+  margin-top: 16px;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pizarra-galeria-video {
+  width: 100%;
+  aspect-ratio: 800/520;
+  object-fit: cover;
+  display: block;
+  background: #000;
+}

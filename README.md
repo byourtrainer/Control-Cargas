@@ -1488,6 +1488,30 @@ construimos para las diapositivas — funciona bien en Chrome/Edge/Safari
 de escritorio, pero no está disponible en navegadores de móvil/tablet (es
 una limitación del propio sistema operativo, no de la app).
 
+## Vídeo del movimiento: sin "compartir pantalla", con previa, MP4, y corrección de fotogramas
+
+- **Ya no pide compartir pantalla**: en vez de grabar toda la pantalla,
+  ahora se graba directamente el propio dibujo de la pizarra en un
+  lienzo interno — sin ningún permiso del navegador de por medio.
+- **Previsualización**: al terminar de generar, aparece un reproductor de
+  vídeo justo en la propia pizarra, con controles, antes de decidir qué
+  hacer con él.
+- **Formato**: se intenta grabar directamente en **MP4** (funciona en
+  Safari, que sí lo soporta de forma nativa); si el navegador no lo
+  permite (Chrome y Firefox, por ahora, solo graban en su formato nativo
+  WEBM), se usa WEBM automáticamente en su lugar — un aviso honesto: no
+  puedo forzar el MP4 en todos los navegadores, es una limitación real de
+  cómo graban vídeo hoy en día.
+- **Guardar en la biblioteca**: nuevo botón que sube el vídeo a un
+  almacenamiento de archivos de verdad (Supabase Storage — un vídeo no
+  cabe razonablemente como texto en la base de datos, a diferencia de las
+  imágenes), con su propio formulario de nombre/etiquetas/descripción.
+  Aparece en la galería de siempre, ya como un reproductor de vídeo
+  normal. Al borrarlo, también se limpia el archivo del almacenamiento.
+- **Flechas ◀ ▶ para revisar y corregir fotogramas**: navega entre los ya
+  capturados, y si ves un error, corrígelo y pulsa "Actualizar fotograma"
+  para sobrescribirlo en su sitio, sin tener que empezar de cero.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.
