@@ -1462,6 +1462,32 @@ app), ordenadas mostrando primero a quien peor está — pensada exactamente
 para el vistazo rápido antes de empezar la sesión que pedías. Con el
 arreglo de fechas de arriba, ahora muestra el día correcto de verdad.
 
+## Pizarra: línea recta, cuadro de texto, y vídeo del movimiento
+
+- **Línea recta**: nueva herramienta "— Línea recta", con los mismos
+  colores/grosor/trazo que la flecha, pero sin punta — para marcar
+  límites o referencias que no representan un desplazamiento.
+- **Cuadro de texto**: botón "+ Texto" para escribir directamente en la
+  pizarra (admite varias líneas), con color y tamaño de letra ajustables
+  desde el panel lateral, igual que el resto de elementos.
+- **Vídeo del movimiento de jugadores** — la pieza grande de esta
+  actualización:
+  - Colocas a los jugadores, pulsas **"📷 Capturar fotograma"**.
+  - Los mueves a la siguiente posición, capturas otro fotograma. Repite
+    tantas veces como necesites.
+  - Pulsas **"▶ Generar vídeo del movimiento"**: la pizarra se anima sola
+    (interpolando el desplazamiento entre cada par de fotogramas
+    consecutivos) mientras se graba la pantalla — al terminar, se
+    descarga automáticamente un vídeo (.webm) mostrando ese movimiento.
+  - Al acabar, la pizarra vuelve tal y como estaba antes de generar el
+    vídeo — los fotogramas capturados se quedan guardados por si quieres
+    volver a generarlo o añadir alguno más.
+
+**Aviso honesto**: esto reutiliza la misma grabación de pantalla que ya
+construimos para las diapositivas — funciona bien en Chrome/Edge/Safari
+de escritorio, pero no está disponible en navegadores de móvil/tablet (es
+una limitación del propio sistema operativo, no de la app).
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

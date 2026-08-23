@@ -153,6 +153,27 @@ function ElementoSVG({ el, seleccionado }) {
   )
   const transformRotacion = rot ? `rotate(${rot} ${el.x} ${el.y})` : undefined
 
+  if (el.tipo === 'texto') {
+    const lineasTexto = (el.contenido || '').split('\n')
+    const tamanoFuente = el.tamanoFuente || 18
+    const anchoAprox = Math.max(1, ...lineasTexto.map((l) => l.length)) * tamanoFuente * 0.55
+    return (
+      <g transform={transformRotacion}>
+        {seleccionado && (
+          <rect
+            x={el.x - 4} y={el.y - tamanoFuente} width={anchoAprox + 8} height={lineasTexto.length * tamanoFuente * 1.2 + 8}
+            fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeDasharray="4 3"
+          />
+        )}
+        <text x={el.x} y={el.y} fontSize={tamanoFuente} fill={el.color} fontWeight="600">
+          {lineasTexto.map((linea, i) => (
+            <tspan key={i} x={el.x} dy={i === 0 ? 0 : tamanoFuente * 1.2}>{linea || ' '}</tspan>
+          ))}
+        </text>
+      </g>
+    )
+  }
+
   if (el.tipo === 'jugador') {
     return (
       <g>
@@ -292,6 +313,13 @@ export default function PizarraTactica() {
   const [figuraNueva, setFiguraNueva] = useState('circulo')
   const [opacidadNuevaForma, setOpacidadNuevaForma] = useState(0.5)
   const [estiloLineaActual, setEstiloLineaActual] = useState({ color: '#f5f5f5', grosor: 3, trazo: 'solida' })
+
+  // --- Captura de fotogramas y grabación del movimiento entre ellos ---
+  const [fotogramas, setFotogramas] = useState([]) // [{ elementos, lineas }]
+  const [reproduciendoAnimacion, setReproduciendoAnimacion] = useState(false)
+  const [grabandoAnimacion, setGrabandoAnimacion] = useState(false)
+  const [mensajeAnimacion, setMensajeAnimacion] = useState(null)
+  const estadoAntesDeAnimarRef = useRef(null)
 
   useEffect(() => {
     setEstiloLineaActual((s) => ({ ...s, color: esColorClaro(colorCampo) ? '#0d1210' : '#f5f5f5' }))
@@ -547,6 +575,10 @@ export default function PizarraTactica() {
       base.color = colorNuevoElemento
       base.tamano = tamanoNuevoElemento
       base.opacidad = opacidadNuevaForma
+    } else if (tipo === 'texto') {
+      base.contenido = 'Texto'
+      base.color = colorNuevoElemento
+      base.tamanoFuente = 18
     }
     setElementos((prev) => [...prev, base])
     setSeleccionId(base.id)
@@ -692,8 +724,10 @@ export default function PizarraTactica() {
       setLineaTemp({ x1: x, y1: y, x2: x, y2: y })
     } else if (herramienta === 'flecha_curva') {
       setLineaTemp({ tipo: 'curva', x1: x, y1: y, x2: x, y2: y, cx: x, cy: y, color: estiloLineaActual.color, grosor: estiloLineaActual.grosor, trazo: estiloLineaActual.trazo })
+    } else if (herramienta === 'linea_recta') {
+      setLineaTemp({ tipo: 'recta', conFlecha: false, x1: x, y1: y, x2: x, y2: y, color: estiloLineaActual.color, grosor: estiloLineaActual.grosor, trazo: estiloLineaActual.trazo })
     } else {
-      setLineaTemp({ tipo: 'recta', x1: x, y1: y, x2: x, y2: y, color: estiloLineaActual.color, grosor: estiloLineaActual.grosor, trazo: estiloLineaActual.trazo })
+      setLineaTemp({ tipo: 'recta', conFlecha: true, x1: x, y1: y, x2: x, y2: y, color: estiloLineaActual.color, grosor: estiloLineaActual.grosor, trazo: estiloLineaActual.trazo })
     }
   }
 
@@ -741,6 +775,124 @@ export default function PizarraTactica() {
       })
     }
     img.src = url
+  }
+
+  function capturarFotograma() {
+    setFotogramas((prev) => [...prev, {
+      elementos: JSON.parse(JSON.stringify(elementos)),
+      lineas: JSON.parse(JSON.stringify(lineas)),
+    }])
+    setMensajeAnimacion(null)
+  }
+
+  function eliminarFotograma(indice) {
+    setFotogramas((prev) => prev.filter((_, i) => i !== indice))
+  }
+
+  function vaciarFotogramas() {
+    if (!window.confirm('¿Borrar todos los fotogramas capturados?')) return
+    setFotogramas([])
+  }
+
+  // Mezcla la posición (y tamaño/rotación) de los elementos que existen en
+  // ambos fotogramas, a mitad de camino según "t" (0 = fotograma A, 1 = fotograma B).
+  function interpolarElementos(elementosA, elementosB, t) {
+    const mapaB = Object.fromEntries(elementosB.map((el) => [el.id, el]))
+    return elementosA
+      .filter((elA) => mapaB[elA.id])
+      .map((elA) => {
+        const elB = mapaB[elA.id]
+        return {
+          ...elA,
+          x: elA.x + (elB.x - elA.x) * t,
+          y: elA.y + (elB.y - elA.y) * t,
+          rotacion: (elA.rotacion || 0) + ((elB.rotacion || 0) - (elA.rotacion || 0)) * t,
+          tamano: (elA.tamano || 1) + ((elB.tamano || 1) - (elA.tamano || 1)) * t,
+        }
+      })
+  }
+
+  // Reproduce la animación tramo a tramo (interpolando entre cada par de
+  // fotogramas consecutivos) actualizando el propio estado de la pizarra —
+  // así se reutiliza el mismo dibujo de siempre, sin duplicar nada.
+  function reproducirFotogramas({ duracionTramoMs = 1200, fps = 30 } = {}) {
+    return new Promise((resolve) => {
+      setReproduciendoAnimacion(true)
+      const pasosPorTramo = Math.round(duracionTramoMs / (1000 / fps))
+
+      function siguienteTramo(indiceTramo) {
+        if (indiceTramo >= fotogramas.length - 1) {
+          const ultimo = fotogramas[fotogramas.length - 1]
+          setElementos(ultimo.elementos)
+          setLineas(ultimo.lineas)
+          setReproduciendoAnimacion(false)
+          resolve()
+          return
+        }
+        const frameA = fotogramas[indiceTramo]
+        const frameB = fotogramas[indiceTramo + 1]
+        setLineas(frameA.lineas)
+        let paso = 0
+        const intervalo = setInterval(() => {
+          paso++
+          const t = paso / pasosPorTramo
+          if (t >= 1) {
+            setElementos(frameB.elementos)
+            clearInterval(intervalo)
+            siguienteTramo(indiceTramo + 1)
+          } else {
+            setElementos(interpolarElementos(frameA.elementos, frameB.elementos, t))
+          }
+        }, 1000 / fps)
+      }
+      siguienteTramo(0)
+    })
+  }
+
+  async function generarVideoAnimacion() {
+    if (fotogramas.length < 2) {
+      setMensajeAnimacion('Captura al menos 2 fotogramas para poder generar un vídeo del movimiento.')
+      return
+    }
+    if (!navigator.mediaDevices?.getDisplayMedia) {
+      setMensajeAnimacion('Tu navegador no permite grabar la pantalla.')
+      return
+    }
+    setMensajeAnimacion(null)
+    try {
+      const streamPantalla = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false })
+      const grabador = new MediaRecorder(streamPantalla, { mimeType: 'video/webm' })
+      const trozos = []
+      grabador.ondataavailable = (e) => { if (e.data.size > 0) trozos.push(e.data) }
+      const promesaFinal = new Promise((resolveGrabacion) => {
+        grabador.onstop = () => {
+          const blob = new Blob(trozos, { type: 'video/webm' })
+          const enlace = document.createElement('a')
+          enlace.href = URL.createObjectURL(blob)
+          enlace.download = `pizarra-movimiento-${hoyISOLocal()}.webm`
+          enlace.click()
+          streamPantalla.getTracks().forEach((t) => t.stop())
+          resolveGrabacion()
+        }
+      })
+
+      // Guarda el estado actual de la pizarra para restaurarlo cuando termine
+      estadoAntesDeAnimarRef.current = { elementos, lineas }
+      setGrabandoAnimacion(true)
+      grabador.start()
+
+      await reproducirFotogramas()
+      grabador.stop()
+      await promesaFinal
+
+      if (estadoAntesDeAnimarRef.current) {
+        setElementos(estadoAntesDeAnimarRef.current.elementos)
+        setLineas(estadoAntesDeAnimarRef.current.lineas)
+      }
+    } catch {
+      setMensajeAnimacion('No se pudo grabar (¿cancelaste el permiso de compartir pantalla?).')
+    }
+    setGrabandoAnimacion(false)
   }
 
   function pathDeLinea(l) {
@@ -802,6 +954,7 @@ export default function PizarraTactica() {
           <input type="range" min="0.1" max="1" step="0.1" value={opacidadNuevaForma} onChange={(e) => setOpacidadNuevaForma(Number(e.target.value))} />
         </label>
         <button className="pizarra-boton" onClick={() => anadirElemento('forma')}>+ Forma</button>
+        <button className="pizarra-boton" onClick={() => anadirElemento('texto')}>+ Texto</button>
         <button
           className={`pizarra-boton ${herramienta === 'rectangulo_libre' ? 'pizarra-boton-activo' : ''}`}
           onClick={() => setHerramienta('rectangulo_libre')}
@@ -813,6 +966,7 @@ export default function PizarraTactica() {
 
         <button className={`pizarra-boton ${herramienta === 'mover' ? 'pizarra-boton-activo' : ''}`} onClick={() => setHerramienta('mover')}>✥ Mover</button>
         <button className={`pizarra-boton ${herramienta === 'flecha_recta' ? 'pizarra-boton-activo' : ''}`} onClick={() => setHerramienta('flecha_recta')}>↗ Flecha recta</button>
+        <button className={`pizarra-boton ${herramienta === 'linea_recta' ? 'pizarra-boton-activo' : ''}`} onClick={() => setHerramienta('linea_recta')}>— Línea recta</button>
         <button className={`pizarra-boton ${herramienta === 'flecha_curva' ? 'pizarra-boton-activo' : ''}`} onClick={() => setHerramienta('flecha_curva')}>⤴ Flecha curva</button>
         <button className={`pizarra-boton ${herramienta === 'lapiz' ? 'pizarra-boton-activo' : ''}`} onClick={() => setHerramienta('lapiz')}>✎ Lápiz libre</button>
 
@@ -849,6 +1003,47 @@ export default function PizarraTactica() {
         </div>
       )}
 
+      <section className="pizarra-animacion-card">
+        <div className="pizarra-animacion-cabecera">
+          <div>
+            <h3>🎬 Movimiento de jugadores</h3>
+            <p className="texto-dim">
+              Coloca a los jugadores, captura un fotograma, muévelos a la siguiente posición, captura
+              otro… con 2 o más fotogramas puedes generar un vídeo donde se les vea desplazarse.
+            </p>
+          </div>
+          <div className="pizarra-animacion-botones">
+            <button className="pizarra-boton" onClick={capturarFotograma} disabled={reproduciendoAnimacion || grabandoAnimacion}>
+              📷 Capturar fotograma
+            </button>
+            <button
+              className="btn-principal" onClick={generarVideoAnimacion}
+              disabled={fotogramas.length < 2 || reproduciendoAnimacion || grabandoAnimacion}
+            >
+              {grabandoAnimacion ? '⏺ Grabando…' : '▶ Generar vídeo del movimiento'}
+            </button>
+            {fotogramas.length > 0 && (
+              <button className="pizarra-boton" onClick={vaciarFotogramas} disabled={reproduciendoAnimacion || grabandoAnimacion}>
+                Vaciar fotogramas
+              </button>
+            )}
+          </div>
+        </div>
+
+        {fotogramas.length > 0 && (
+          <div className="pizarra-fotogramas-lista">
+            {fotogramas.map((_, i) => (
+              <span key={i} className="pizarra-fotograma-chip">
+                Fotograma {i + 1}
+                <button type="button" onClick={() => eliminarFotograma(i)} disabled={reproduciendoAnimacion || grabandoAnimacion}>✕</button>
+              </span>
+            ))}
+          </div>
+        )}
+
+        {mensajeAnimacion && <div className="aviso-error">{mensajeAnimacion}</div>}
+      </section>
+
       <div className="pizarra-cuerpo">
         <svg
           ref={svgRef}
@@ -878,7 +1073,7 @@ export default function PizarraTactica() {
                   <line
                     x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2} stroke={l.color} strokeWidth={l.grosor}
                     strokeDasharray={dasharrayPorTrazo[l.trazo]} strokeLinecap="round"
-                    markerEnd={`url(#flecha-${slugColor(l.color)})`}
+                    markerEnd={l.conFlecha === false ? undefined : `url(#flecha-${slugColor(l.color)})`}
                     style={{ pointerEvents: 'none' }}
                   />
                 </>
@@ -1092,6 +1287,46 @@ export default function PizarraTactica() {
                 <input
                   type="range" min="0.1" max="1" step="0.05" value={seleccionado.opacidad ?? 0.5}
                   onChange={(e) => actualizarSeleccionado({ opacidad: Number(e.target.value) })}
+                />
+              </label>
+              <label className="campo-sesion">
+                <span>Rotación ({seleccionado.rotacion || 0}°)</span>
+                <input
+                  type="range" min="0" max="350" step="10" value={seleccionado.rotacion || 0}
+                  onChange={(e) => actualizarSeleccionado({ rotacion: Number(e.target.value) })}
+                />
+              </label>
+              <button className="btn-eliminar-sesion" onClick={eliminarSeleccionado}>Eliminar</button>
+            </>
+          ) : seleccionado.tipo === 'texto' ? (
+            <>
+              <h4>Texto</h4>
+              <label className="campo-sesion">
+                <span>Contenido</span>
+                <textarea
+                  value={seleccionado.contenido} rows={3}
+                  onChange={(e) => actualizarSeleccionado({ contenido: e.target.value })}
+                  placeholder="Escribe aquí…"
+                />
+              </label>
+              <label className="campo-sesion">
+                <span>Color</span>
+                <div className="pizarra-color-chips">
+                  {paletaElementos.map((c) => (
+                    <button
+                      key={c} type="button"
+                      className={`pizarra-color-chip ${seleccionado.color === c ? 'pizarra-color-chip-activo' : ''}`}
+                      style={{ background: c }}
+                      onClick={() => actualizarSeleccionado({ color: c })}
+                    />
+                  ))}
+                </div>
+              </label>
+              <label className="campo-sesion">
+                <span>Tamaño de letra ({seleccionado.tamanoFuente || 18}px)</span>
+                <input
+                  type="range" min="10" max="48" step="1" value={seleccionado.tamanoFuente || 18}
+                  onChange={(e) => actualizarSeleccionado({ tamanoFuente: Number(e.target.value) })}
                 />
               </label>
               <label className="campo-sesion">
