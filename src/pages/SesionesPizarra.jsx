@@ -36,6 +36,13 @@ export default function SesionesPizarra() {
   const grabadorRef = useRef(null)
   const trozosRef = useRef([])
 
+  // --- Rotulador para dibujar encima de la diapositiva mientras se explica ---
+  const canvasDibujoRef = useRef(null)
+  const [dibujoActivo, setDibujoActivo] = useState(false)
+  const [colorRotulador, setColorRotulador] = useState('#ff3b30')
+  const [grosorRotulador, setGrosorRotulador] = useState(5)
+  const dibujandoRef = useRef(false)
+
   useEffect(() => {
     const alCambiar = () => setEnPantallaCompleta(!!document.fullscreenElement)
     document.addEventListener('fullscreenchange', alCambiar)
@@ -99,6 +106,64 @@ export default function SesionesPizarra() {
   function detenerGrabacion() {
     grabadorRef.current?.stop()
   }
+
+  function coordsCanvasDibujo(e) {
+    const canvas = canvasDibujoRef.current
+    const rect = canvas.getBoundingClientRect()
+    const escalaX = canvas.width / rect.width
+    const escalaY = canvas.height / rect.height
+    return { x: (e.clientX - rect.left) * escalaX, y: (e.clientY - rect.top) * escalaY }
+  }
+
+  function iniciarTrazo(e) {
+    if (!dibujoActivo) return
+    const ctx = canvasDibujoRef.current.getContext('2d')
+    const { x, y } = coordsCanvasDibujo(e)
+    ctx.strokeStyle = colorRotulador
+    ctx.lineWidth = grosorRotulador
+    ctx.lineCap = 'round'
+    ctx.lineJoin = 'round'
+    ctx.beginPath()
+    ctx.moveTo(x, y)
+    dibujandoRef.current = true
+  }
+
+  function continuarTrazo(e) {
+    if (!dibujoActivo || !dibujandoRef.current) return
+    const ctx = canvasDibujoRef.current.getContext('2d')
+    const { x, y } = coordsCanvasDibujo(e)
+    ctx.lineTo(x, y)
+    ctx.stroke()
+  }
+
+  function terminarTrazo() {
+    dibujandoRef.current = false
+  }
+
+  function borrarDibujo() {
+    const canvas = canvasDibujoRef.current
+    if (!canvas) return
+    canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height)
+  }
+
+  // Se borra solo al cambiar de diapositiva — las anotaciones son de ese
+  // ejercicio concreto, no tiene sentido que se arrastren a la siguiente.
+  useEffect(() => { borrarDibujo() }, [diapositivaIdx])
+
+  // El lienzo tiene que tener el mismo tamaño en píxeles que su hueco visible,
+  // o los trazos quedarían desplazados respecto a donde toca el dedo/ratón.
+  useEffect(() => {
+    function ajustarTamanoLienzo() {
+      const canvas = canvasDibujoRef.current
+      const contenedor = canvas?.parentElement
+      if (!canvas || !contenedor) return
+      canvas.width = contenedor.clientWidth
+      canvas.height = contenedor.clientHeight
+    }
+    ajustarTamanoLienzo()
+    window.addEventListener('resize', ajustarTamanoLienzo)
+    return () => window.removeEventListener('resize', ajustarTamanoLienzo)
+  }, [diapositivaIdx, enPantallaCompleta])
 
   useEffect(() => { cargarSesiones(); cargarBiblioteca(); cargarEquipos(); cargarLogoEntrenador() }, [])
 
@@ -290,6 +355,35 @@ export default function SesionesPizarra() {
           </div>
         </div>
         {mensaje && <div className={`no-imprimir ${mensaje.tipo === 'ok' ? 'aviso-ok' : 'aviso-error'}`}>{mensaje.texto}</div>}
+
+        <div className="sesiones-rotulador-barra no-imprimir">
+          <button
+            className={`pizarra-boton ${dibujoActivo ? 'pizarra-boton-activo' : ''}`}
+            onClick={() => setDibujoActivo((a) => !a)}
+          >
+            {dibujoActivo ? '✎ Dibujando' : '✎ Rotulador'}
+          </button>
+          {dibujoActivo && (
+            <>
+              <div className="pizarra-color-chips">
+                {['#ff3b30', '#ffd60a', '#34c759', '#0a84ff', '#ffffff', '#0d1210'].map((c) => (
+                  <button
+                    key={c} type="button"
+                    className={`pizarra-color-chip ${colorRotulador === c ? 'pizarra-color-chip-activo' : ''}`}
+                    style={{ background: c }}
+                    onClick={() => setColorRotulador(c)}
+                  />
+                ))}
+              </div>
+              <label className="pizarra-linea-campo">
+                <span>Grosor</span>
+                <input type="range" min="2" max="16" value={grosorRotulador} onChange={(e) => setGrosorRotulador(Number(e.target.value))} />
+              </label>
+              <button className="pizarra-boton" onClick={borrarDibujo}>🧹 Borrar</button>
+            </>
+          )}
+        </div>
+
         <div className="sesiones-diapo-cuerpo">
           <div className="sesiones-diapo-media">
             {ej.tipo_origen === 'youtube' ? (
@@ -297,6 +391,14 @@ export default function SesionesPizarra() {
             ) : (
               <img src={ej.imagen_base64} alt={ej.nombre} />
             )}
+            <canvas
+              ref={canvasDibujoRef}
+              className={`sesiones-rotulador-lienzo ${dibujoActivo ? 'sesiones-rotulador-lienzo-activo' : ''}`}
+              onPointerDown={iniciarTrazo}
+              onPointerMove={continuarTrazo}
+              onPointerUp={terminarTrazo}
+              onPointerLeave={terminarTrazo}
+            />
           </div>
           <div className="sesiones-diapo-info">
             <h2>{ej.nombre}</h2>

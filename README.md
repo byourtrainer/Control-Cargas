@@ -1512,6 +1512,24 @@ una limitación del propio sistema operativo, no de la app).
   capturados, y si ves un error, corrígelo y pulsa "Actualizar fotograma"
   para sobrescribirlo en su sitio, sin tener que empezar de cero.
 
+## Rotulador para dibujar encima de las diapositivas
+
+Nuevo botón **"✎ Rotulador"** en las diapositivas — al activarlo, aparece
+un lienzo transparente encima de la imagen o vídeo del ejercicio, donde
+puedes dibujar a mano alzada (6 colores + grosor ajustable) para señalar
+movimientos, zonas o indicaciones mientras explicas. Botón "🧹 Borrar"
+para limpiar, y se borra solo al cambiar de diapositiva (las anotaciones
+son de ese ejercicio concreto).
+
+**No hizo falta tocar la grabación de pantalla**: como ya graba
+literalmente lo que se ve en pantalla, tus trazos aparecen solos en el
+vídeo grabado, sin componer nada por separado — se activa el rotulador,
+se graba pantalla, y se dibuja mientras se explica, tal y como pedías.
+
+Cuando el rotulador está activo, el lienzo capta el ratón/dedo por
+encima del vídeo o imagen (para poder dibujar) — desactívalo para volver
+a poder tocar los controles del vídeo con normalidad.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.
