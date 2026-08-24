@@ -11,6 +11,7 @@ const MESES = [
 ]
 
 const tiposEvento = ['Entrenamiento', 'Amistoso', 'Liga', 'Europa', 'Copa del Rey', 'Play-Off']
+const opcionesTipoSesion = ['Pista', 'Gimnasio', 'Recuperación']
 
 const colorPorTipo = {
   'Entrenamiento': '#8a968c',
@@ -36,7 +37,7 @@ function ordenarIntensidad(intensidad) {
   return ordenIntensidad.filter((v) => intensidad.includes(v))
 }
 
-const vacio = { tipo: 'Liga', titulo: '', hora: '', rival: '', lugar: '', notas: '', fechaFin: '', intensidad: [] }
+const vacio = { tipo: 'Liga', titulo: '', hora: '', rival: '', lugar: '', notas: '', fechaFin: '', intensidad: [], duracionMin: '', tipoSesion: '' }
 
 /** Texto que identifica el evento: el título si lo hay, o "vs Rival" si no. */
 function tituloEfectivo(ev) {
@@ -133,6 +134,8 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], o
       notas: ev.notas || '',
       fechaFin: ev.fecha_fin || '',
       intensidad: ev.intensidad || [],
+      duracionMin: ev.duracion_min ?? '',
+      tipoSesion: ev.tipo_sesion || '',
     })
     setEditandoId(ev.id)
     setMensaje(null)
@@ -142,6 +145,30 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], o
     setForm(vacio)
     setEditandoId(null)
     setMensaje(null)
+  }
+
+  async function crearSesionesDesdeEvento(datosEvento) {
+    if (!datosEvento.duracion_min) return { ok: true }
+
+    let idsJugadores = []
+    if (modoDestino === 'equipo') {
+      const { data } = await supabase.from('perfiles').select('id').eq('rol', 'jugador').eq('equipo_id', equipoActivo)
+      idsJugadores = (data || []).map((j) => j.id)
+    } else if (modoDestino === 'jugador') {
+      idsJugadores = [jugadorSeleccionado]
+    }
+    if (idsJugadores.length === 0) return { ok: true }
+
+    const filas = idsJugadores.map((jugador_id) => ({
+      fecha: datosEvento.fecha,
+      jugador_id,
+      duracion_min: datosEvento.duracion_min,
+      tipo_sesion: datosEvento.tipo_sesion,
+      contenido: datosEvento.notas,
+      mdx: datosEvento.tipo !== 'Entrenamiento' ? 'MD' : null,
+    }))
+    const { error } = await supabase.from('sesiones').upsert(filas, { onConflict: 'fecha,jugador_id,tipo_sesion' })
+    return { ok: !error }
   }
 
   async function guardarEvento(e) {
@@ -175,6 +202,8 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], o
       lugar: form.lugar || null,
       notas: form.notas || null,
       intensidad: form.intensidad.length > 0 ? form.intensidad : null,
+      duracion_min: form.duracionMin === '' ? null : Number(form.duracionMin),
+      tipo_sesion: esEntrenamiento ? (form.tipoSesion || null) : null,
     }
     const { error } = editandoId
       ? await supabase.from('eventos_calendario').update(datos).eq('id', editandoId)
@@ -183,9 +212,14 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], o
     if (error) {
       setMensaje({ tipo: 'error', texto: 'No se pudo guardar el evento.' })
     } else {
+      const resultadoSesiones = await crearSesionesDesdeEvento(datos)
       setForm(vacio)
       setEditandoId(null)
-      setMensaje({ tipo: 'ok', texto: editandoId ? 'Evento actualizado.' : 'Evento añadido.' })
+      setMensaje(
+        !resultadoSesiones.ok
+          ? { tipo: 'error', texto: 'El evento se guardó, pero hubo un problema al aplicar la duración a los jugadores.' }
+          : { tipo: 'ok', texto: editandoId ? 'Evento actualizado.' : 'Evento añadido.' }
+      )
       cargarMes()
     }
     setGuardando(false)
@@ -348,7 +382,7 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], o
             type="button" className="pizarra-boton calendario-club-boton-planificar"
             onClick={() => onIrAPlanificar?.(fechaSeleccionada, equipoActivo)}
           >
-            → Planificar la duración de este día
+            → Poner una duración distinta por jugador
           </button>
         )}
 
@@ -367,6 +401,11 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], o
                   {ev.fecha_fin && ev.fecha_fin !== ev.fecha && (
                     <span className="texto-dim calendario-club-rango">
                       Del {new Date(ev.fecha + 'T00:00:00').toLocaleDateString('es-ES')} al {new Date(ev.fecha_fin + 'T00:00:00').toLocaleDateString('es-ES')}
+                    </span>
+                  )}
+                  {ev.duracion_min && (
+                    <span className="texto-dim">
+                      ⏱ {ev.duracion_min} min{ev.tipo_sesion ? ` · ${ev.tipo_sesion}` : ''}
                     </span>
                   )}
                   {ev.intensidad && ev.intensidad.length > 0 && (
@@ -464,6 +503,32 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], o
             <input type="text" value={form.lugar} onChange={(e) => setForm({ ...form, lugar: e.target.value })} placeholder="Casa / Fuera / estadio…" />
           </label>
 
+          <div className="fila-doble">
+            <label className="campo-sesion">
+              <span>Duración (min) — aplica esta sesión al jugador o a todo el grupo activo</span>
+              <input
+                type="number" min="0" max="300" value={form.duracionMin}
+                onChange={(e) => setForm({ ...form, duracionMin: e.target.value })}
+                placeholder="Ej. 60"
+              />
+            </label>
+            {esEntrenamientoForm && (
+              <label className="campo-sesion">
+                <span>Tipo de sesión</span>
+                <select value={form.tipoSesion} onChange={(e) => setForm({ ...form, tipoSesion: e.target.value })}>
+                  <option value="">Sin especificar</option>
+                  {opcionesTipoSesion.map((op) => <option key={op} value={op}>{op}</option>)}
+                </select>
+              </label>
+            )}
+          </div>
+          {form.duracionMin !== '' && (
+            <p className="texto-faint calendario-club-duracion-nota">
+              Al guardar, esta duración se aplicará a {modoDestino === 'equipo' ? 'todos los jugadores del equipo activo' : 'este jugador'}{' '}
+              ese día — si quieres una duración distinta para cada jugador, usa Planificación en su lugar.
+            </p>
+          )}
+
           <label className="campo-sesion">
             <span>Intensidad esperada (opcional, hasta 2 — ej. rojo-amarillo)</span>
             <div className="calendario-club-intensidad-selector">
@@ -492,7 +557,7 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], o
           </label>
 
           <label className="campo-sesion">
-            <span>Notas (opcional) — aquí puedes detallar el contenido de la sesión</span>
+            <span>Contenido de la sesión (opcional, solo lo ves tú)</span>
             <textarea value={form.notas} onChange={(e) => setForm({ ...form, notas: e.target.value })} rows={3} />
           </label>
 

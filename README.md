@@ -1651,6 +1651,30 @@ encaja perfectamente sobre una curva. Es el compromiso razonable de
 adaptarse al individuo en vez de seguir la parábola de grupo al pie de la
 letra.
 
+## Calendario y Planificación unificados en un solo sitio
+
+Ahora, al crear o editar un evento en el **Calendario**, todo se indica
+junto en el mismo formulario: tipo de evento, tipo de sesión
+(Pista/Gimnasio/Recuperación, para entrenamientos), intensidad,
+duración (minutos), y contenido de la sesión (solo lo ves tú) — antes
+había que ir a Planificación aparte para la duración y el contenido.
+
+Al guardar un evento con duración rellenada, se crean o actualizan
+automáticamente las sesiones de **todos los jugadores del equipo activo**
+(o del jugador individual, si estás en modo "Sin asignar") ese día — el
+mismo efecto que antes lograbas yendo a Planificación en modo "Todo el
+grupo".
+
+**Planificación sigue existiendo**, pero ahora solo hace falta para el
+caso concreto de querer poner una **duración distinta a cada jugador** —
+el atajo desde el Calendario se renombró a "→ Poner una duración distinta
+por jugador" para dejar claro cuándo hace falta.
+
+Un aviso honesto sobre el comportamiento: si borras un evento del
+Calendario, **no se borran** las sesiones ya creadas de los jugadores
+(por si alguno ya había registrado su RPE contra esa sesión) — solo se
+borra el evento del calendario en sí.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

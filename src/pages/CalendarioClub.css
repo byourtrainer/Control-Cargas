@@ -110,6 +110,11 @@
   margin: 2px 0 18px;
 }
 
+.calendario-club-duracion-nota {
+  font-size: 11px;
+  margin: -6px 0 12px;
+}
+
 .calendario-club-boton-planificar {
   width: 100%;
   margin-bottom: 16px;
