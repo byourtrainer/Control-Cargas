@@ -1530,6 +1530,39 @@ Cuando el rotulador está activo, el lienzo capta el ratón/dedo por
 encima del vídeo o imagen (para poder dibujar) — desactívalo para volver
 a poder tocar los controles del vídeo con normalidad.
 
+## Biblioteca grande al crear sesiones, filtro de varias etiquetas, y fotogramas arreglados
+
+- **Biblioteca en modal grande**: al crear una sesión, el botón "🔍 Explorar
+  biblioteca y añadir ejercicios" abre una ventana amplia con cuadrícula de
+  tarjetas grandes (imagen o vídeo, nombre, etiquetas) — mucho más cómoda
+  para buscar que la lista estrecha de antes. Esta parte ya estaba
+  programada de un paso anterior, pero le faltaba **todo el estilo visual**
+  (por eso probablemente se veía mal) — completado ahora.
+- **Filtro de varias etiquetas a la vez**: dentro del mismo modal, clica
+  tantas etiquetas como quieras combinar (se muestran solo los ejercicios
+  que tengan TODAS las etiquetas marcadas) — también programado ya, solo
+  le faltaba el estilo.
+- **Vídeos grabados en la biblioteca**: se me había quedado un hueco — las
+  miniaturas y vistas no contemplaban los vídeos de movimiento que
+  guardamos hace poco; ya se ven correctamente tanto en el modal como en
+  la lista de ejercicios de la sesión.
+
+## Fotogramas: arreglado el fallo, y barra de botones fija
+
+Encontrado el motivo exacto de "solo puedo capturar uno": capturar dejaba
+el fotograma recién creado "seleccionado", así que el siguiente clic lo
+sobrescribía en vez de crear uno nuevo. Rediseñado con la barra que
+pediste, siempre visible:
+
+- **📷 Capturar fotograma** — siempre añade uno nuevo, nunca sobrescribe.
+- **◀ / ▶** — navega entre los ya capturados.
+- **💾 Guardar cambios** — aparece solo mientras revisas un fotograma
+  concreto, para corregirlo en su sitio sin crear uno nuevo por error.
+- **▶ Reproducir / ⏸ Pausa** — repasa la secuencia animada en la propia
+  pizarra, sin grabar nada, antes de exportar.
+- **⬇ Exportar secuencia** — genera y descarga/guarda el vídeo, como ya
+  teníamos.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

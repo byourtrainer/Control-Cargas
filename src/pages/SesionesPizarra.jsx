@@ -10,7 +10,12 @@ const itemVacio = {
 
 function miniaturaDe(ej) {
   if (ej.tipo_origen === 'youtube') return `https://img.youtube.com/vi/${ej.youtube_id}/mqdefault.jpg`
+  if (ej.tipo_origen === 'video_grabado') return ej.video_url
   return ej.imagen_base64
+}
+
+function esVideo(ej) {
+  return ej.tipo_origen === 'video_grabado'
 }
 
 export default function SesionesPizarra() {
@@ -27,6 +32,8 @@ export default function SesionesPizarra() {
   const [equipoId, setEquipoId] = useState('')
   const [items, setItems] = useState([])
   const [filtroBiblioteca, setFiltroBiblioteca] = useState('')
+  const [etiquetasFiltroBiblioteca, setEtiquetasFiltroBiblioteca] = useState([])
+  const [modalBibliotecaAbierto, setModalBibliotecaAbierto] = useState(false)
   const [guardando, setGuardando] = useState(false)
   const [mensaje, setMensaje] = useState(null)
   const [diapositivaIdx, setDiapositivaIdx] = useState(null)
@@ -294,11 +301,24 @@ export default function SesionesPizarra() {
     cargarSesiones()
   }
 
+  const todasLasEtiquetasBiblioteca = useMemo(() => {
+    const set = new Set()
+    biblioteca.forEach((ej) => (ej.etiquetas || []).forEach((et) => set.add(et)))
+    return [...set].sort()
+  }, [biblioteca])
+
   const bibliotecaFiltrada = useMemo(() => {
-    if (!filtroBiblioteca.trim()) return biblioteca
-    const q = filtroBiblioteca.toLowerCase()
-    return biblioteca.filter((ej) => ej.nombre.toLowerCase().includes(q) || (ej.etiquetas || []).some((et) => et.toLowerCase().includes(q)))
-  }, [biblioteca, filtroBiblioteca])
+    const q = filtroBiblioteca.trim().toLowerCase()
+    return biblioteca.filter((ej) => {
+      const coincideTexto = !q || ej.nombre.toLowerCase().includes(q) || (ej.etiquetas || []).some((et) => et.toLowerCase().includes(q))
+      const coincideEtiquetas = etiquetasFiltroBiblioteca.every((et) => (ej.etiquetas || []).includes(et))
+      return coincideTexto && coincideEtiquetas
+    })
+  }, [biblioteca, filtroBiblioteca, etiquetasFiltroBiblioteca])
+
+  function alternarEtiquetaFiltro(et) {
+    setEtiquetasFiltroBiblioteca((prev) => (prev.includes(et) ? prev.filter((e) => e !== et) : [...prev, et]))
+  }
 
   if (cargando) return <p className="mono texto-dim">Cargando…</p>
 
@@ -477,34 +497,24 @@ export default function SesionesPizarra() {
         </label>
       </section>
 
-      <div className="sesiones-cuerpo">
-        <section className="sesiones-biblioteca-panel no-imprimir">
-          <h3>Biblioteca</h3>
-          <input
-            type="text" className="pizarra-etiquetas-entrada" value={filtroBiblioteca}
-            onChange={(e) => setFiltroBiblioteca(e.target.value)} placeholder="Buscar por nombre o etiqueta…"
-          />
-          <div className="sesiones-biblioteca-lista">
-            {bibliotecaFiltrada.map((ej) => (
-              <button key={ej.id} className="sesiones-biblioteca-item" onClick={() => anadirEjercicio(ej)}>
-                <img src={miniaturaDe(ej)} alt={ej.nombre} />
-                <span>{ej.nombre}</span>
-                <span className="sesiones-biblioteca-anadir">+</span>
-              </button>
-            ))}
-            {bibliotecaFiltrada.length === 0 && <p className="texto-dim">Sin resultados.</p>}
-          </div>
-        </section>
+      <div className="sesiones-cuerpo-simple">
+        <button type="button" className="btn-principal no-imprimir" onClick={() => setModalBibliotecaAbierto(true)}>
+          🔍 Explorar biblioteca y añadir ejercicios
+        </button>
 
         <section className="sesiones-items-panel">
           <h3 className="no-imprimir">Ejercicios de la sesión ({items.length})</h3>
           {items.length === 0 ? (
-            <p className="texto-dim no-imprimir">Añade ejercicios desde la biblioteca de la izquierda.</p>
+            <p className="texto-dim no-imprimir">Añade ejercicios con el botón de arriba.</p>
           ) : (
             <div className="sesiones-items-lista">
               {items.map((it, i) => (
                 <div className="sesiones-item-card" key={i}>
-                  <img src={miniaturaDe(it.ejercicio)} alt={it.ejercicio.nombre} className="sesiones-item-imagen" />
+                  {esVideo(it.ejercicio) ? (
+                    <video src={it.ejercicio.video_url} controls className="sesiones-item-imagen" />
+                  ) : (
+                    <img src={miniaturaDe(it.ejercicio)} alt={it.ejercicio.nombre} className="sesiones-item-imagen" />
+                  )}
                   <div className="sesiones-item-cuerpo">
                     <div className="sesiones-item-cabecera">
                       <strong>{i + 1}. {it.ejercicio.nombre}</strong>
@@ -550,6 +560,64 @@ export default function SesionesPizarra() {
       <button className="btn-principal no-imprimir" onClick={guardarSesion} disabled={guardando}>
         {guardando ? 'Guardando…' : '+ Guardar sesión'}
       </button>
+
+      {modalBibliotecaAbierto && (
+        <div className="sesiones-modal-fondo no-imprimir" onClick={() => setModalBibliotecaAbierto(false)}>
+          <div className="sesiones-modal-biblioteca" onClick={(e) => e.stopPropagation()}>
+            <div className="sesiones-modal-cabecera">
+              <h3>Biblioteca de ejercicios</h3>
+              <button className="pizarra-boton" onClick={() => setModalBibliotecaAbierto(false)}>✕ Cerrar</button>
+            </div>
+
+            <input
+              type="text" className="sesiones-modal-buscador" value={filtroBiblioteca}
+              onChange={(e) => setFiltroBiblioteca(e.target.value)} placeholder="Buscar por nombre o etiqueta…"
+              autoFocus
+            />
+
+            {todasLasEtiquetasBiblioteca.length > 0 && (
+              <div className="pizarra-etiquetas-sugeridas sesiones-modal-etiquetas">
+                {todasLasEtiquetasBiblioteca.map((et) => (
+                  <button
+                    key={et} type="button"
+                    className={`pizarra-etiqueta-sugerida ${etiquetasFiltroBiblioteca.includes(et) ? 'sesiones-etiqueta-filtro-activa' : ''}`}
+                    onClick={() => alternarEtiquetaFiltro(et)}
+                  >
+                    {et}
+                  </button>
+                ))}
+                {etiquetasFiltroBiblioteca.length > 0 && (
+                  <button type="button" className="equipo-cambiar-link" onClick={() => setEtiquetasFiltroBiblioteca([])}>
+                    Quitar filtro de etiquetas
+                  </button>
+                )}
+              </div>
+            )}
+
+            <p className="texto-dim sesiones-modal-contador">{bibliotecaFiltrada.length} ejercicio(s)</p>
+
+            <div className="sesiones-modal-grid">
+              {bibliotecaFiltrada.map((ej) => (
+                <button key={ej.id} className="sesiones-modal-item" onClick={() => anadirEjercicio(ej)}>
+                  {esVideo(ej) ? (
+                    <video src={ej.video_url} muted />
+                  ) : (
+                    <img src={miniaturaDe(ej)} alt={ej.nombre} />
+                  )}
+                  <div className="sesiones-modal-item-info">
+                    <strong>{ej.nombre}</strong>
+                    {ej.etiquetas && ej.etiquetas.length > 0 && (
+                      <span className="texto-faint">{ej.etiquetas.join(', ')}</span>
+                    )}
+                  </div>
+                  <span className="sesiones-modal-item-anadir">+ Añadir</span>
+                </button>
+              ))}
+              {bibliotecaFiltrada.length === 0 && <p className="texto-dim">Sin resultados.</p>}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

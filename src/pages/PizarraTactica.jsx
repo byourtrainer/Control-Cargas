@@ -317,7 +317,9 @@ export default function PizarraTactica() {
   // --- Captura de fotogramas y grabación del movimiento entre ellos ---
   const [fotogramas, setFotogramas] = useState([]) // [{ elementos, lineas }]
   const [fotogramaActivo, setFotogramaActivo] = useState(null) // índice que se está viendo/corrigiendo, o null
-  const [reproduciendoAnimacion, setReproduciendoAnimacion] = useState(false)
+  const [reproduciendoAnimacion, setReproduciendoAnimacion] = useState(false) // vista previa en curso
+  const [exportandoAnimacion, setExportandoAnimacion] = useState(false) // grabando el vídeo final
+  const detenerReproduccionRef = useRef(false)
   const [videoGenerado, setVideoGenerado] = useState(null) // { blob, url, extension }
   const [mensajeAnimacion, setMensajeAnimacion] = useState(null)
   const estadoAntesDeAnimarRef = useRef(null)
@@ -789,15 +791,11 @@ export default function PizarraTactica() {
     img.src = url
   }
 
+  // "Capturar" SIEMPRE añade un fotograma nuevo al final — nunca sobrescribe.
   function capturarFotograma() {
     const nuevo = { elementos: JSON.parse(JSON.stringify(elementos)), lineas: JSON.parse(JSON.stringify(lineas)) }
-    if (fotogramaActivo !== null) {
-      // Estábamos viendo/corrigiendo un fotograma ya existente: lo sobrescribe en su sitio
-      setFotogramas((prev) => prev.map((f, i) => (i === fotogramaActivo ? nuevo : f)))
-    } else {
-      setFotogramas((prev) => [...prev, nuevo])
-      setFotogramaActivo(fotogramas.length) // pasa a "viendo" el que se acaba de crear
-    }
+    setFotogramas((prev) => [...prev, nuevo])
+    setFotogramaActivo(null)
     setMensajeAnimacion(null)
   }
 
@@ -807,6 +805,15 @@ export default function PizarraTactica() {
     setElementos(JSON.parse(JSON.stringify(fotogramas[indice].elementos)))
     setLineas(JSON.parse(JSON.stringify(fotogramas[indice].lineas)))
     setSeleccionId(null)
+  }
+
+  // Acción aparte y explícita: guarda los cambios hechos SOBRE el fotograma
+  // que se está viendo ahora mismo (para corregir un error de posición).
+  function guardarCambiosFotogramaActivo() {
+    if (fotogramaActivo === null) return
+    const actualizado = { elementos: JSON.parse(JSON.stringify(elementos)), lineas: JSON.parse(JSON.stringify(lineas)) }
+    setFotogramas((prev) => prev.map((f, i) => (i === fotogramaActivo ? actualizado : f)))
+    setMensajeAnimacion(null)
   }
 
   function eliminarFotograma(indice) {
@@ -873,9 +880,58 @@ export default function PizarraTactica() {
     return null
   }
 
+  // Recorre todos los fotogramas interpolando el movimiento entre cada par
+  // consecutivo — actualiza el propio estado de la pizarra en vivo. Si se le
+  // pasa un contexto de lienzo de grabación, también dibuja cada paso ahí
+  // (usado tanto para la vista previa como para exportar, sin duplicar lógica).
+  async function recorrerFotogramas({ ctxGrabacion = null } = {}) {
+    const fps = 30
+    const duracionTramoMs = 1200
+    const pasosPorTramo = Math.round(duracionTramoMs / (1000 / fps))
+
+    for (let indiceTramo = 0; indiceTramo < fotogramas.length - 1; indiceTramo++) {
+      if (detenerReproduccionRef.current) break
+      const frameA = fotogramas[indiceTramo]
+      const frameB = fotogramas[indiceTramo + 1]
+      setLineas(frameA.lineas)
+      for (let paso = 0; paso <= pasosPorTramo; paso++) {
+        if (detenerReproduccionRef.current) break
+        const t = paso / pasosPorTramo
+        setElementos(t >= 1 ? frameB.elementos : interpolarElementos(frameA.elementos, frameB.elementos, t))
+        await esperarPintado()
+        if (ctxGrabacion) await dibujarSvgActualEnCanvas(ctxGrabacion)
+        await esperar(1000 / fps)
+      }
+    }
+    if (!detenerReproduccionRef.current) {
+      const ultimo = fotogramas[fotogramas.length - 1]
+      setElementos(ultimo.elementos)
+      setLineas(ultimo.lineas)
+    }
+  }
+
+  // Vista previa: reproduce la secuencia en la propia pizarra, sin grabar nada.
+  async function alternarReproduccion() {
+    if (reproduciendoAnimacion) {
+      detenerReproduccionRef.current = true
+      return
+    }
+    if (fotogramas.length < 2) {
+      setMensajeAnimacion('Captura al menos 2 fotogramas para poder reproducir la secuencia.')
+      return
+    }
+    setMensajeAnimacion(null)
+    estadoAntesDeAnimarRef.current = { elementos, lineas }
+    setFotogramaActivo(null)
+    detenerReproduccionRef.current = false
+    setReproduciendoAnimacion(true)
+    await recorrerFotogramas()
+    setReproduciendoAnimacion(false)
+  }
+
   async function generarVideoAnimacion() {
     if (fotogramas.length < 2) {
-      setMensajeAnimacion('Captura al menos 2 fotogramas para poder generar un vídeo del movimiento.')
+      setMensajeAnimacion('Captura al menos 2 fotogramas para poder exportar la secuencia.')
       return
     }
     const mimeType = elegirMimeTypeVideo()
@@ -890,8 +946,7 @@ export default function PizarraTactica() {
     canvasGrabacion.width = ANCHO
     canvasGrabacion.height = ALTO
     const ctx = canvasGrabacion.getContext('2d')
-    const fps = 30
-    const streamCanvas = canvasGrabacion.captureStream(fps)
+    const streamCanvas = canvasGrabacion.captureStream(30)
     const grabador = new MediaRecorder(streamCanvas, { mimeType })
     const trozos = []
     grabador.ondataavailable = (e) => { if (e.data.size > 0) trozos.push(e.data) }
@@ -905,28 +960,15 @@ export default function PizarraTactica() {
 
     estadoAntesDeAnimarRef.current = { elementos, lineas }
     setFotogramaActivo(null)
-    setReproduciendoAnimacion(true)
+    detenerReproduccionRef.current = false
+    setExportandoAnimacion(true)
     grabador.start()
 
-    const duracionTramoMs = 1200
-    const pasosPorTramo = Math.round(duracionTramoMs / (1000 / fps))
-
-    for (let indiceTramo = 0; indiceTramo < fotogramas.length - 1; indiceTramo++) {
-      const frameA = fotogramas[indiceTramo]
-      const frameB = fotogramas[indiceTramo + 1]
-      setLineas(frameA.lineas)
-      for (let paso = 0; paso <= pasosPorTramo; paso++) {
-        const t = paso / pasosPorTramo
-        setElementos(t >= 1 ? frameB.elementos : interpolarElementos(frameA.elementos, frameB.elementos, t))
-        await esperarPintado()
-        await dibujarSvgActualEnCanvas(ctx)
-        await esperar(1000 / fps)
-      }
-    }
+    await recorrerFotogramas({ ctxGrabacion: ctx })
 
     grabador.stop()
     const blobFinal = await promesaFinal
-    setReproduciendoAnimacion(false)
+    setExportandoAnimacion(false)
 
     if (estadoAntesDeAnimarRef.current) {
       setElementos(estadoAntesDeAnimarRef.current.elementos)
@@ -1115,53 +1157,75 @@ export default function PizarraTactica() {
           <div>
             <h3>🎬 Movimiento de jugadores</h3>
             <p className="texto-dim">
-              Coloca a los jugadores, captura un fotograma, muévelos a la siguiente posición, captura
-              otro… con 2 o más fotogramas puedes generar un vídeo donde se les vea desplazarse. Usa
-              las flechas para revisar y corregir un fotograma ya capturado.
+              Coloca a los jugadores y captura un fotograma; muévelos y captura otro. Con 2 o más
+              fotogramas puedes reproducir la secuencia o exportarla como vídeo. Usa las flechas para
+              revisar uno ya capturado — si lo corriges, pulsa "Guardar cambios" para que quede así.
             </p>
-          </div>
-          <div className="pizarra-animacion-botones">
-            <button className="pizarra-boton" onClick={capturarFotograma} disabled={reproduciendoAnimacion}>
-              {fotogramaActivo !== null ? `📷 Actualizar fotograma ${fotogramaActivo + 1}` : '📷 Capturar fotograma'}
-            </button>
-            <button
-              className="btn-principal" onClick={generarVideoAnimacion}
-              disabled={fotogramas.length < 2 || reproduciendoAnimacion}
-            >
-              {reproduciendoAnimacion ? '⏺ Generando…' : '▶ Generar vídeo del movimiento'}
-            </button>
-            {fotogramas.length > 0 && (
-              <button className="pizarra-boton" onClick={vaciarFotogramas} disabled={reproduciendoAnimacion}>
-                Vaciar fotogramas
-              </button>
-            )}
           </div>
         </div>
 
+        <div className="pizarra-animacion-toolbar">
+          <button className="pizarra-boton" onClick={capturarFotograma} disabled={reproduciendoAnimacion || exportandoAnimacion}>
+            📷 Capturar fotograma
+          </button>
+
+          <div className="pizarra-separador" />
+
+          <button
+            type="button" className="pizarra-boton"
+            disabled={fotogramas.length === 0 || (fotogramaActivo ?? 0) <= 0 || reproduciendoAnimacion || exportandoAnimacion}
+            onClick={() => irAFotograma((fotogramaActivo ?? 0) - 1)}
+          >
+            ◀
+          </button>
+          <span className="pizarra-fotograma-contador">
+            {fotogramaActivo !== null ? `Fotograma ${fotogramaActivo + 1} / ${fotogramas.length}` : `${fotogramas.length} fotograma(s)`}
+          </span>
+          <button
+            type="button" className="pizarra-boton"
+            disabled={fotogramas.length === 0 || (fotogramaActivo ?? -1) >= fotogramas.length - 1 || reproduciendoAnimacion || exportandoAnimacion}
+            onClick={() => irAFotograma((fotogramaActivo ?? -1) + 1)}
+          >
+            ▶
+          </button>
+          {fotogramaActivo !== null && (
+            <button className="pizarra-boton" onClick={guardarCambiosFotogramaActivo} disabled={reproduciendoAnimacion || exportandoAnimacion}>
+              💾 Guardar cambios
+            </button>
+          )}
+
+          <div className="pizarra-separador" />
+
+          <button
+            className="pizarra-boton" onClick={alternarReproduccion}
+            disabled={fotogramas.length < 2 || exportandoAnimacion}
+          >
+            {reproduciendoAnimacion ? '⏸ Pausa' : '▶ Reproducir'}
+          </button>
+          <button
+            className="btn-principal" onClick={generarVideoAnimacion}
+            disabled={fotogramas.length < 2 || reproduciendoAnimacion || exportandoAnimacion}
+          >
+            {exportandoAnimacion ? '⏺ Exportando…' : '⬇ Exportar secuencia'}
+          </button>
+
+          {fotogramas.length > 0 && (
+            <button className="pizarra-boton" onClick={vaciarFotogramas} disabled={reproduciendoAnimacion || exportandoAnimacion}>
+              Vaciar
+            </button>
+          )}
+        </div>
+
         {fotogramas.length > 0 && (
-          <div className="pizarra-fotogramas-nav">
-            <button
-              type="button" className="pizarra-boton" disabled={fotogramaActivo === null || fotogramaActivo === 0 || reproduciendoAnimacion}
-              onClick={() => irAFotograma((fotogramaActivo ?? 0) - 1)}
-            >
-              ◀
-            </button>
-            <div className="pizarra-fotogramas-lista">
-              {fotogramas.map((_, i) => (
-                <span key={i} className={`pizarra-fotograma-chip ${fotogramaActivo === i ? 'pizarra-fotograma-chip-activo' : ''}`}>
-                  <button type="button" onClick={() => irAFotograma(i)} disabled={reproduciendoAnimacion}>
-                    Fotograma {i + 1}
-                  </button>
-                  <button type="button" onClick={() => eliminarFotograma(i)} disabled={reproduciendoAnimacion} title="Eliminar este fotograma">✕</button>
-                </span>
-              ))}
-            </div>
-            <button
-              type="button" className="pizarra-boton" disabled={fotogramaActivo === null || fotogramaActivo >= fotogramas.length - 1 || reproduciendoAnimacion}
-              onClick={() => irAFotograma((fotogramaActivo ?? 0) + 1)}
-            >
-              ▶
-            </button>
+          <div className="pizarra-fotogramas-lista">
+            {fotogramas.map((_, i) => (
+              <span key={i} className={`pizarra-fotograma-chip ${fotogramaActivo === i ? 'pizarra-fotograma-chip-activo' : ''}`}>
+                <button type="button" onClick={() => irAFotograma(i)} disabled={reproduciendoAnimacion || exportandoAnimacion}>
+                  Fotograma {i + 1}
+                </button>
+                <button type="button" onClick={() => eliminarFotograma(i)} disabled={reproduciendoAnimacion || exportandoAnimacion} title="Eliminar este fotograma">✕</button>
+              </span>
+            ))}
           </div>
         )}
 
