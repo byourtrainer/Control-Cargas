@@ -1631,6 +1631,26 @@ despeje matemático de la parábola está bien resuelto.
 Actualizada la interfaz (nota explicativa) y la referencia científica en
 la pestaña Referencias con la cita correcta.
 
+## Sentadilla: método híbrido (regresión individual + ancla de González-Badillo)
+
+Combinado lo mejor de los dos enfoques que habíamos probado:
+
+1. **Regresión lineal individual** con tus 4 puntos (carga, velocidad) —
+   se adapta al perfil y técnica de cada jugador concreto.
+2. Extrapolada hasta la velocidad que, al 100% del 1RM, predice la propia
+   parábola de Sánchez-Medina, Pallarés, Pérez, Morán-Navarro y
+   González-Badillo (2017) — **0.3242 m/s**, calculada directamente de su
+   ecuación (no un valor suelto de otra tabla), así el punto de anclaje
+   es coherente con el estudio de mayor tamaño muestral revisado.
+
+Verificado matemáticamente con dos simulaciones: si un sujeto siguiera
+exactamente la curva de grupo, el método da 104 en vez de 100 — no es un
+fallo, es la consecuencia esperable de ajustar una recta (el perfil
+individual) sobre una parábola (la ecuación de grupo); una recta nunca
+encaja perfectamente sobre una curva. Es el compromiso razonable de
+adaptarse al individuo en vez de seguir la parábola de grupo al pie de la
+letra.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

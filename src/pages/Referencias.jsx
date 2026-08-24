@@ -227,23 +227,25 @@ export default function Referencias() {
       <section className="referencia-card">
         <h2>7. Estimación del 1RM de Sentadilla por Perfil Carga-Velocidad</h2>
         <p>
-          <strong>Definición:</strong> con 4 cargas incrementales y su velocidad media propulsiva
-          (MPV, m/s), se usa la ecuación de grupo de Sánchez-Medina, Pallarés, Pérez, Morán-Navarro
-          y González-Badillo (2017) — una parábola que relaciona directamente el %1RM con la MPV —
-          para despejar el %1RM correspondiente a cada una de las 4 cargas por separado.
+          <strong>Definición:</strong> método híbrido que combina lo mejor de dos enfoques. Con
+          las 4 cargas incrementales y su velocidad media propulsiva (MPV, m/s), se calcula la
+          <strong> regresión lineal individual</strong> del propio jugador (Velocidad = pendiente
+          × Carga + intercepto) — se adapta a su técnica y perfil concreto — y se extrapola esa
+          recta hasta la velocidad que, al 100% del 1RM, predice la ecuación de grupo de
+          Sánchez-Medina, Pallarés, Pérez, Morán-Navarro y González-Badillo (2017).
         </p>
         <p>
-          Cada carga da así su propia estimación independiente del 1RM (carga ÷ %1RM de esa
-          carga), y el resultado final es la <strong>media de las 4 estimaciones</strong> — se
-          aprovechan los 4 puntos para un resultado más estable, en vez de depender de una única
-          lectura o de ajustar una recta que pueda verse afectada por un punto con ruido.
+          El punto de extrapolación no es un valor suelto tomado de otra tabla: se calcula
+          directamente introduciendo 100 en la propia parábola de ese estudio, para que el ancla
+          de referencia sea coherente con el trabajo de mayor tamaño muestral de los revisados
+          (489 repeticiones, 80 sujetos, R²=0.958) — así se combina la adaptación individual (que
+          la sola ecuación de grupo no ofrece) con el respaldo de la referencia más sólida (que una
+          regresión puramente individual, sin ningún ancla externa, tampoco ofrece).
         </p>
         <p className="referencia-cita">
           Sánchez-Medina, L., Pallarés, J.G., Pérez, C.E., Morán-Navarro, R., y González-Badillo, J.J.
           Estimation of Relative Load From Bar Velocity in the Full Back Squat Exercise.
-          <em> Sports Med Int Open.</em> 2017;1(2):E80-E88. (R²=0.958, n=489 repeticiones de 80
-          sujetos entrenados en fuerza — el estudio de mayor tamaño muestral de los revisados
-          para esta funcionalidad.)
+          <em> Sports Med Int Open.</em> 2017;1(2):E80-E88.
         </p>
       </section>
     </div>

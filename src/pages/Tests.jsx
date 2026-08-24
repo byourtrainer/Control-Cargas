@@ -4,7 +4,7 @@ import {
   CartesianGrid, Tooltip, ReferenceLine, ReferenceArea, Cell, LabelList, LineChart, Line, BarChart, Bar,
 } from 'recharts'
 import { supabase } from '../lib/supabaseClient'
-import { valorRelativo, indiceFatiga, tiposTest, traducirTipoTest, ultimosTestsPorTipo, interpretarCMJ, interpretarSentadilla, interpretarPotencia, interpretarFatigaWingate, estimarRMSentadilla } from '../lib/testsFisicos'
+import { valorRelativo, indiceFatiga, tiposTest, traducirTipoTest, ultimosTestsPorTipo, interpretarCMJ, interpretarSentadilla, interpretarPotencia, interpretarFatigaWingate, estimarRMSentadilla, VELOCIDAD_OBJETIVO_SENTADILLA_100 } from '../lib/testsFisicos'
 import './Tests.css'
 
 import { hoyISOLocal as hoyISO } from '../lib/fechas'
@@ -240,7 +240,7 @@ export default function Tests({ equipoActivo = 'todos' }) {
     if (form.tipo_test === 'sentadilla') {
       const estimacion = estimarRMSentadilla(form.cargaVelocidad)
       if (!estimacion) {
-        setMensaje({ tipo: 'error', texto: 'Introduce al menos 2 cargas con su velocidad, dentro de un rango de velocidades razonable, para poder estimar el 1RM.' })
+        setMensaje({ tipo: 'error', texto: 'Introduce al menos 2 cargas con su velocidad (y que la velocidad baje al subir la carga) para poder estimar el 1RM.' })
         return
       }
       valorKgFinal = estimacion.rm
@@ -596,9 +596,9 @@ export default function Tests({ equipoActivo = 'todos' }) {
                 )
               })()}
               <p className="texto-faint campo-carga-velocidad-nota">
-                Calculado con la ecuación carga-velocidad de Sánchez-Medina, Pallarés, Pérez,
-                Morán-Navarro y González-Badillo (2017) — cada carga da su propia estimación de
-                1RM, y el resultado es la media de las 4.
+                Regresión individual con tus 4 puntos, extrapolada hasta {VELOCIDAD_OBJETIVO_SENTADILLA_100.toFixed(3)} m/s
+                — la velocidad al 100% del 1RM según la ecuación de Sánchez-Medina, Pallarés,
+                Pérez, Morán-Navarro y González-Badillo (2017).
               </p>
             </div>
           )}
