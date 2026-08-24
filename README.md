@@ -1580,6 +1580,33 @@ pediste, siempre visible:
   anterior (un cierre de etiqueta suelto) que podía haber causado
   problemas al compilar.
 
+## Estimación del 1RM de Sentadilla por perfil carga-velocidad
+
+Al seleccionar el test de "Sentadilla", ahora aparecen **4 recuadros de
+carga (kg) + velocidad media propulsiva (m/s)** en vez de un único campo.
+Con esos 4 puntos:
+
+1. Se calcula la **regresión individual** del jugador (Velocidad =
+   pendiente × Carga + intercepto) — el mismo enfoque de Jidovtseff et al.
+   (2011) para press banca, pero aplicado a sus propios datos.
+2. Se extrapola esa recta hasta **0.30 m/s** — la velocidad específica a
+   la que la sentadilla completa alcanza el 1RM, según Conceição,
+   Fernandes, Lewis, González-Badillo y Jiménez-Reyes (2016, *J Sports
+   Sci*) — en vez de hasta velocidad cero (que es un punto específico de
+   press banca, no de sentadilla).
+3. El 1RM resultante alimenta automáticamente el resto de la app tal y
+   como ya funcionaba: relación kg/peso corporal, interpretación
+   Fuerte/Poco fuerte, y posicionamiento en el cuadrante Sentadilla-CMJ.
+
+Los 4 pares de datos introducidos se guardan junto al resultado (columna
+nueva `datos_carga_velocidad`), para poder auditar de dónde salió cada
+número si hace falta revisarlo más adelante. Nueva referencia añadida a
+la pestaña Referencias explicando el método y su respaldo científico.
+
+**ISO SQ** (el test isométrico) se queda como estaba — un único valor de
+carga, sin velocidad — ya que es un ejercicio distinto que no usa este
+método.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

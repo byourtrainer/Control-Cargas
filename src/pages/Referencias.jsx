@@ -223,6 +223,29 @@ export default function Referencias() {
           claro para que sepas exactamente qué tipo de respaldo tiene cada dato que ves aquí.
         </p>
       </section>
+
+      <section className="referencia-card">
+        <h2>7. Estimación del 1RM de Sentadilla por Perfil Carga-Velocidad</h2>
+        <p>
+          <strong>Definición:</strong> con 4 cargas incrementales y su velocidad media propulsiva
+          (m/s), se calcula la recta de regresión individual del jugador (Velocidad = pendiente ×
+          Carga + intercepto) y se extrapola hasta la velocidad a la que la sentadilla completa
+          alcanza el 1RM — <strong>0.30 m/s</strong> — para estimar la carga correspondiente.
+        </p>
+        <p>
+          Este 0.30 m/s no es un valor arbitrario: es la <strong>velocidad media propulsiva
+          específica de sentadilla completa</strong> encontrada en el estudio de referencia — a
+          diferencia del press banca (donde el punto de extrapolación es velocidad cero), en
+          sentadilla el 1RM se alcanza a una velocidad claramente distinta de cero, así que
+          extrapolar hasta ahí (y no hasta cero) es lo que hace la estimación específica de este
+          ejercicio y no una adaptación genérica de otro.
+        </p>
+        <p className="referencia-cita">
+          Conceição, F., Fernandes, J., Lewis, M., González-Badillo, J.J., y Jiménez-Reyes, P.
+          Movement velocity as a measure of exercise intensity in three lower limb exercises.
+          <em> J Sports Sci.</em> 2016;34(12):1099-1106.
+        </p>
+      </section>
     </div>
   )
 }

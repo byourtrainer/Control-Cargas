@@ -4,7 +4,7 @@ import {
   CartesianGrid, Tooltip, ReferenceLine, ReferenceArea, Cell, LabelList, LineChart, Line, BarChart, Bar,
 } from 'recharts'
 import { supabase } from '../lib/supabaseClient'
-import { valorRelativo, indiceFatiga, tiposTest, traducirTipoTest, ultimosTestsPorTipo, interpretarCMJ, interpretarSentadilla, interpretarPotencia, interpretarFatigaWingate } from '../lib/testsFisicos'
+import { valorRelativo, indiceFatiga, tiposTest, traducirTipoTest, ultimosTestsPorTipo, interpretarCMJ, interpretarSentadilla, interpretarPotencia, interpretarFatigaWingate, estimarRMSentadilla, MPV_1RM_SENTADILLA } from '../lib/testsFisicos'
 import './Tests.css'
 
 import { hoyISOLocal as hoyISO } from '../lib/fechas'
@@ -32,10 +32,13 @@ export function iniciales(nombre) {
     .slice(0, 3)
 }
 
+const puntosVacios = () => [{ carga: '', velocidad: '' }, { carga: '', velocidad: '' }, { carga: '', velocidad: '' }, { carga: '', velocidad: '' }]
+
 const formularioVacio = {
   jugador_id: '', tipo_test: 'sentadilla', fecha: hoyISO(), peso_corporal_kg: '',
   valor_kg: '', valor_cm: '', rsi_modificado: '', dri: '',
   pp1: '', mp1: '', pp2: '', mp2: '', notas: '',
+  cargaVelocidad: puntosVacios(),
 }
 
 // Métricas que alimentan tanto la evolución individual como la comparativa entre jugadores.
@@ -230,16 +233,30 @@ export default function Tests({ equipoActivo = 'todos' }) {
       setMensaje({ tipo: 'error', texto: 'Selecciona un jugador.' })
       return
     }
+
+    let valorKgFinal = form.valor_kg
+    let datosCargaVelocidad = null
+
+    if (form.tipo_test === 'sentadilla') {
+      const estimacion = estimarRMSentadilla(form.cargaVelocidad)
+      if (!estimacion) {
+        setMensaje({ tipo: 'error', texto: 'Introduce al menos 2 cargas con su velocidad (y que la velocidad baje al subir la carga) para poder estimar el 1RM.' })
+        return
+      }
+      valorKgFinal = estimacion.rm
+      datosCargaVelocidad = form.cargaVelocidad.filter((p) => p.carga !== '' && p.velocidad !== '')
+    }
+
     setGuardando(true)
     setMensaje(null)
 
-    const numero = (v) => (v === '' ? null : Number(v))
+    const numero = (v) => (v === '' || v === null || v === undefined ? null : Number(v))
     const { error } = await supabase.from('tests_fisicos').insert({
       jugador_id: form.jugador_id,
       fecha: form.fecha,
       tipo_test: form.tipo_test,
       peso_corporal_kg: numero(form.peso_corporal_kg),
-      valor_kg: numero(form.valor_kg),
+      valor_kg: numero(valorKgFinal),
       valor_cm: numero(form.valor_cm),
       rsi_modificado: numero(form.rsi_modificado),
       dri: numero(form.dri),
@@ -248,13 +265,14 @@ export default function Tests({ equipoActivo = 'todos' }) {
       pp2: numero(form.pp2),
       mp2: numero(form.mp2),
       notas: form.notas || null,
+      datos_carga_velocidad: datosCargaVelocidad,
     })
 
     if (error) {
       setMensaje({ tipo: 'error', texto: 'No se pudo guardar el test.' })
     } else {
       setMensaje({ tipo: 'ok', texto: 'Test registrado correctamente.' })
-      setForm({ ...formularioVacio, jugador_id: form.jugador_id, peso_corporal_kg: form.peso_corporal_kg })
+      setForm({ ...formularioVacio, jugador_id: form.jugador_id, peso_corporal_kg: form.peso_corporal_kg, cargaVelocidad: puntosVacios() })
       cargarTodo()
     }
     setGuardando(false)
@@ -529,7 +547,62 @@ export default function Tests({ equipoActivo = 'todos' }) {
             </label>
           )}
 
-          {(form.tipo_test === 'sentadilla' || form.tipo_test === 'iso_sq') && (
+          {form.tipo_test === 'sentadilla' && (
+            <div className="campo-test campo-carga-velocidad">
+              <span>
+                4 cargas incrementales — carga (kg) y velocidad media propulsiva (m/s) en cada una
+              </span>
+              <div className="carga-velocidad-tabla">
+                <div className="carga-velocidad-cabecera">
+                  <span></span><span>Carga (kg)</span><span>Velocidad (m/s)</span>
+                </div>
+                {form.cargaVelocidad.map((punto, i) => (
+                  <div className="carga-velocidad-fila" key={i}>
+                    <span className="carga-velocidad-numero">{i + 1}</span>
+                    <input
+                      type="number" step="0.5" value={punto.carga}
+                      onChange={(e) => {
+                        const copia = [...form.cargaVelocidad]
+                        copia[i] = { ...copia[i], carga: e.target.value }
+                        setForm({ ...form, cargaVelocidad: copia })
+                      }}
+                    />
+                    <input
+                      type="number" step="0.01" value={punto.velocidad}
+                      onChange={(e) => {
+                        const copia = [...form.cargaVelocidad]
+                        copia[i] = { ...copia[i], velocidad: e.target.value }
+                        setForm({ ...form, cargaVelocidad: copia })
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {(() => {
+                const estimacion = estimarRMSentadilla(form.cargaVelocidad)
+                if (!estimacion) return null
+                const relativo = form.peso_corporal_kg ? estimacion.rm / Number(form.peso_corporal_kg) : null
+                return (
+                  <div className="preview-test mono">
+                    1RM estimado: <strong>{estimacion.rm.toFixed(1)} kg</strong>
+                    {relativo !== null && (
+                      <>
+                        {' '}· Relativo: <strong>{relativo.toFixed(2)}</strong> kg/peso corporal
+                        {' '}· <span className="interpretacion-chip">{interpretarSentadilla(relativo)}</span>
+                      </>
+                    )}
+                  </div>
+                )
+              })()}
+              <p className="texto-faint campo-carga-velocidad-nota">
+                Extrapolado hasta {MPV_1RM_SENTADILLA} m/s (velocidad de 1RM en sentadilla completa,
+                según Conceição et al. 2016) a partir de la regresión de tus 4 puntos.
+              </p>
+            </div>
+          )}
+
+          {form.tipo_test === 'iso_sq' && (
             <>
               <label className="campo-test">
                 <span>Carga (kg)</span>
@@ -538,9 +611,6 @@ export default function Tests({ equipoActivo = 'todos' }) {
               {form.valor_kg && form.peso_corporal_kg && (
                 <div className="preview-test mono">
                   Relativo: <strong>{(Number(form.valor_kg) / Number(form.peso_corporal_kg)).toFixed(2)}</strong> kg/peso corporal
-                  {form.tipo_test === 'sentadilla' && (
-                    <> · <span className="interpretacion-chip">{interpretarSentadilla(Number(form.valor_kg) / Number(form.peso_corporal_kg))}</span></>
-                  )}
                 </div>
               )}
             </>
