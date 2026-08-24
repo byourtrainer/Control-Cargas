@@ -321,6 +321,7 @@ export default function PizarraTactica() {
   const [exportandoAnimacion, setExportandoAnimacion] = useState(false) // grabando el vídeo final
   const detenerReproduccionRef = useRef(false)
   const [videoGenerado, setVideoGenerado] = useState(null) // { blob, url, extension }
+  const [panelAnimacionAbierto, setPanelAnimacionAbierto] = useState(false)
   const [mensajeAnimacion, setMensajeAnimacion] = useState(null)
   const estadoAntesDeAnimarRef = useRef(null)
   const [mostrarGuardarVideo, setMostrarGuardarVideo] = useState(false)
@@ -1153,79 +1154,77 @@ export default function PizarraTactica() {
       )}
 
       <section className="pizarra-animacion-card">
-        <div className="pizarra-animacion-cabecera">
-          <div>
-            <h3>🎬 Movimiento de jugadores</h3>
-            <p className="texto-dim">
-              Coloca a los jugadores y captura un fotograma; muévelos y captura otro. Con 2 o más
-              fotogramas puedes reproducir la secuencia o exportarla como vídeo. Usa las flechas para
-              revisar uno ya capturado — si lo corriges, pulsa "Guardar cambios" para que quede así.
-            </p>
-          </div>
-        </div>
+        <button
+          type="button" className="pizarra-animacion-cabecera pizarra-animacion-cabecera-boton"
+          onClick={() => setPanelAnimacionAbierto((a) => !a)}
+          title="Captura fotogramas de las posiciones y genera un vídeo animado del movimiento"
+        >
+          <h3>
+            🎬 Movimiento de jugadores
+            {fotogramas.length > 0 && <span className="pizarra-animacion-contador-mini">{fotogramas.length} fotograma(s)</span>}
+          </h3>
+          <span className="pizarra-animacion-plegar">{panelAnimacionAbierto ? '▲ Ocultar' : '▼ Mostrar'}</span>
+        </button>
 
-        <div className="pizarra-animacion-toolbar">
-          <button className="pizarra-boton" onClick={capturarFotograma} disabled={reproduciendoAnimacion || exportandoAnimacion}>
-            📷 Capturar fotograma
-          </button>
-
-          <div className="pizarra-separador" />
-
-          <button
-            type="button" className="pizarra-boton"
-            disabled={fotogramas.length === 0 || (fotogramaActivo ?? 0) <= 0 || reproduciendoAnimacion || exportandoAnimacion}
-            onClick={() => irAFotograma((fotogramaActivo ?? 0) - 1)}
-          >
-            ◀
-          </button>
-          <span className="pizarra-fotograma-contador">
-            {fotogramaActivo !== null ? `Fotograma ${fotogramaActivo + 1} / ${fotogramas.length}` : `${fotogramas.length} fotograma(s)`}
-          </span>
-          <button
-            type="button" className="pizarra-boton"
-            disabled={fotogramas.length === 0 || (fotogramaActivo ?? -1) >= fotogramas.length - 1 || reproduciendoAnimacion || exportandoAnimacion}
-            onClick={() => irAFotograma((fotogramaActivo ?? -1) + 1)}
-          >
-            ▶
-          </button>
-          {fotogramaActivo !== null && (
-            <button className="pizarra-boton" onClick={guardarCambiosFotogramaActivo} disabled={reproduciendoAnimacion || exportandoAnimacion}>
-              💾 Guardar cambios
+        {panelAnimacionAbierto && (
+          <div className="pizarra-animacion-toolbar">
+            <button className="pizarra-boton" onClick={capturarFotograma} disabled={reproduciendoAnimacion || exportandoAnimacion}>
+              📷 Capturar
             </button>
-          )}
 
-          <div className="pizarra-separador" />
+            <div className="pizarra-separador" />
 
-          <button
-            className="pizarra-boton" onClick={alternarReproduccion}
-            disabled={fotogramas.length < 2 || exportandoAnimacion}
-          >
-            {reproduciendoAnimacion ? '⏸ Pausa' : '▶ Reproducir'}
-          </button>
-          <button
-            className="btn-principal" onClick={generarVideoAnimacion}
-            disabled={fotogramas.length < 2 || reproduciendoAnimacion || exportandoAnimacion}
-          >
-            {exportandoAnimacion ? '⏺ Exportando…' : '⬇ Exportar secuencia'}
-          </button>
-
-          {fotogramas.length > 0 && (
-            <button className="pizarra-boton" onClick={vaciarFotogramas} disabled={reproduciendoAnimacion || exportandoAnimacion}>
-              Vaciar
+            <button
+              type="button" className="pizarra-boton"
+              disabled={fotogramas.length === 0 || (fotogramaActivo ?? 0) <= 0 || reproduciendoAnimacion || exportandoAnimacion}
+              onClick={() => irAFotograma((fotogramaActivo ?? 0) - 1)}
+            >
+              ◀
             </button>
-          )}
-        </div>
-
-        {fotogramas.length > 0 && (
-          <div className="pizarra-fotogramas-lista">
-            {fotogramas.map((_, i) => (
-              <span key={i} className={`pizarra-fotograma-chip ${fotogramaActivo === i ? 'pizarra-fotograma-chip-activo' : ''}`}>
-                <button type="button" onClick={() => irAFotograma(i)} disabled={reproduciendoAnimacion || exportandoAnimacion}>
-                  Fotograma {i + 1}
+            <span className="pizarra-fotograma-contador">
+              {fotogramaActivo !== null ? `${fotogramaActivo + 1} / ${fotogramas.length}` : `${fotogramas.length} fotograma(s)`}
+            </span>
+            <button
+              type="button" className="pizarra-boton"
+              disabled={fotogramas.length === 0 || (fotogramaActivo ?? -1) >= fotogramas.length - 1 || reproduciendoAnimacion || exportandoAnimacion}
+              onClick={() => irAFotograma((fotogramaActivo ?? -1) + 1)}
+            >
+              ▶
+            </button>
+            {fotogramaActivo !== null && (
+              <>
+                <button className="pizarra-boton" onClick={guardarCambiosFotogramaActivo} disabled={reproduciendoAnimacion || exportandoAnimacion} title="Guardar los cambios en este fotograma">
+                  💾
                 </button>
-                <button type="button" onClick={() => eliminarFotograma(i)} disabled={reproduciendoAnimacion || exportandoAnimacion} title="Eliminar este fotograma">✕</button>
-              </span>
-            ))}
+                <button
+                  className="pizarra-boton" onClick={() => eliminarFotograma(fotogramaActivo)} disabled={reproduciendoAnimacion || exportandoAnimacion}
+                  title="Eliminar este fotograma"
+                >
+                  🗑
+                </button>
+              </>
+            )}
+
+            <div className="pizarra-separador" />
+
+            <button
+              className="pizarra-boton" onClick={alternarReproduccion}
+              disabled={fotogramas.length < 2 || exportandoAnimacion}
+            >
+              {reproduciendoAnimacion ? '⏸ Pausa' : '▶ Reproducir'}
+            </button>
+            <button
+              className="btn-principal" onClick={generarVideoAnimacion}
+              disabled={fotogramas.length < 2 || reproduciendoAnimacion || exportandoAnimacion}
+            >
+              {exportandoAnimacion ? '⏺ Exportando…' : '⬇ Exportar'}
+            </button>
+
+            {fotogramas.length > 0 && (
+              <button className="pizarra-boton" onClick={vaciarFotogramas} disabled={reproduciendoAnimacion || exportandoAnimacion}>
+                Vaciar
+              </button>
+            )}
           </div>
         )}
 

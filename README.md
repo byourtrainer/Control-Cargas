@@ -1563,6 +1563,23 @@ pediste, siempre visible:
 - **⬇ Exportar secuencia** — genera y descarga/guarda el vídeo, como ya
   teníamos.
 
+## Panel de "Movimiento de jugadores" más compacto
+
+- **Plegado por defecto** (esto ya estaba hecho de un paso anterior) —
+  cabecera de una sola línea con el número de fotogramas, se despliega
+  solo al pulsarla.
+- **Quitada la lista de "Fotograma 1, 2, 3..."** que pediste — redundante
+  con las flechas ◀ ▶, que ya cumplen esa función. Los botones "💾
+  Guardar cambios" y "🗑 Eliminar" (para el fotograma que estás viendo)
+  pasan a la propia barra de herramientas, en vez de estar en esa lista.
+- Quitado el párrafo explicativo largo (ahora es un texto emergente al
+  pasar el ratón por la cabecera) y apretados los espacios — la tarjeta
+  ocupa bastante menos alto, tanto plegada como desplegada, dejando ver
+  antes la pizarra y sus herramientas de dibujo.
+- De paso, arreglado un desajuste de código que quedó de la actualización
+  anterior (un cierre de etiqueta suelto) que podía haber causado
+  problemas al compilar.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.
