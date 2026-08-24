@@ -11,44 +11,50 @@ export function valorRelativo(valorAbsoluto, pesoCorporalKg) {
  * Estima el 1RM de sentadilla a partir de 4 pares (carga, velocidad media
  * propulsiva) tomados a distintas cargas submáximas.
  *
- * Método: regresión lineal individual del propio jugador (Velocidad = m×Carga + b,
- * mismo enfoque que Jidovtseff et al. 2011 para press banca), pero extrapolada
- * hasta la velocidad de 0.30 m/s — el punto de MPV al que Conceição, Fernandes,
- * Lewis, González-Badillo y Jiménez-Reyes (2016, J Sports Sci) encontraron que se
- * alcanza el 1RM en sentadilla completa — en vez de hasta velocidad cero (que es
- * específico de press banca, no de sentadilla).
+ * Método: ecuación cuadrática de grupo de Sánchez-Medina, Pallarés, Pérez,
+ * Morán-Navarro y González-Badillo (2017, Sports Medicine International
+ * Open) — MPV = -0.00006977×%1RM² - 0.005861×%1RM + 1.608 (R²=0.958,
+ * n=489 repeticiones de 80 sujetos entrenados en fuerza) — que relaciona
+ * directamente la velocidad medida con el %1RM correspondiente.
  *
- * Devuelve null si los datos no forman una recta descendente coherente (por
- * ejemplo, si faltan puntos o la pendiente no es negativa).
+ * Por cada carga introducida se despeja su %1RM (resolviendo la ecuación
+ * de segundo grado) y se calcula el 1RM implícito en ese punto
+ * (carga ÷ %1RM). El resultado final es la media de las estimaciones de
+ * las 4 cargas — así se aprovechan los 4 puntos para un resultado más
+ * estable que con uno solo, en vez de ajustar una recta individual.
+ *
+ * Devuelve null si no hay datos suficientes o ninguna carga da una
+ * solución físicamente razonable.
  */
-export const MPV_1RM_SENTADILLA = 0.30 // m/s — Conceição et al. 2016
+const COEF_A_SENTADILLA = -0.00006977
+const COEF_B_SENTADILLA = -0.005861
+const COEF_C_SENTADILLA = 1.608
+
+/** Despeja el %1RM correspondiente a una MPV medida, según la parábola de Sánchez-Medina et al. (2017). */
+function porcentaje1RMDesdeMPV(mpv) {
+  const discriminante = COEF_B_SENTADILLA ** 2 - 4 * COEF_A_SENTADILLA * (COEF_C_SENTADILLA - mpv)
+  if (discriminante < 0) return null
+  const x = (-COEF_B_SENTADILLA - Math.sqrt(discriminante)) / (2 * COEF_A_SENTADILLA)
+  if (!Number.isFinite(x) || x <= 0 || x > 200) return null
+  return x
+}
 
 export function estimarRMSentadilla(puntos) {
   const validos = puntos.filter((p) => p.carga !== '' && p.carga !== null && p.velocidad !== '' && p.velocidad !== null)
   if (validos.length < 2) return null
 
-  const cargas = validos.map((p) => Number(p.carga))
-  const velocidades = validos.map((p) => Number(p.velocidad))
-  const n = cargas.length
-  const mediaCarga = cargas.reduce((a, b) => a + b, 0) / n
-  const mediaVelocidad = velocidades.reduce((a, b) => a + b, 0) / n
+  const estimacionesPorPunto = validos
+    .map((p) => {
+      const porcentaje = porcentaje1RMDesdeMPV(Number(p.velocidad))
+      if (porcentaje === null) return null
+      return { carga: Number(p.carga), porcentaje, rmImplicito: Number(p.carga) / (porcentaje / 100) }
+    })
+    .filter((e) => e !== null)
 
-  let numerador = 0
-  let denominador = 0
-  for (let i = 0; i < n; i++) {
-    numerador += (cargas[i] - mediaCarga) * (velocidades[i] - mediaVelocidad)
-    denominador += (cargas[i] - mediaCarga) ** 2
-  }
-  if (denominador === 0) return null
+  if (estimacionesPorPunto.length === 0) return null
 
-  const pendiente = numerador / denominador
-  const intercepto = mediaVelocidad - pendiente * mediaCarga
-  if (pendiente >= 0) return null // una sentadilla real siempre pierde velocidad al subir la carga
-
-  const rm = (MPV_1RM_SENTADILLA - intercepto) / pendiente
-  if (!Number.isFinite(rm) || rm <= 0) return null
-
-  return { rm, pendiente, intercepto }
+  const rm = estimacionesPorPunto.reduce((a, e) => a + e.rmImplicito, 0) / estimacionesPorPunto.length
+  return { rm, estimacionesPorPunto }
 }
 
 /** Índice de fatiga del Wingate doble, en %: (MP1 - MP2) / MP2 × 100. */

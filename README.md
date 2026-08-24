@@ -1607,6 +1607,30 @@ la pestaña Referencias explicando el método y su respaldo científico.
 carga, sin velocidad — ya que es un ejercicio distinto que no usa este
 método.
 
+## Sentadilla: cambiado a la fórmula de González-Badillo/Sánchez-Medina
+
+Sustituido el método de estimación del 1RM de sentadilla — de la regresión
+individual (Conceição et al.) a la **ecuación de grupo de Sánchez-Medina,
+Pallarés, Pérez, Morán-Navarro y González-Badillo (2017)**, el estudio más
+grande de los revisados (489 repeticiones, 80 sujetos, R²=0.958). Es una
+parábola, no una recta, que relaciona directamente el %1RM con la
+velocidad media propulsiva.
+
+**Cómo se aplica con tus 4 cargas**: por cada carga se despeja su propio
+%1RM (resolviendo la ecuación de segundo grado), se calcula el 1RM
+implícito en ese punto (carga ÷ %1RM), y el resultado final es la
+**media de las 4 estimaciones** — se aprovechan los 4 datos para un
+resultado más estable, en vez de depender de un único punto o de una
+recta que un solo dato con ruido podría desviar.
+
+Verificado con una simulación completa: generando 4 cargas con la
+velocidad exacta que predice la propia fórmula para un 1RM conocido, el
+cálculo recupera ese mismo 1RM con precisión exacta — confirma que el
+despeje matemático de la parábola está bien resuelto.
+
+Actualizada la interfaz (nota explicativa) y la referencia científica en
+la pestaña Referencias con la cita correcta.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

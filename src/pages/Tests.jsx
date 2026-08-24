@@ -4,7 +4,7 @@ import {
   CartesianGrid, Tooltip, ReferenceLine, ReferenceArea, Cell, LabelList, LineChart, Line, BarChart, Bar,
 } from 'recharts'
 import { supabase } from '../lib/supabaseClient'
-import { valorRelativo, indiceFatiga, tiposTest, traducirTipoTest, ultimosTestsPorTipo, interpretarCMJ, interpretarSentadilla, interpretarPotencia, interpretarFatigaWingate, estimarRMSentadilla, MPV_1RM_SENTADILLA } from '../lib/testsFisicos'
+import { valorRelativo, indiceFatiga, tiposTest, traducirTipoTest, ultimosTestsPorTipo, interpretarCMJ, interpretarSentadilla, interpretarPotencia, interpretarFatigaWingate, estimarRMSentadilla } from '../lib/testsFisicos'
 import './Tests.css'
 
 import { hoyISOLocal as hoyISO } from '../lib/fechas'
@@ -240,7 +240,7 @@ export default function Tests({ equipoActivo = 'todos' }) {
     if (form.tipo_test === 'sentadilla') {
       const estimacion = estimarRMSentadilla(form.cargaVelocidad)
       if (!estimacion) {
-        setMensaje({ tipo: 'error', texto: 'Introduce al menos 2 cargas con su velocidad (y que la velocidad baje al subir la carga) para poder estimar el 1RM.' })
+        setMensaje({ tipo: 'error', texto: 'Introduce al menos 2 cargas con su velocidad, dentro de un rango de velocidades razonable, para poder estimar el 1RM.' })
         return
       }
       valorKgFinal = estimacion.rm
@@ -596,8 +596,9 @@ export default function Tests({ equipoActivo = 'todos' }) {
                 )
               })()}
               <p className="texto-faint campo-carga-velocidad-nota">
-                Extrapolado hasta {MPV_1RM_SENTADILLA} m/s (velocidad de 1RM en sentadilla completa,
-                según Conceição et al. 2016) a partir de la regresión de tus 4 puntos.
+                Calculado con la ecuación carga-velocidad de Sánchez-Medina, Pallarés, Pérez,
+                Morán-Navarro y González-Badillo (2017) — cada carga da su propia estimación de
+                1RM, y el resultado es la media de las 4.
               </p>
             </div>
           )}

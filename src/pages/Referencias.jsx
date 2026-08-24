@@ -228,22 +228,22 @@ export default function Referencias() {
         <h2>7. Estimación del 1RM de Sentadilla por Perfil Carga-Velocidad</h2>
         <p>
           <strong>Definición:</strong> con 4 cargas incrementales y su velocidad media propulsiva
-          (m/s), se calcula la recta de regresión individual del jugador (Velocidad = pendiente ×
-          Carga + intercepto) y se extrapola hasta la velocidad a la que la sentadilla completa
-          alcanza el 1RM — <strong>0.30 m/s</strong> — para estimar la carga correspondiente.
+          (MPV, m/s), se usa la ecuación de grupo de Sánchez-Medina, Pallarés, Pérez, Morán-Navarro
+          y González-Badillo (2017) — una parábola que relaciona directamente el %1RM con la MPV —
+          para despejar el %1RM correspondiente a cada una de las 4 cargas por separado.
         </p>
         <p>
-          Este 0.30 m/s no es un valor arbitrario: es la <strong>velocidad media propulsiva
-          específica de sentadilla completa</strong> encontrada en el estudio de referencia — a
-          diferencia del press banca (donde el punto de extrapolación es velocidad cero), en
-          sentadilla el 1RM se alcanza a una velocidad claramente distinta de cero, así que
-          extrapolar hasta ahí (y no hasta cero) es lo que hace la estimación específica de este
-          ejercicio y no una adaptación genérica de otro.
+          Cada carga da así su propia estimación independiente del 1RM (carga ÷ %1RM de esa
+          carga), y el resultado final es la <strong>media de las 4 estimaciones</strong> — se
+          aprovechan los 4 puntos para un resultado más estable, en vez de depender de una única
+          lectura o de ajustar una recta que pueda verse afectada por un punto con ruido.
         </p>
         <p className="referencia-cita">
-          Conceição, F., Fernandes, J., Lewis, M., González-Badillo, J.J., y Jiménez-Reyes, P.
-          Movement velocity as a measure of exercise intensity in three lower limb exercises.
-          <em> J Sports Sci.</em> 2016;34(12):1099-1106.
+          Sánchez-Medina, L., Pallarés, J.G., Pérez, C.E., Morán-Navarro, R., y González-Badillo, J.J.
+          Estimation of Relative Load From Bar Velocity in the Full Back Squat Exercise.
+          <em> Sports Med Int Open.</em> 2017;1(2):E80-E88. (R²=0.958, n=489 repeticiones de 80
+          sujetos entrenados en fuerza — el estudio de mayor tamaño muestral de los revisados
+          para esta funcionalidad.)
         </p>
       </section>
     </div>
