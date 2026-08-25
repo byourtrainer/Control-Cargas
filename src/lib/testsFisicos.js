@@ -8,11 +8,11 @@ export function valorRelativo(valorAbsoluto, pesoCorporalKg) {
 }
 
 /**
- * Estima el 1RM de sentadilla a partir de 4 pares (carga, velocidad media
- * propulsiva) tomados a distintas cargas submáximas.
+ * Estima el 1RM de sentadilla a partir de 1 a 4 pares (carga, velocidad
+ * media propulsiva) tomados a distintas cargas submáximas.
  *
- * Método híbrido: combina lo mejor de dos enfoques.
- * 1. Regresión lineal INDIVIDUAL del propio jugador con sus 4 puntos
+ * Con 2, 3 o 4 cargas — método híbrido: combina lo mejor de dos enfoques.
+ * 1. Regresión lineal INDIVIDUAL del propio jugador con sus puntos
  *    (Velocidad = pendiente × Carga + intercepto) — se adapta a su
  *    técnica y perfil concreto, no asume que todo el mundo se mueve igual.
  * 2. Se extrapola esa recta hasta la velocidad que, al 100% del 1RM,
@@ -22,11 +22,13 @@ export function valorRelativo(valorAbsoluto, pesoCorporalKg) {
  *    parábola, para que el punto de referencia sea coherente con el
  *    estudio de mayor tamaño muestral (489 repeticiones, 80 sujetos).
  *
- * Así se combina la adaptación individual (que la sola ecuación de grupo
- * no ofrece) con el respaldo del estudio más sólido (que una regresión
- * puramente individual, sin ningún ancla externa, tampoco ofrece).
+ * Con 1 sola carga — no se puede calcular una pendiente propia (hacen
+ * falta al menos 2 puntos para definir una recta), así que se usa
+ * directamente esa misma ecuación de grupo, despejando el %1RM de la
+ * ecuación de segundo grado para la única velocidad medida.
  *
- * Devuelve null si los datos no forman una recta descendente coherente.
+ * Devuelve null si los datos no forman una relación descendente coherente
+ * (a más carga, menos velocidad — como debe ser en una sentadilla real).
  */
 const COEF_A_SENTADILLA = -0.00006977
 const COEF_B_SENTADILLA = -0.005861
@@ -36,10 +38,29 @@ const COEF_C_SENTADILLA = 1.608
 export const VELOCIDAD_OBJETIVO_SENTADILLA_100 =
   COEF_A_SENTADILLA * 100 ** 2 + COEF_B_SENTADILLA * 100 + COEF_C_SENTADILLA
 
+/** Despeja el %1RM correspondiente a una MPV medida, resolviendo la ecuación de segundo grado. */
+function porcentaje1RMDesdeMPV(mpv) {
+  const discriminante = COEF_B_SENTADILLA ** 2 - 4 * COEF_A_SENTADILLA * (COEF_C_SENTADILLA - mpv)
+  if (discriminante < 0) return null
+  const x = (-COEF_B_SENTADILLA - Math.sqrt(discriminante)) / (2 * COEF_A_SENTADILLA)
+  if (!Number.isFinite(x) || x <= 0 || x > 200) return null
+  return x
+}
+
 export function estimarRMSentadilla(puntos) {
   const validos = puntos.filter((p) => p.carga !== '' && p.carga !== null && p.velocidad !== '' && p.velocidad !== null)
-  if (validos.length < 2) return null
+  if (validos.length === 0) return null
 
+  // Con 1 sola carga: ecuación de grupo directa (no hay datos para una recta propia)
+  if (validos.length === 1) {
+    const porcentaje = porcentaje1RMDesdeMPV(Number(validos[0].velocidad))
+    if (porcentaje === null) return null
+    const rm = Number(validos[0].carga) / (porcentaje / 100)
+    if (!Number.isFinite(rm) || rm <= 0) return null
+    return { rm, metodo: 'grupo_un_punto', porcentaje1RM: porcentaje }
+  }
+
+  // Con 2, 3 o 4 cargas: regresión individual + extrapolación (método híbrido)
   const cargas = validos.map((p) => Number(p.carga))
   const velocidades = validos.map((p) => Number(p.velocidad))
   const n = cargas.length
@@ -61,7 +82,7 @@ export function estimarRMSentadilla(puntos) {
   const rm = (VELOCIDAD_OBJETIVO_SENTADILLA_100 - intercepto) / pendiente
   if (!Number.isFinite(rm) || rm <= 0) return null
 
-  return { rm, pendiente, intercepto, velocidadObjetivo: VELOCIDAD_OBJETIVO_SENTADILLA_100 }
+  return { rm, pendiente, intercepto, velocidadObjetivo: VELOCIDAD_OBJETIVO_SENTADILLA_100, metodo: 'individual_hibrido' }
 }
 
 /** Índice de fatiga del Wingate doble, en %: (MP1 - MP2) / MP2 × 100. */

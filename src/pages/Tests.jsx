@@ -240,7 +240,7 @@ export default function Tests({ equipoActivo = 'todos' }) {
     if (form.tipo_test === 'sentadilla') {
       const estimacion = estimarRMSentadilla(form.cargaVelocidad)
       if (!estimacion) {
-        setMensaje({ tipo: 'error', texto: 'Introduce al menos 2 cargas con su velocidad (y que la velocidad baje al subir la carga) para poder estimar el 1RM.' })
+        setMensaje({ tipo: 'error', texto: 'Introduce al menos 1 carga con su velocidad (y que la velocidad baje al subir la carga, si pones varias) para poder estimar el 1RM.' })
         return
       }
       valorKgFinal = estimacion.rm
@@ -550,7 +550,8 @@ export default function Tests({ equipoActivo = 'todos' }) {
           {form.tipo_test === 'sentadilla' && (
             <div className="campo-test campo-carga-velocidad">
               <span>
-                4 cargas incrementales — carga (kg) y velocidad media propulsiva (m/s) en cada una
+                De 1 a 4 cargas incrementales — carga (kg) y velocidad media propulsiva (m/s) en
+                cada una (cuantas más rellenes, más precisa la estimación)
               </span>
               <div className="carga-velocidad-tabla">
                 <div className="carga-velocidad-cabecera">
@@ -596,9 +597,13 @@ export default function Tests({ equipoActivo = 'todos' }) {
                 )
               })()}
               <p className="texto-faint campo-carga-velocidad-nota">
-                Regresión individual con tus 4 puntos, extrapolada hasta {VELOCIDAD_OBJETIVO_SENTADILLA_100.toFixed(3)} m/s
-                — la velocidad al 100% del 1RM según la ecuación de Sánchez-Medina, Pallarés,
-                Pérez, Morán-Navarro y González-Badillo (2017).
+                {(() => {
+                  const estimacion = estimarRMSentadilla(form.cargaVelocidad)
+                  if (estimacion?.metodo === 'grupo_un_punto') {
+                    return 'Con una sola carga: ecuación de grupo de Sánchez-Medina, Pallarés, Pérez, Morán-Navarro y González-Badillo (2017), despejando el %1RM directamente de esa medición.'
+                  }
+                  return `Con 2 o más cargas: regresión individual con tus puntos, extrapolada hasta ${VELOCIDAD_OBJETIVO_SENTADILLA_100.toFixed(3)} m/s — la velocidad al 100% del 1RM según la misma ecuación de Sánchez-Medina, Pallarés, Pérez, Morán-Navarro y González-Badillo (2017).`
+                })()}
               </p>
             </div>
           )}

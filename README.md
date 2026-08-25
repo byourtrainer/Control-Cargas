@@ -1675,6 +1675,23 @@ Calendario, **no se borran** las sesiones ya creadas de los jugadores
 (por si alguno ya había registrado su RPE contra esa sesión) — solo se
 borra el evento del calendario en sí.
 
+## Sentadilla: la estimación de 1RM ya admite de 1 a 4 cargas
+
+Antes hacían falta al menos 2 cargas (mínimo para poder calcular una
+recta). Ahora también funciona con **una sola carga**:
+
+- **1 carga**: no hay datos para una pendiente propia, así que se usa
+  directamente la ecuación de grupo de González-Badillo, despejando el
+  %1RM de esa única medición.
+- **2, 3 o 4 cargas**: sigue funcionando igual que antes — regresión
+  individual extrapolada a la velocidad del 100% del 1RM.
+
+Verificado matemáticamente con una simulación probando las 4 cantidades
+de cargas por separado: con 1 carga el resultado es exacto (100.00 para
+un 1RM simulado de 100), y con 2/3/4 cargas el error de la regresión
+individual **baja cuantas más cargas se añaden** (113→106→104) — confirma
+que más datos sí mejoran la estimación, como cabía esperar.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

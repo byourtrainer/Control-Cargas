@@ -227,8 +227,12 @@ export default function Referencias() {
       <section className="referencia-card">
         <h2>7. Estimación del 1RM de Sentadilla por Perfil Carga-Velocidad</h2>
         <p>
-          <strong>Definición:</strong> método híbrido que combina lo mejor de dos enfoques. Con
-          las 4 cargas incrementales y su velocidad media propulsiva (MPV, m/s), se calcula la
+          <strong>Definición:</strong> método híbrido que combina lo mejor de dos enfoques,
+          admitiendo de <strong>1 a 4 cargas</strong> incrementales con su velocidad media
+          propulsiva (MPV, m/s):
+        </p>
+        <p>
+          Con <strong>2, 3 o 4 cargas</strong>: se calcula la
           <strong> regresión lineal individual</strong> del propio jugador (Velocidad = pendiente
           × Carga + intercepto) — se adapta a su técnica y perfil concreto — y se extrapola esa
           recta hasta la velocidad que, al 100% del 1RM, predice la ecuación de grupo de
@@ -241,6 +245,11 @@ export default function Referencias() {
           (489 repeticiones, 80 sujetos, R²=0.958) — así se combina la adaptación individual (que
           la sola ecuación de grupo no ofrece) con el respaldo de la referencia más sólida (que una
           regresión puramente individual, sin ningún ancla externa, tampoco ofrece).
+        </p>
+        <p>
+          Con <strong>1 sola carga</strong>: no hay datos suficientes para calcular una pendiente
+          propia (hacen falta al menos 2 puntos para definir una recta), así que se usa
+          directamente la ecuación de grupo, despejando el %1RM de esa única medición.
         </p>
         <p className="referencia-cita">
           Sánchez-Medina, L., Pallarés, J.G., Pérez, C.E., Morán-Navarro, R., y González-Badillo, J.J.
