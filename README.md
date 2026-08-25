@@ -1735,6 +1735,19 @@ de los últimos 7 días.
   YouTube). Al reemplazar un vídeo, el archivo antiguo se borra del
   almacenamiento para no dejar basura acumulada.
 
+## Editar ejercicio: ahora se puede cambiar el tipo de medio libremente
+
+Antes, al editar un ejercicio, solo podías reemplazar el archivo por otro
+del mismo tipo (imagen por imagen, vídeo por vídeo). Ahora hay un
+selector **Imagen / YouTube / Vídeo** dentro de la propia edición — igual
+que en "Subir ejercicio externo" — así puedes, por ejemplo, convertir un
+ejercicio que tenías como imagen en uno con enlace de YouTube, o al
+revés, sin tener que borrarlo y crearlo de nuevo.
+
+Si el ejercicio tenía un vídeo propio guardado en el almacenamiento y
+cambias a imagen o YouTube, ese vídeo se borra automáticamente para no
+dejar archivos huérfanos ocupando espacio.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

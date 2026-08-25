@@ -353,6 +353,7 @@ export default function PizarraTactica() {
   const [edUrlYoutube, setEdUrlYoutube] = useState('')
   const [edArchivoNuevo, setEdArchivoNuevo] = useState(null) // File, para reemplazar imagen/vídeo
   const [edPreviewArchivo, setEdPreviewArchivo] = useState(null)
+  const [edTipoMedia, setEdTipoMedia] = useState('imagen') // 'imagen' | 'youtube' | 'video'
   const [guardandoEdicion, setGuardandoEdicion] = useState(false)
   const [mensajeEdicion, setMensajeEdicion] = useState(null)
 
@@ -517,6 +518,7 @@ export default function PizarraTactica() {
     setEdUrlYoutube(ej.url_youtube || '')
     setEdArchivoNuevo(null)
     setEdPreviewArchivo(null)
+    setEdTipoMedia(ej.tipo_origen === 'youtube' ? 'youtube' : ej.tipo_origen === 'video_grabado' ? 'video' : 'imagen')
     setMensajeEdicion(null)
   }
 
@@ -524,6 +526,13 @@ export default function PizarraTactica() {
     setEditandoEjercicio(null)
     setEdArchivoNuevo(null)
     setEdPreviewArchivo(null)
+  }
+
+  function cambiarTipoMediaEdicion(tipo) {
+    setEdTipoMedia(tipo)
+    setEdArchivoNuevo(null)
+    setEdPreviewArchivo(null)
+    setMensajeEdicion(null)
   }
 
   function anadirEtiquetaEdicion() {
@@ -540,17 +549,25 @@ export default function PizarraTactica() {
   function elegirArchivoReemplazo(archivo) {
     if (!archivo) return
     setMensajeEdicion(null)
-    const esVideo = editandoEjercicio?.tipo_origen === 'video_grabado'
-    if (esVideo && !archivo.type.startsWith('video/')) {
+    if (edTipoMedia === 'video' && !archivo.type.startsWith('video/')) {
       setMensajeEdicion({ tipo: 'error', texto: 'El archivo debe ser un vídeo.' })
       return
     }
-    if (!esVideo && !archivo.type.startsWith('image/')) {
+    if (edTipoMedia === 'imagen' && !archivo.type.startsWith('image/')) {
       setMensajeEdicion({ tipo: 'error', texto: 'El archivo debe ser una imagen.' })
       return
     }
     setEdArchivoNuevo(archivo)
     setEdPreviewArchivo(URL.createObjectURL(archivo))
+  }
+
+  /** Si el ejercicio tenía un vídeo propio en el almacenamiento, lo borra — se usa
+   * tanto al reemplazarlo por otro vídeo como al cambiar a imagen/YouTube. */
+  async function borrarVideoAlmacenadoSiExiste() {
+    if (editandoEjercicio.tipo_origen === 'video_grabado' && editandoEjercicio.video_url) {
+      const antiguo = editandoEjercicio.video_url.split('/videos-pizarra/')[1]
+      if (antiguo) await supabase.storage.from('videos-pizarra').remove([antiguo])
+    }
   }
 
   async function guardarEdicionEjercicio(e) {
@@ -567,44 +584,60 @@ export default function PizarraTactica() {
       etiquetas: edEtiquetas.length > 0 ? edEtiquetas : null,
       descripcion: edDescripcion || null,
       variantes: edVariantes || null,
+      tipo_origen: null, youtube_id: null, url_youtube: null, video_url: null, imagen_base64: null,
     }
 
-    if (editandoEjercicio.tipo_origen === 'youtube') {
+    if (edTipoMedia === 'youtube') {
       const nuevoId = extraerYoutubeIdExterno(edUrlYoutube)
-      if (edUrlYoutube.trim() && !nuevoId) {
-        setMensajeEdicion({ tipo: 'error', texto: 'No reconozco ese enlace de YouTube.' })
+      if (!nuevoId) {
+        setMensajeEdicion({ tipo: 'error', texto: 'Introduce un enlace de YouTube válido.' })
         setGuardandoEdicion(false)
         return
       }
-      if (nuevoId) {
-        cambios.youtube_id = nuevoId
-        cambios.url_youtube = edUrlYoutube.trim()
-      }
-    } else if (editandoEjercicio.tipo_origen === 'video_grabado' && edArchivoNuevo) {
-      const nombreArchivo = `${Date.now()}-${idNuevo()}.${edArchivoNuevo.name.split('.').pop() || 'webm'}`
-      const { error: errorSubida } = await supabase.storage
-        .from('videos-pizarra')
-        .upload(nombreArchivo, edArchivoNuevo, { contentType: edArchivoNuevo.type })
-      if (errorSubida) {
-        setMensajeEdicion({ tipo: 'error', texto: 'No se pudo subir el nuevo vídeo.' })
+      await borrarVideoAlmacenadoSiExiste()
+      cambios.tipo_origen = 'youtube'
+      cambios.youtube_id = nuevoId
+      cambios.url_youtube = edUrlYoutube.trim()
+    } else if (edTipoMedia === 'video') {
+      if (edArchivoNuevo) {
+        const nombreArchivo = `${Date.now()}-${idNuevo()}.${edArchivoNuevo.name.split('.').pop() || 'webm'}`
+        const { error: errorSubida } = await supabase.storage
+          .from('videos-pizarra')
+          .upload(nombreArchivo, edArchivoNuevo, { contentType: edArchivoNuevo.type })
+        if (errorSubida) {
+          setMensajeEdicion({ tipo: 'error', texto: 'No se pudo subir el vídeo.' })
+          setGuardandoEdicion(false)
+          return
+        }
+        await borrarVideoAlmacenadoSiExiste()
+        const { data: urlPublica } = supabase.storage.from('videos-pizarra').getPublicUrl(nombreArchivo)
+        cambios.video_url = urlPublica.publicUrl
+      } else if (editandoEjercicio.tipo_origen === 'video_grabado') {
+        cambios.video_url = editandoEjercicio.video_url // sin cambios, se mantiene el que ya tenía
+      } else {
+        setMensajeEdicion({ tipo: 'error', texto: 'Sube un archivo de vídeo.' })
         setGuardandoEdicion(false)
         return
       }
-      if (editandoEjercicio.video_url) {
-        const antiguo = editandoEjercicio.video_url.split('/videos-pizarra/')[1]
-        if (antiguo) await supabase.storage.from('videos-pizarra').remove([antiguo])
+      cambios.tipo_origen = 'video_grabado'
+    } else {
+      // imagen
+      if (edArchivoNuevo) {
+        const base64 = await new Promise((resolve, reject) => {
+          const lector = new FileReader()
+          lector.onload = () => resolve(lector.result)
+          lector.onerror = reject
+          lector.readAsDataURL(edArchivoNuevo)
+        })
+        await borrarVideoAlmacenadoSiExiste()
+        cambios.imagen_base64 = base64
+      } else if (editandoEjercicio.tipo_origen === 'youtube' || editandoEjercicio.tipo_origen === 'video_grabado') {
+        setMensajeEdicion({ tipo: 'error', texto: 'Sube una imagen.' })
+        setGuardandoEdicion(false)
+        return
+      } else {
+        cambios.imagen_base64 = editandoEjercicio.imagen_base64 // sin cambios, se mantiene la que ya tenía
       }
-      const { data: urlPublica } = supabase.storage.from('videos-pizarra').getPublicUrl(nombreArchivo)
-      cambios.video_url = urlPublica.publicUrl
-    } else if (edArchivoNuevo) {
-      // pizarra o imagen: se reemplaza el base64 directamente
-      const base64 = await new Promise((resolve, reject) => {
-        const lector = new FileReader()
-        lector.onload = () => resolve(lector.result)
-        lector.onerror = reject
-        lector.readAsDataURL(edArchivoNuevo)
-      })
-      cambios.imagen_base64 = base64
       cambios.tipo_origen = 'imagen'
     }
 
@@ -1885,27 +1918,52 @@ export default function PizarraTactica() {
             </div>
 
             <form onSubmit={guardarEdicionEjercicio}>
-              {editandoEjercicio.tipo_origen === 'video_grabado' ? (
+              <div className="pizarra-toolbar pizarra-toolbar-origen">
+                <button
+                  type="button" className={`pizarra-boton ${edTipoMedia === 'imagen' ? 'pizarra-boton-activo' : ''}`}
+                  onClick={() => cambiarTipoMediaEdicion('imagen')}
+                >
+                  🖼 Imagen
+                </button>
+                <button
+                  type="button" className={`pizarra-boton ${edTipoMedia === 'youtube' ? 'pizarra-boton-activo' : ''}`}
+                  onClick={() => cambiarTipoMediaEdicion('youtube')}
+                >
+                  ▶ YouTube
+                </button>
+                <button
+                  type="button" className={`pizarra-boton ${edTipoMedia === 'video' ? 'pizarra-boton-activo' : ''}`}
+                  onClick={() => cambiarTipoMediaEdicion('video')}
+                >
+                  🎬 Vídeo
+                </button>
+              </div>
+
+              {edTipoMedia === 'video' && (edPreviewArchivo || (editandoEjercicio.tipo_origen === 'video_grabado' && editandoEjercicio.video_url)) && (
                 <video src={edPreviewArchivo || editandoEjercicio.video_url} controls className="pizarra-preview-externa pizarra-preview-edicion" />
-              ) : editandoEjercicio.tipo_origen === 'youtube' ? (
-                editandoEjercicio.youtube_id && !edPreviewArchivo && (
-                  <img src={`https://img.youtube.com/vi/${extraerYoutubeIdExterno(edUrlYoutube) || editandoEjercicio.youtube_id}/mqdefault.jpg`} alt="Vista previa" className="pizarra-preview-externa pizarra-preview-edicion" />
-                )
-              ) : (
+              )}
+              {edTipoMedia === 'youtube' && !edPreviewArchivo && extraerYoutubeIdExterno(edUrlYoutube) && (
+                <img src={`https://img.youtube.com/vi/${extraerYoutubeIdExterno(edUrlYoutube)}/mqdefault.jpg`} alt="Vista previa" className="pizarra-preview-externa pizarra-preview-edicion" />
+              )}
+              {edTipoMedia === 'imagen' && (edPreviewArchivo || (editandoEjercicio.tipo_origen !== 'youtube' && editandoEjercicio.tipo_origen !== 'video_grabado' && editandoEjercicio.imagen_base64)) && (
                 <img src={edPreviewArchivo || editandoEjercicio.imagen_base64} alt="Vista previa" className="pizarra-preview-externa pizarra-preview-edicion" />
               )}
 
-              {editandoEjercicio.tipo_origen === 'youtube' ? (
+              {edTipoMedia === 'youtube' ? (
                 <label className="campo-sesion">
                   <span>Enlace de YouTube</span>
                   <input type="text" value={edUrlYoutube} onChange={(e) => setEdUrlYoutube(e.target.value)} placeholder="https://youtube.com/watch?v=…" />
                 </label>
               ) : (
                 <label className="campo-sesion">
-                  <span>{editandoEjercicio.tipo_origen === 'video_grabado' ? 'Reemplazar vídeo (opcional)' : 'Reemplazar imagen (opcional)'}</span>
+                  <span>
+                    {edTipoMedia === 'video'
+                      ? (editandoEjercicio.tipo_origen === 'video_grabado' ? 'Reemplazar vídeo (opcional)' : 'Sube un vídeo')
+                      : (editandoEjercicio.tipo_origen !== 'youtube' && editandoEjercicio.tipo_origen !== 'video_grabado' ? 'Reemplazar imagen (opcional)' : 'Sube una imagen')}
+                  </span>
                   <input
                     type="file"
-                    accept={editandoEjercicio.tipo_origen === 'video_grabado' ? 'video/*' : 'image/*'}
+                    accept={edTipoMedia === 'video' ? 'video/*' : 'image/*'}
                     onChange={(e) => elegirArchivoReemplazo(e.target.files?.[0])}
                   />
                 </label>
