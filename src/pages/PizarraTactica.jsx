@@ -324,12 +324,6 @@ export default function PizarraTactica() {
   const [panelAnimacionAbierto, setPanelAnimacionAbierto] = useState(false)
   const [mensajeAnimacion, setMensajeAnimacion] = useState(null)
   const estadoAntesDeAnimarRef = useRef(null)
-  const [mostrarGuardarVideo, setMostrarGuardarVideo] = useState(false)
-  const [nombreVideo, setNombreVideo] = useState('')
-  const [etiquetasVideo, setEtiquetasVideo] = useState([])
-  const [etiquetaVideoInput, setEtiquetaVideoInput] = useState('')
-  const [descripcionVideo, setDescripcionVideo] = useState('')
-  const [guardandoVideo, setGuardandoVideo] = useState(false)
 
   useEffect(() => {
     setEstiloLineaActual((s) => ({ ...s, color: esColorClaro(colorCampo) ? '#0d1210' : '#f5f5f5' }))
@@ -348,6 +342,19 @@ export default function PizarraTactica() {
   const [ejerciciosGuardados, setEjerciciosGuardados] = useState([])
   const [borrandoEjercicioId, setBorrandoEjercicioId] = useState(null)
   const [reproduciendoId, setReproduciendoId] = useState(null)
+
+  // --- Editar un ejercicio ya guardado en la biblioteca ---
+  const [editandoEjercicio, setEditandoEjercicio] = useState(null) // el objeto completo, o null
+  const [edNombre, setEdNombre] = useState('')
+  const [edEtiquetas, setEdEtiquetas] = useState([])
+  const [edEtiquetaInput, setEdEtiquetaInput] = useState('')
+  const [edDescripcion, setEdDescripcion] = useState('')
+  const [edVariantes, setEdVariantes] = useState('')
+  const [edUrlYoutube, setEdUrlYoutube] = useState('')
+  const [edArchivoNuevo, setEdArchivoNuevo] = useState(null) // File, para reemplazar imagen/vídeo
+  const [edPreviewArchivo, setEdPreviewArchivo] = useState(null)
+  const [guardandoEdicion, setGuardandoEdicion] = useState(false)
+  const [mensajeEdicion, setMensajeEdicion] = useState(null)
 
   // --- Subir ejercicio externo (imagen o YouTube) ---
   const [origenExterno, setOrigenExterno] = useState('imagen') // 'imagen' | 'youtube'
@@ -433,28 +440,56 @@ export default function PizarraTactica() {
     }
     setGuardandoEjercicio(true)
     setMensajeEjercicio(null)
+
+    const datosComunes = {
+      nombre: nombreEjercicio.trim(),
+      etiquetas: etiquetasSeleccionadas.length > 0 ? etiquetasSeleccionadas : null,
+      descripcion: descripcionEjercicio || null,
+      variantes: variantesEjercicio || null,
+      fondo,
+    }
+
     try {
-      const imagen = await generarImagenBase64()
-      const { error } = await supabase.from('ejercicios_pizarra').insert({
-        nombre: nombreEjercicio.trim(),
-        etiquetas: etiquetasSeleccionadas.length > 0 ? etiquetasSeleccionadas : null,
-        descripcion: descripcionEjercicio || null,
-        variantes: variantesEjercicio || null,
-        imagen_base64: imagen,
-        fondo,
-      })
+      let error
+      if (videoGenerado) {
+        // Hay un vídeo del movimiento ya exportado: se guarda ESE vídeo, no una imagen estática.
+        const nombreArchivo = `${Date.now()}-${idNuevo()}.${videoGenerado.extension}`
+        const { error: errorSubida } = await supabase.storage
+          .from('videos-pizarra')
+          .upload(nombreArchivo, videoGenerado.blob, { contentType: videoGenerado.blob.type })
+        if (errorSubida) {
+          setMensajeEjercicio({ tipo: 'error', texto: 'No se pudo subir el vídeo. Inténtalo de nuevo.' })
+          setGuardandoEjercicio(false)
+          return
+        }
+        const { data: urlPublica } = supabase.storage.from('videos-pizarra').getPublicUrl(nombreArchivo)
+        ;({ error } = await supabase.from('ejercicios_pizarra').insert({
+          ...datosComunes,
+          tipo_origen: 'video_grabado',
+          video_url: urlPublica.publicUrl,
+        }))
+      } else {
+        const imagen = await generarImagenBase64()
+        ;({ error } = await supabase.from('ejercicios_pizarra').insert({
+          ...datosComunes,
+          tipo_origen: 'pizarra',
+          imagen_base64: imagen,
+        }))
+      }
+
       if (error) {
         setMensajeEjercicio({ tipo: 'error', texto: 'No se pudo guardar el ejercicio.' })
       } else {
-        setMensajeEjercicio({ tipo: 'ok', texto: 'Ejercicio guardado en la biblioteca.' })
+        setMensajeEjercicio({ tipo: 'ok', texto: videoGenerado ? 'Vídeo guardado en la biblioteca.' : 'Ejercicio guardado en la biblioteca.' })
         setNombreEjercicio('')
         setDescripcionEjercicio('')
         setVariantesEjercicio('')
         setEtiquetasSeleccionadas([])
+        setVideoGenerado(null)
         cargarEjerciciosPizarra()
       }
     } catch {
-      setMensajeEjercicio({ tipo: 'error', texto: 'No se pudo generar la imagen del ejercicio.' })
+      setMensajeEjercicio({ tipo: 'error', texto: 'No se pudo generar el archivo del ejercicio.' })
     }
     setGuardandoEjercicio(false)
   }
@@ -470,6 +505,117 @@ export default function PizarraTactica() {
     const { error } = await supabase.from('ejercicios_pizarra').delete().eq('id', id)
     if (!error) setEjerciciosGuardados((prev) => prev.filter((ej) => ej.id !== id))
     setBorrandoEjercicioId(null)
+  }
+
+  function empezarEdicionEjercicio(ej) {
+    setEditandoEjercicio(ej)
+    setEdNombre(ej.nombre)
+    setEdEtiquetas(ej.etiquetas || [])
+    setEdEtiquetaInput('')
+    setEdDescripcion(ej.descripcion || '')
+    setEdVariantes(ej.variantes || '')
+    setEdUrlYoutube(ej.url_youtube || '')
+    setEdArchivoNuevo(null)
+    setEdPreviewArchivo(null)
+    setMensajeEdicion(null)
+  }
+
+  function cerrarEdicionEjercicio() {
+    setEditandoEjercicio(null)
+    setEdArchivoNuevo(null)
+    setEdPreviewArchivo(null)
+  }
+
+  function anadirEtiquetaEdicion() {
+    const valor = edEtiquetaInput.trim()
+    if (!valor || edEtiquetas.includes(valor)) { setEdEtiquetaInput(''); return }
+    setEdEtiquetas((prev) => [...prev, valor])
+    setEdEtiquetaInput('')
+  }
+
+  function quitarEtiquetaEdicion(et) {
+    setEdEtiquetas((prev) => prev.filter((e) => e !== et))
+  }
+
+  function elegirArchivoReemplazo(archivo) {
+    if (!archivo) return
+    setMensajeEdicion(null)
+    const esVideo = editandoEjercicio?.tipo_origen === 'video_grabado'
+    if (esVideo && !archivo.type.startsWith('video/')) {
+      setMensajeEdicion({ tipo: 'error', texto: 'El archivo debe ser un vídeo.' })
+      return
+    }
+    if (!esVideo && !archivo.type.startsWith('image/')) {
+      setMensajeEdicion({ tipo: 'error', texto: 'El archivo debe ser una imagen.' })
+      return
+    }
+    setEdArchivoNuevo(archivo)
+    setEdPreviewArchivo(URL.createObjectURL(archivo))
+  }
+
+  async function guardarEdicionEjercicio(e) {
+    e.preventDefault()
+    if (!edNombre.trim()) {
+      setMensajeEdicion({ tipo: 'error', texto: 'Ponle un nombre al ejercicio.' })
+      return
+    }
+    setGuardandoEdicion(true)
+    setMensajeEdicion(null)
+
+    const cambios = {
+      nombre: edNombre.trim(),
+      etiquetas: edEtiquetas.length > 0 ? edEtiquetas : null,
+      descripcion: edDescripcion || null,
+      variantes: edVariantes || null,
+    }
+
+    if (editandoEjercicio.tipo_origen === 'youtube') {
+      const nuevoId = extraerYoutubeIdExterno(edUrlYoutube)
+      if (edUrlYoutube.trim() && !nuevoId) {
+        setMensajeEdicion({ tipo: 'error', texto: 'No reconozco ese enlace de YouTube.' })
+        setGuardandoEdicion(false)
+        return
+      }
+      if (nuevoId) {
+        cambios.youtube_id = nuevoId
+        cambios.url_youtube = edUrlYoutube.trim()
+      }
+    } else if (editandoEjercicio.tipo_origen === 'video_grabado' && edArchivoNuevo) {
+      const nombreArchivo = `${Date.now()}-${idNuevo()}.${edArchivoNuevo.name.split('.').pop() || 'webm'}`
+      const { error: errorSubida } = await supabase.storage
+        .from('videos-pizarra')
+        .upload(nombreArchivo, edArchivoNuevo, { contentType: edArchivoNuevo.type })
+      if (errorSubida) {
+        setMensajeEdicion({ tipo: 'error', texto: 'No se pudo subir el nuevo vídeo.' })
+        setGuardandoEdicion(false)
+        return
+      }
+      if (editandoEjercicio.video_url) {
+        const antiguo = editandoEjercicio.video_url.split('/videos-pizarra/')[1]
+        if (antiguo) await supabase.storage.from('videos-pizarra').remove([antiguo])
+      }
+      const { data: urlPublica } = supabase.storage.from('videos-pizarra').getPublicUrl(nombreArchivo)
+      cambios.video_url = urlPublica.publicUrl
+    } else if (edArchivoNuevo) {
+      // pizarra o imagen: se reemplaza el base64 directamente
+      const base64 = await new Promise((resolve, reject) => {
+        const lector = new FileReader()
+        lector.onload = () => resolve(lector.result)
+        lector.onerror = reject
+        lector.readAsDataURL(edArchivoNuevo)
+      })
+      cambios.imagen_base64 = base64
+      cambios.tipo_origen = 'imagen'
+    }
+
+    const { error } = await supabase.from('ejercicios_pizarra').update(cambios).eq('id', editandoEjercicio.id)
+    if (error) {
+      setMensajeEdicion({ tipo: 'error', texto: 'No se pudo guardar los cambios.' })
+    } else {
+      cerrarEdicionEjercicio()
+      cargarEjerciciosPizarra()
+    }
+    setGuardandoEdicion(false)
   }
 
   function extraerYoutubeIdExterno(url) {
@@ -988,63 +1134,6 @@ export default function PizarraTactica() {
     enlace.click()
   }
 
-  function anadirEtiquetaVideo() {
-    const valor = etiquetaVideoInput.trim()
-    if (!valor || etiquetasVideo.includes(valor)) { setEtiquetaVideoInput(''); return }
-    setEtiquetasVideo((prev) => [...prev, valor])
-    setEtiquetaVideoInput('')
-  }
-
-  function quitarEtiquetaVideo(et) {
-    setEtiquetasVideo((prev) => prev.filter((e) => e !== et))
-  }
-
-  async function guardarVideoEnBiblioteca(e) {
-    e.preventDefault()
-    if (!nombreVideo.trim()) {
-      setMensajeAnimacion('Ponle un nombre al ejercicio antes de guardarlo.')
-      return
-    }
-    if (!videoGenerado) return
-
-    setGuardandoVideo(true)
-    setMensajeAnimacion(null)
-
-    const nombreArchivo = `${Date.now()}-${idNuevo()}.${videoGenerado.extension}`
-    const { error: errorSubida } = await supabase.storage
-      .from('videos-pizarra')
-      .upload(nombreArchivo, videoGenerado.blob, { contentType: videoGenerado.blob.type })
-
-    if (errorSubida) {
-      setMensajeAnimacion('No se pudo subir el vídeo. Inténtalo de nuevo.')
-      setGuardandoVideo(false)
-      return
-    }
-
-    const { data: urlPublica } = supabase.storage.from('videos-pizarra').getPublicUrl(nombreArchivo)
-
-    const { error: errorInsercion } = await supabase.from('ejercicios_pizarra').insert({
-      nombre: nombreVideo.trim(),
-      etiquetas: etiquetasVideo.length > 0 ? etiquetasVideo : null,
-      descripcion: descripcionVideo || null,
-      tipo_origen: 'video_grabado',
-      video_url: urlPublica.publicUrl,
-      fondo,
-    })
-
-    if (errorInsercion) {
-      setMensajeAnimacion('El vídeo se subió, pero no se pudo guardar en la biblioteca.')
-    } else {
-      setMensajeAnimacion(null)
-      setMostrarGuardarVideo(false)
-      setNombreVideo('')
-      setEtiquetasVideo([])
-      setDescripcionVideo('')
-      cargarEjerciciosPizarra()
-    }
-    setGuardandoVideo(false)
-  }
-
   function pathDeLinea(l) {
     if (l.tipo === 'recta') return null
     if (l.tipo === 'curva') return `M ${l.x1} ${l.y1} Q ${l.cx} ${l.cy} ${l.x2} ${l.y2}`
@@ -1235,53 +1324,12 @@ export default function PizarraTactica() {
             <video src={videoGenerado.url} controls loop className="pizarra-video-preview" />
             <div className="pizarra-video-botones">
               <button className="pizarra-boton" onClick={descargarVideoGenerado}>⬇ Descargar</button>
-              {!mostrarGuardarVideo && (
-                <button className="pizarra-boton" onClick={() => setMostrarGuardarVideo(true)}>+ Guardar en la biblioteca</button>
-              )}
-              <button className="pizarra-boton" onClick={() => { setVideoGenerado(null); setMostrarGuardarVideo(false) }}>Descartar</button>
+              <button className="pizarra-boton" onClick={() => setVideoGenerado(null)}>Descartar</button>
             </div>
-
-            {mostrarGuardarVideo && (
-              <form onSubmit={guardarVideoEnBiblioteca} className="pizarra-video-form">
-                <label className="campo-sesion">
-                  <span>Nombre del ejercicio</span>
-                  <input type="text" value={nombreVideo} onChange={(e) => setNombreVideo(e.target.value)} placeholder="Ej. Desmarque y apoyo 2v1" required />
-                </label>
-                <label className="campo-sesion">
-                  <span>Etiquetas</span>
-                  <div className="pizarra-etiquetas-entrada">
-                    <input
-                      type="text" list="pizarra-etiquetas-disponibles" value={etiquetaVideoInput}
-                      onChange={(e) => setEtiquetaVideoInput(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); anadirEtiquetaVideo() } }}
-                      placeholder="Escribe una etiqueta y pulsa Enter…"
-                    />
-                    <button type="button" className="pizarra-boton" onClick={anadirEtiquetaVideo}>+ Añadir</button>
-                  </div>
-                  {etiquetasDisponibles.filter((et) => !etiquetasVideo.includes(et)).length > 0 && (
-                    <div className="pizarra-etiquetas-sugeridas">
-                      {etiquetasDisponibles.filter((et) => !etiquetasVideo.includes(et)).map((et) => (
-                        <button key={et} type="button" className="pizarra-etiqueta-sugerida" onClick={() => setEtiquetasVideo((prev) => [...prev, et])}>{et}</button>
-                      ))}
-                    </div>
-                  )}
-                  {etiquetasVideo.length > 0 && (
-                    <div className="pizarra-etiquetas-chips">
-                      {etiquetasVideo.map((et) => (
-                        <span key={et} className="pizarra-etiqueta-chip">{et}<button type="button" onClick={() => quitarEtiquetaVideo(et)}>✕</button></span>
-                      ))}
-                    </div>
-                  )}
-                </label>
-                <label className="campo-sesion">
-                  <span>Descripción (opcional)</span>
-                  <textarea value={descripcionVideo} onChange={(e) => setDescripcionVideo(e.target.value)} rows={2} />
-                </label>
-                <button type="submit" className="btn-principal" disabled={guardandoVideo}>
-                  {guardandoVideo ? 'Guardando…' : 'Guardar vídeo en la biblioteca'}
-                </button>
-              </form>
-            )}
+            <p className="texto-faint pizarra-video-nota">
+              Rellena el formulario "Guardar este ejercicio en la biblioteca" de más abajo y pulsa
+              guardar — como hay un vídeo generado, se guardará este vídeo en vez de una imagen.
+            </p>
           </div>
         )}
       </section>
@@ -1596,7 +1644,12 @@ export default function PizarraTactica() {
       </div>
 
       <section className="pizarra-ejercicio-card">
-        <h3>Guardar este ejercicio en la biblioteca</h3>
+        <h3>{videoGenerado ? 'Guardar este vídeo en la biblioteca' : 'Guardar este ejercicio en la biblioteca'}</h3>
+        {videoGenerado && (
+          <p className="texto-dim pizarra-ejercicio-nota">
+            Hay un vídeo del movimiento generado — se guardará ese vídeo en vez de una imagen de la pizarra.
+          </p>
+        )}
         <form onSubmit={guardarEjercicioPizarra}>
           <label className="campo-sesion">
             <span>Nombre del ejercicio</span>
@@ -1665,7 +1718,7 @@ export default function PizarraTactica() {
           )}
 
           <button type="submit" className="btn-principal" disabled={guardandoEjercicio}>
-            {guardandoEjercicio ? 'Guardando…' : '+ Guardar ejercicio en la biblioteca'}
+            {guardandoEjercicio ? 'Guardando…' : videoGenerado ? '+ Guardar vídeo en la biblioteca' : '+ Guardar ejercicio en la biblioteca'}
           </button>
         </form>
       </section>
@@ -1802,17 +1855,112 @@ export default function PizarraTactica() {
                       {ej.etiquetas.map((et) => <span key={et} className="pizarra-etiqueta-chip pizarra-etiqueta-chip-lectura">{et}</span>)}
                     </div>
                   )}
-                  <button
-                    className="btn-eliminar-fila" onClick={() => eliminarEjercicioPizarra(ej.id)}
-                    disabled={borrandoEjercicioId === ej.id} title="Eliminar ejercicio"
-                  >
-                    {borrandoEjercicioId === ej.id ? '…' : '✕ Eliminar'}
-                  </button>
+                  <div className="pizarra-galeria-acciones">
+                    <button
+                      className="equipo-cambiar-link" onClick={() => empezarEdicionEjercicio(ej)}
+                      title="Editar ejercicio"
+                    >
+                      ✎ Editar
+                    </button>
+                    <button
+                      className="btn-eliminar-fila" onClick={() => eliminarEjercicioPizarra(ej.id)}
+                      disabled={borrandoEjercicioId === ej.id} title="Eliminar ejercicio"
+                    >
+                      {borrandoEjercicioId === ej.id ? '…' : '✕ Eliminar'}
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
           </div>
         </section>
+      )}
+
+      {editandoEjercicio && (
+        <div className="pizarra-modal-fondo" onClick={cerrarEdicionEjercicio}>
+          <div className="pizarra-modal-editar" onClick={(e) => e.stopPropagation()}>
+            <div className="pizarra-modal-cabecera">
+              <h3>Editar ejercicio</h3>
+              <button type="button" className="pizarra-boton" onClick={cerrarEdicionEjercicio}>✕ Cerrar</button>
+            </div>
+
+            <form onSubmit={guardarEdicionEjercicio}>
+              {editandoEjercicio.tipo_origen === 'video_grabado' ? (
+                <video src={edPreviewArchivo || editandoEjercicio.video_url} controls className="pizarra-preview-externa pizarra-preview-edicion" />
+              ) : editandoEjercicio.tipo_origen === 'youtube' ? (
+                editandoEjercicio.youtube_id && !edPreviewArchivo && (
+                  <img src={`https://img.youtube.com/vi/${extraerYoutubeIdExterno(edUrlYoutube) || editandoEjercicio.youtube_id}/mqdefault.jpg`} alt="Vista previa" className="pizarra-preview-externa pizarra-preview-edicion" />
+                )
+              ) : (
+                <img src={edPreviewArchivo || editandoEjercicio.imagen_base64} alt="Vista previa" className="pizarra-preview-externa pizarra-preview-edicion" />
+              )}
+
+              {editandoEjercicio.tipo_origen === 'youtube' ? (
+                <label className="campo-sesion">
+                  <span>Enlace de YouTube</span>
+                  <input type="text" value={edUrlYoutube} onChange={(e) => setEdUrlYoutube(e.target.value)} placeholder="https://youtube.com/watch?v=…" />
+                </label>
+              ) : (
+                <label className="campo-sesion">
+                  <span>{editandoEjercicio.tipo_origen === 'video_grabado' ? 'Reemplazar vídeo (opcional)' : 'Reemplazar imagen (opcional)'}</span>
+                  <input
+                    type="file"
+                    accept={editandoEjercicio.tipo_origen === 'video_grabado' ? 'video/*' : 'image/*'}
+                    onChange={(e) => elegirArchivoReemplazo(e.target.files?.[0])}
+                  />
+                </label>
+              )}
+
+              <label className="campo-sesion">
+                <span>Nombre del ejercicio</span>
+                <input type="text" value={edNombre} onChange={(e) => setEdNombre(e.target.value)} required />
+              </label>
+
+              <label className="campo-sesion">
+                <span>Etiquetas</span>
+                <div className="pizarra-etiquetas-entrada">
+                  <input
+                    type="text" list="pizarra-etiquetas-disponibles" value={edEtiquetaInput}
+                    onChange={(e) => setEdEtiquetaInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); anadirEtiquetaEdicion() } }}
+                    placeholder="Escribe una etiqueta y pulsa Enter…"
+                  />
+                  <button type="button" className="pizarra-boton" onClick={anadirEtiquetaEdicion}>+ Añadir</button>
+                </div>
+                {etiquetasDisponibles.filter((et) => !edEtiquetas.includes(et)).length > 0 && (
+                  <div className="pizarra-etiquetas-sugeridas">
+                    {etiquetasDisponibles.filter((et) => !edEtiquetas.includes(et)).map((et) => (
+                      <button key={et} type="button" className="pizarra-etiqueta-sugerida" onClick={() => setEdEtiquetas((prev) => [...prev, et])}>{et}</button>
+                    ))}
+                  </div>
+                )}
+                {edEtiquetas.length > 0 && (
+                  <div className="pizarra-etiquetas-chips">
+                    {edEtiquetas.map((et) => (
+                      <span key={et} className="pizarra-etiqueta-chip">{et}<button type="button" onClick={() => quitarEtiquetaEdicion(et)}>✕</button></span>
+                    ))}
+                  </div>
+                )}
+              </label>
+
+              <label className="campo-sesion">
+                <span>Descripción</span>
+                <textarea value={edDescripcion} onChange={(e) => setEdDescripcion(e.target.value)} rows={3} />
+              </label>
+
+              <label className="campo-sesion">
+                <span>Posibles variantes</span>
+                <textarea value={edVariantes} onChange={(e) => setEdVariantes(e.target.value)} rows={2} />
+              </label>
+
+              {mensajeEdicion && <div className={mensajeEdicion.tipo === 'ok' ? 'aviso-ok' : 'aviso-error'}>{mensajeEdicion.texto}</div>}
+
+              <button type="submit" className="btn-principal" disabled={guardandoEdicion}>
+                {guardandoEdicion ? 'Guardando…' : 'Guardar cambios'}
+              </button>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   )

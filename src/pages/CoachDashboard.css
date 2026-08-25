@@ -250,6 +250,37 @@
 
 .bienestar-hoy-card h3 { font-size: 14px; color: var(--text-dim); font-weight: 500; margin-bottom: 2px; }
 
+.bienestar-hoy-cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.bienestar-hoy-selector-fecha {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.bienestar-hoy-selector-fecha input[type="date"] {
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+.bienestar-hoy-rpe {
+  font-size: 11px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
 .bienestar-hoy-sub {
   font-size: 12px;
   margin-bottom: 16px;
@@ -318,6 +349,60 @@
   top: 8px;
   right: 8px;
   font-size: 13px;
+}
+
+.rpe-semana-card {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 20px 24px;
+  margin-bottom: 16px;
+}
+
+.rpe-semana-card h3 { font-size: 14px; color: var(--text-dim); font-weight: 500; margin-bottom: 2px; }
+
+.rpe-semana-tabla-wrap {
+  overflow-x: auto;
+}
+
+.rpe-semana-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.rpe-semana-tabla th {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-faint);
+  text-transform: capitalize;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.rpe-semana-tabla th:first-child { text-align: left; }
+
+.rpe-semana-nombre {
+  padding: 8px 8px 8px 0;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--line);
+}
+
+.rpe-semana-celda {
+  text-align: center;
+  padding: 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.rpe-semana-valor {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.rpe-semana-vacio {
+  color: var(--text-faint);
+  opacity: 0.4;
 }
 
 .alertas-grid {

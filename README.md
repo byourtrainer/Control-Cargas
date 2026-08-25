@@ -1692,6 +1692,49 @@ un 1RM simulado de 100), y con 2/3/4 cargas el error de la regresión
 individual **baja cuantas más cargas se añaden** (113→106→104) — confirma
 que más datos sí mejoran la estimación, como cabía esperar.
 
+## Nueva tarjeta "RPE de la semana"
+
+Justo debajo de "Bienestar de hoy", en el Resumen — una tabla con cada
+jugador del grupo activo en filas y los **últimos 7 días** en columnas,
+mostrando el RPE que ha reportado cada uno, coloreado igual que el resto
+de la app (verde=bajo, rojo=alto). Los días sin RPE registrado muestran
+un guion, para detectar de un vistazo tanto quién ha aportado qué
+esfuerzo como quién no ha registrado todavía.
+
+Jugadores con más huecos sin registrar aparecen primero, para que salten
+a la vista antes que los que ya tienen la semana completa.
+
+## "Bienestar de hoy" ahora es "Bienestar y RPE del día", con fecha elegible
+
+La tarjeta que antes se llamaba "Bienestar de hoy" pasa a mostrar
+**bienestar y RPE juntos**, para la fecha que elijas (selector de fecha +
+atajos "Ayer"/"Hoy"), en vez de estar fija siempre al día actual. Cada
+tarjeta de jugador muestra ahora también su RPE de ese día (coloreado
+igual que el resto de la app), o "—" si no registró sesión.
+
+Útil tanto para el vistazo pre-sesión de siempre como para revisar
+retrospectivamente cómo llegó el equipo un día concreto del pasado. La
+tabla "RPE de la semana" se mantiene tal cual, para la vista de conjunto
+de los últimos 7 días.
+
+## Guardado de vídeo unificado, y edición de ejercicios de la biblioteca
+
+- **Un solo formulario para guardar**: antes había dos sitios distintos
+  para guardar en la biblioteca (uno para la imagen de la pizarra, otro
+  aparte para el vídeo del movimiento) — ahora es uno solo. Si has
+  generado un vídeo con "Exportar secuencia", el formulario "Guardar este
+  ejercicio en la biblioteca" lo detecta automáticamente y guarda ESE
+  vídeo (con su nombre/etiquetas/descripción/variantes), en vez de una
+  imagen estática — el propio título del formulario y el botón cambian
+  para dejarlo claro.
+- **Editar un ejercicio ya guardado**: nuevo botón "✎ Editar" en cada
+  tarjeta de la galería, que abre una ventana con todos sus datos —
+  nombre, etiquetas, descripción, variantes, y también la posibilidad de
+  **reemplazar el archivo** (subir un vídeo nuevo si es de tipo vídeo,
+  una imagen nueva si es de tipo imagen, o cambiar el enlace si es de
+  YouTube). Al reemplazar un vídeo, el archivo antiguo se borra del
+  almacenamiento para no dejar basura acumulada.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

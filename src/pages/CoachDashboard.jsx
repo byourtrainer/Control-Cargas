@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabaseClient'
 import { fechaISOLocal } from '../lib/fechas'
 import { calcularMetricas, clasificarRiesgoACWR, clasificarMonotonia, diferenciaCarga } from '../lib/cargaMetrics'
 import { calcularBienestar, clasificarBienestar } from '../lib/bienestar'
+import { colorParaValor } from '../lib/colorEscalas'
 import { diferenciaBienestar, deltaBienestarDiario, deltaBienestarSemanal, clasificarDeltaDiario, bienestarAgudo, bienestarBasal } from '../lib/bienestarTendencia'
 import './CoachDashboard.css'
 
@@ -452,23 +453,47 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
   }, [jugadorActivo, jugadoresGrafico, registros, metodoACWR, buckets])
 
   // --- Bienestar de hoy: vistazo rápido antes de empezar la sesión, independiente del rango elegido ---
-  const bienestarHoy = useMemo(() => {
-    const hoy = diasAtras(0)
+  // --- Bienestar y RPE del día: vistazo por jugador, para una fecha elegible (por defecto hoy) ---
+  const [fechaEstadoDia, setFechaEstadoDia] = useState(() => diasAtras(0))
+
+  const estadoDelDia = useMemo(() => {
     const orden = { malo: 0, bueno: 1, optimo: 2, sin_datos: 3 }
     return jugadoresFiltrados
       .map((j) => {
-        const registroHoy = registros.find((r) => r.jugador_id === j.id && r.fecha === hoy)
-        const valor = registroHoy ? calcularBienestar(registroHoy) : null
+        const registro = registros.find((r) => r.jugador_id === j.id && r.fecha === fechaEstadoDia)
+        const valor = registro ? calcularBienestar(registro) : null
         return {
           id: j.id,
           nombre: j.nombre,
           valor,
           nivel: clasificarBienestar(valor),
-          molestia: !!registroHoy?.tiene_molestia,
+          molestia: !!registro?.tiene_molestia,
+          rpe: registro?.rpe ?? null,
         }
       })
       .sort((a, b) => orden[a.nivel] - orden[b.nivel])
-  }, [jugadoresFiltrados, registros])
+  }, [jugadoresFiltrados, registros, fechaEstadoDia])
+
+  // --- RPE de la semana: qué ha aportado cada jugador día a día, últimos 7 días ---
+  const diasRpeSemana = useMemo(() => {
+    const dias = []
+    for (let i = 6; i >= 0; i--) dias.push(diasAtras(i))
+    return dias
+  }, [])
+
+  const rpeSemana = useMemo(() => {
+    return jugadoresFiltrados
+      .map((j) => {
+        const suyos = registros.filter((r) => r.jugador_id === j.id)
+        const celdas = diasRpeSemana.map((fecha) => {
+          const registro = suyos.find((r) => r.fecha === fecha)
+          return { fecha, rpe: registro?.rpe ?? null }
+        })
+        const diasConRpe = celdas.filter((c) => c.rpe !== null).length
+        return { id: j.id, nombre: j.nombre, celdas, diasConRpe }
+      })
+      .sort((a, b) => a.diasConRpe - b.diasConRpe || a.nombre.localeCompare(b.nombre))
+  }, [jugadoresFiltrados, registros, diasRpeSemana])
 
   // --- Alertas de hoy: control diario, independiente del rango/vista elegidos ---
   const alertasHoy = useMemo(() => {
@@ -662,21 +687,74 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
       </div>
 
       <section className="bienestar-hoy-card no-imprimir">
-        <h3>Bienestar de hoy</h3>
-        <p className="texto-dim bienestar-hoy-sub">Antes de empezar la sesión — cómo llega cada jugador hoy.</p>
-        {bienestarHoy.length === 0 ? (
+        <div className="bienestar-hoy-cabecera">
+          <div>
+            <h3>Bienestar y RPE del día</h3>
+            <p className="texto-dim bienestar-hoy-sub">Cómo llegó (o llega) cada jugador ese día — bienestar y esfuerzo reportado juntos.</p>
+          </div>
+          <div className="bienestar-hoy-selector-fecha">
+            <button type="button" className="pizarra-boton" onClick={() => setFechaEstadoDia(diasAtras(1))}>Ayer</button>
+            <input type="date" value={fechaEstadoDia} max={diasAtras(0)} onChange={(e) => setFechaEstadoDia(e.target.value)} />
+            <button type="button" className="pizarra-boton" onClick={() => setFechaEstadoDia(diasAtras(0))}>Hoy</button>
+          </div>
+        </div>
+        {estadoDelDia.length === 0 ? (
           <p className="texto-dim">No hay jugadores en el grupo activo.</p>
         ) : (
           <div className="bienestar-hoy-grid">
-            {bienestarHoy.map((j) => (
+            {estadoDelDia.map((j) => (
               <div key={j.id} className={`bienestar-hoy-tarjeta bienestar-hoy-${j.nivel}`}>
-                {j.molestia && <span className="bienestar-hoy-molestia" title="Molestia reportada hoy">⚠</span>}
+                {j.molestia && <span className="bienestar-hoy-molestia" title="Molestia reportada ese día">⚠</span>}
                 <span className="bienestar-hoy-punto" />
                 <strong className="bienestar-hoy-nombre">{j.nombre}</strong>
                 <span className="bienestar-hoy-etiqueta">{traducirBienestar(j.nivel)}</span>
                 {j.valor !== null && <span className="bienestar-hoy-numero mono">{j.valor.toFixed(1)}</span>}
+                <span className="bienestar-hoy-rpe mono" style={{ color: colorParaValor(j.rpe, 10) }}>
+                  RPE {j.rpe !== null ? j.rpe : '—'}
+                </span>
               </div>
             ))}
+          </div>
+        )}
+      </section>
+
+      <section className="rpe-semana-card no-imprimir">
+        <h3>RPE de la semana</h3>
+        <p className="texto-dim bienestar-hoy-sub">Qué ha aportado cada jugador, día a día, en los últimos 7 días.</p>
+        {rpeSemana.length === 0 ? (
+          <p className="texto-dim">No hay jugadores en el grupo activo.</p>
+        ) : (
+          <div className="rpe-semana-tabla-wrap">
+            <table className="rpe-semana-tabla">
+              <thead>
+                <tr>
+                  <th>Jugador</th>
+                  {diasRpeSemana.map((fecha) => (
+                    <th key={fecha}>
+                      {new Date(fecha + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' })}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rpeSemana.map((j) => (
+                  <tr key={j.id}>
+                    <td className="rpe-semana-nombre">{j.nombre}</td>
+                    {j.celdas.map((c) => (
+                      <td key={c.fecha} className="rpe-semana-celda">
+                        {c.rpe !== null ? (
+                          <span className="rpe-semana-valor mono" style={{ color: colorParaValor(c.rpe, 10) }}>
+                            {c.rpe}
+                          </span>
+                        ) : (
+                          <span className="rpe-semana-vacio">—</span>
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </section>
