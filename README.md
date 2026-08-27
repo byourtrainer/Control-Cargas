@@ -1830,6 +1830,20 @@ confirmar que está bien hecho, y añadí lo que faltaba.
 - Revisión completa de sintaxis y enlaces entre archivos para confirmar
   que todo compila y funciona junto correctamente.
 
+## El entrenador ya ve todo lo del Fisio, no solo el resumen
+
+Nueva pestaña **"🩺 Fisio"** en tu propia navegación — abre exactamente
+la misma pantalla que usa el fisioterapeuta: el formulario completo,
+el historial entero, y el detalle clínico de cada informe (motivo de
+consulta, causa, contacto, notas de evolución...), no solo la tabla
+resumida y las estadísticas que ya tenías en Lesiones.
+
+No hizo falta tocar la base de datos — los permisos para que el
+entrenador gestionara esto ya estaban puestos desde que se construyó el
+módulo; solo faltaba la pestaña para acceder a la pantalla. La pestaña
+"Lesiones" (con la tabla resumida y las estadísticas de frecuencia) se
+mantiene tal cual, como una vista más rápida para el día a día.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

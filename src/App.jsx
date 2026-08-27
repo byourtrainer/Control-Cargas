@@ -25,6 +25,7 @@ const pestanasEntrenador = [
   { clave: 'sesion', etiqueta: 'Planificación' },
   { clave: 'tests', etiqueta: 'Tests' },
   { clave: 'lesiones', etiqueta: 'Lesiones' },
+  { clave: 'fisio', etiqueta: '🩺 Fisio' },
   { clave: 'referencias', etiqueta: 'Referencias' },
   { clave: 'entrenamiento', etiqueta: '🏋 App Entrenamiento' },
   { clave: 'pizarra', etiqueta: '🎯 Pizarra Táctica' },
@@ -255,6 +256,7 @@ export default function App() {
               jugadorActivo={jugadorActivo} fechaDesde={fechaDesde} fechaHasta={fechaHasta}
             />
           )
+          : pestana === 'fisio' ? <Fisio perfil={perfil} />
           : pestana === 'referencias' ? <Referencias />
           : pestana === 'calendario' ? <CalendarioClub equipoActivo={equipoActivo} equipos={equipos} onIrAPlanificar={irAPlanificar} />
           : pestana === 'entrenamiento' ? <BibliotecaEjercicios />
