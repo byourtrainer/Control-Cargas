@@ -98,6 +98,11 @@
   color: var(--text-dim);
 }
 
+.rol-fisio {
+  background: rgba(77, 200, 255, 0.15);
+  color: #4dc8ff;
+}
+
 .btn-salir {
   background: none;
   border: 1px solid var(--line-strong);

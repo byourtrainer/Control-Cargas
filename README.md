@@ -1748,6 +1748,88 @@ Si el ejercicio tenía un vídeo propio guardado en el almacenamiento y
 cambias a imagen o YouTube, ese vídeo se borra automáticamente para no
 dejar archivos huérfanos ocupando espacio.
 
+## Nuevo espacio para el fisioterapeuta ("Fisio")
+
+Comparaste el informe profesional que usa tu fisio (en catalán) con lo
+que ya teníamos en Lesiones, y se ha construido una pieza grande a partir
+de ahí:
+
+### Nuevo rol: Fisio
+Un tercer tipo de cuenta (junto a entrenador y jugador), con su propio
+espacio dedicado — el fisio inicia sesión y ve directamente su página,
+sin el resto de pestañas del entrenador.
+
+### La tabla "lesiones" se amplió (no se sustituyó)
+Se mantienen todos los campos que ya había — se añadieron los del
+informe profesional: motivo de consulta, fecha posible de retorno, las
+17 zonas del cuerpo del informe (como checklist, pudiendo marcar varias),
+lateralidad, los 13 tipos de lesión del informe (también checklist),
+lesión previa en la misma zona, causa (sobreuso/traumatismo), momento
+(entreno/partido/fuera del ámbito hockey), tipo de contacto, y gravedad
+con los rangos de días exactos del informe (Leve 1-3, Menor 4-7,
+Moderada 8-28, Grave +28).
+
+### La página del Fisio
+Formulario completo calcado del informe, historial de lesiones (con
+filtro "solo activas"), y una ficha de seguimiento por lesión donde puede
+ir añadiendo **notas de evolución** con fecha en cada visita, además de
+poder editar el informe o **dar de alta** cuando se resuelve.
+
+### Para el entrenador: nueva sección "Lesiones más frecuentes"
+En la pestaña Lesiones, antes del mapa corporal de molestias — dos
+listas (tipo de lesión y zona del cuerpo) ordenadas por frecuencia,
+respetando el selector <strong>◎</strong> de la cabecera para ver el
+conjunto del equipo o de un jugador en concreto, en el rango de fechas
+que quieras.
+
+**Aviso honesto sobre alcance**: esta primera versión no intenta unificar
+el mapa corporal de molestias (que usan los propios jugadores, con zonas
+más finas por lado izquierdo/derecho) con las zonas del informe del fisio
+(más generales, sin distinguir lado en la propia zona) — son dos
+vocabularios distintos con propósitos distintos, y forzarlos a compartir
+el mismo dibujo habría exigido rediseñar uno de los dos. Se muestran como
+dos secciones separadas, cada una con su propio criterio.
+
+## Módulo de Fisio — revisado a fondo, y 4 zonas añadidas al muñeco
+
+Al revisar el proyecto, encontré que **la mayor parte de este módulo ya
+estaba construida** de un paso anterior de este mismo bloque de trabajo
+que no tenía completamente a la vista — lo repasé entero para
+confirmar que está bien hecho, y añadí lo que faltaba.
+
+### Lo que ya estaba (revisado y confirmado correcto)
+- **Nuevo rol "fisio"**, con su propio espacio dedicado — el fisio nunca
+  ve la navegación ni las pestañas del entrenador, entra directo a su
+  formulario.
+- **Formulario fiel al documento del club** (Informe d'Evolució de
+  Lesió): jugador, motivo de consulta, fecha de lesión, fecha estimada de
+  retorno, 17 zonas del cuerpo (checklist), lateralidad, 13 tipos de
+  lesión + "otro", si es lesión repetida en la misma zona, causa
+  (sobreuso/traumatismo), momento (entreno/partido/fuera del hockey),
+  contacto, y gravedad con los mismos rangos de días del documento
+  original.
+- **Seguimiento de evolución**: cada informe admite notas de visitas
+  sucesivas (con fecha automática), y un botón "Dar de alta" que cierra
+  la lesión.
+- **Historial filtrable** (activas / todas) con vista detallada de cada
+  informe.
+- **Análisis para el entrenador**, en la pestaña Lesiones: "Lesiones más
+  frecuentes" (por tipo y por zona, formal, del fisio) — separado con
+  claridad de las molestias autoinformadas por los jugadores, que ya
+  existían — ambas respetando el selector ◎ para ver el conjunto del
+  equipo o un jugador individual.
+- **`crear_cuenta_fisio.sql`**: script para dar de alta la cuenta del
+  fisio directamente (sin pasar por el formulario de registro, que está
+  pensado para jugadores).
+
+### Lo que añadí ahora
+- **4 zonas nuevas en el muñeco corporal** (Cabeza/cara, Esternón/costillas,
+  Abdomen, Mano) — antes el muñeco de molestias autoinformadas no cubría
+  del todo el listado del fisio; ahora sí, en vista frontal (con eco
+  decorativo en la posterior, igual que el resto de zonas).
+- Revisión completa de sintaxis y enlaces entre archivos para confirmar
+  que todo compila y funciona junto correctamente.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

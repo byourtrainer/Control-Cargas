@@ -67,6 +67,30 @@ export default function Lesiones({ equipoActivo = 'todos', jugadorActivo = 'equi
   const zonasOrdenadas = Object.entries(frecuenciasMapa).sort((a, b) => b[1] - a[1])
   const nombreJugadorActivo = jugadorActivo !== 'equipo' ? jugadores.find((j) => j.id === jugadorActivo)?.nombre : null
 
+  // --- Lesiones formales más frecuentes (tipos y zonas), respetando el contexto ◎ ---
+  const lesionesEnContexto = lesiones.filter((l) => {
+    if (jugadorActivo !== 'equipo') return l.jugador_id === jugadorActivo
+    const jugador = jugadores.find((j) => j.id === l.jugador_id)
+    if (!jugador) return false
+    if (equipoActivo === 'sin_asignar') return !jugador.equipo_id
+    if (equipoActivo !== 'todos') return jugador.equipo_id === equipoActivo
+    return true
+  }).filter((l) => (!fechaDesde || l.fecha_lesion >= fechaDesde) && (!fechaHasta || l.fecha_lesion <= fechaHasta))
+
+  const conteoTipos = {}
+  lesionesEnContexto.forEach((l) => {
+    const tipos = l.tipos_lesion?.length > 0 ? l.tipos_lesion : [l.tipologia].filter(Boolean)
+    tipos.forEach((t) => { conteoTipos[t] = (conteoTipos[t] || 0) + 1 })
+  })
+  const tiposLesionOrdenados = Object.entries(conteoTipos).sort((a, b) => b[1] - a[1])
+
+  const conteoZonasLesion = {}
+  lesionesEnContexto.forEach((l) => {
+    const zonas = l.partes_cuerpo?.length > 0 ? l.partes_cuerpo : (l.parte_cuerpo ? [l.parte_cuerpo] : [])
+    zonas.forEach((z) => { conteoZonasLesion[z] = (conteoZonasLesion[z] || 0) + 1 })
+  })
+  const zonasLesionOrdenadas = Object.entries(conteoZonasLesion).sort((a, b) => b[1] - a[1])
+
   async function cargarTodo() {
     setCargando(true)
     const [{ data: perfiles }, { data: lesionesData }] = await Promise.all([
@@ -306,6 +330,43 @@ export default function Lesiones({ equipoActivo = 'todos', jugadorActivo = 'equi
             </table>
           </div>
         )}
+      </section>
+
+      <section className="lesiones-frecuentes-card">
+        <h2>Lesiones más frecuentes</h2>
+        <p className="cuerpo-mapa-sub">
+          Basado en los informes formales del fisio (no en las molestias autoinformadas de abajo).
+          Usa el selector <strong>◎</strong> para ver el conjunto del equipo o de un jugador en concreto.
+        </p>
+        <p className="cuerpo-mapa-contexto mono texto-dim">
+          {nombreJugadorActivo || 'Todo el grupo seleccionado'} · {fechaDesde} → {fechaHasta} · {lesionesEnContexto.length} informe(s)
+        </p>
+        <div className="lesiones-frecuentes-grid">
+          <div>
+            <h4>Tipo de lesión</h4>
+            {tiposLesionOrdenados.length === 0 ? (
+              <p className="texto-dim">Sin informes en este periodo.</p>
+            ) : (
+              <ul className="cuerpo-mapa-ul">
+                {tiposLesionOrdenados.map(([tipo, veces]) => (
+                  <li key={tipo}><span>{tipo}</span><span className="mono">{veces}×</span></li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <div>
+            <h4>Zona del cuerpo</h4>
+            {zonasLesionOrdenadas.length === 0 ? (
+              <p className="texto-dim">Sin informes en este periodo.</p>
+            ) : (
+              <ul className="cuerpo-mapa-ul">
+                {zonasLesionOrdenadas.map(([zona, veces]) => (
+                  <li key={zona}><span>{zona}</span><span className="mono">{veces}×</span></li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
       </section>
 
       <section className="cuerpo-mapa-card">

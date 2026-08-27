@@ -57,6 +57,10 @@ export default function SelectorCuerpo({
           </g>
           <circle cx="60" cy="14" r="15" fill="var(--bg-elevated)" stroke="var(--line)" strokeWidth="1" />
 
+          <circle cx="60" cy="14" r="15" {...propsZona('Cabeza/cara')}>
+            {modo === 'mapa' && <title>{tituloZona('Cabeza/cara')}</title>}
+          </circle>
+
           <rect x="52" y="28" width="16" height="12" rx="4" {...propsZona('Cuello/cervicales')}>
             {modo === 'mapa' && <title>{tituloZona('Cuello/cervicales')}</title>}
           </rect>
@@ -75,6 +79,12 @@ export default function SelectorCuerpo({
           </rect>
           <rect x="62" y="42" width="14" height="18" rx="4" {...propsZona('Pectoral', 'Derecho')}>
             {modo === 'mapa' && <title>{tituloZona('Pectoral', 'Derecho')}</title>}
+          </rect>
+          <rect x="45" y="61" width="30" height="13" rx="4" {...propsZona('Esternón/costillas')}>
+            {modo === 'mapa' && <title>{tituloZona('Esternón/costillas')}</title>}
+          </rect>
+          <rect x="44" y="76" width="32" height="18" rx="4" {...propsZona('Abdomen')}>
+            {modo === 'mapa' && <title>{tituloZona('Abdomen')}</title>}
           </rect>
 
           <path d="M14,50 C10,60 8,80 10,98 L22,100 C24,82 26,64 30,52 Z" {...propsZona('Brazo', 'Izquierdo')}>
@@ -104,6 +114,13 @@ export default function SelectorCuerpo({
           <circle cx="108" cy="148" r="7" {...propsZona('Muñeca', 'Derecho')}>
             {modo === 'mapa' && <title>{tituloZona('Muñeca', 'Derecho')}</title>}
           </circle>
+
+          <ellipse cx="11" cy="161" rx="8" ry="10" {...propsZona('Mano', 'Izquierdo')}>
+            {modo === 'mapa' && <title>{tituloZona('Mano', 'Izquierdo')}</title>}
+          </ellipse>
+          <ellipse cx="109" cy="161" rx="8" ry="10" {...propsZona('Mano', 'Derecho')}>
+            {modo === 'mapa' && <title>{tituloZona('Mano', 'Derecho')}</title>}
+          </ellipse>
 
           <path d="M40,96 C40,90 80,90 80,96 L82,116 C70,122 50,122 38,116 Z" {...propsZona('Cadera')}>
             {modo === 'mapa' && <title>{tituloZona('Cadera')}</title>}
@@ -173,6 +190,8 @@ export default function SelectorCuerpo({
           <path d="M112,110 C114,120 114,132 111,142 L100,140 C101,128 100,118 99,110 Z" fill="var(--bg-elevated)" fillOpacity="0.5" stroke="var(--line)" strokeWidth="1" />
           <circle cx="12" cy="148" r="7" fill="var(--bg-elevated)" fillOpacity="0.5" stroke="var(--line)" strokeWidth="1" />
           <circle cx="108" cy="148" r="7" fill="var(--bg-elevated)" fillOpacity="0.5" stroke="var(--line)" strokeWidth="1" />
+          <ellipse cx="11" cy="161" rx="8" ry="10" fill="var(--bg-elevated)" fillOpacity="0.5" stroke="var(--line)" strokeWidth="1" />
+          <ellipse cx="109" cy="161" rx="8" ry="10" fill="var(--bg-elevated)" fillOpacity="0.5" stroke="var(--line)" strokeWidth="1" />
 
           <path d="M42,40 C42,36 78,36 78,40 L80,72 C66,78 54,78 40,72 Z" {...propsZona('Zona dorsal (espalda alta)')}>
             {modo === 'mapa' && <title>{tituloZona('Zona dorsal (espalda alta)')}</title>}

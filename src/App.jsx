@@ -3,6 +3,7 @@ import { supabase } from './lib/supabaseClient'
 import { fechaISOLocal } from './lib/fechas'
 import Login from './pages/Login'
 import PlayerForm from './pages/PlayerForm'
+import Fisio from './pages/Fisio'
 import CoachDashboard from './pages/CoachDashboard'
 import SesionDia from './pages/SesionDia'
 import Lesiones from './pages/Lesiones'
@@ -276,6 +277,8 @@ export default function App() {
               fechaDesde={fechaDesde} fechaHasta={fechaHasta}
             />
           )
+        ) : perfil.rol === 'fisio' ? (
+          <Fisio perfil={perfil} />
         ) : (
           <PlayerForm perfil={perfil} />
         )}
