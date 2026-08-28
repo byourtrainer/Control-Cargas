@@ -1883,6 +1883,36 @@ De paso, se limpiaron dos archivos huérfanos (`Informes.jsx` y
 ya rotos y sin ninguna referencia desde el resto de la app, seguramente
 de un intento anterior de este mismo módulo.
 
+## Muñeco de molestias: contornos más parecidos a músculos reales
+
+Mismo propósito de siempre (marcar dónde duele, mapa de calor del
+entrenador), pero con las formas de las zonas más grandes rediseñadas
+para que se parezcan más a la forma real de un músculo, en vez de
+rectángulos y círculos planos:
+
+- **Pectoral**: forma de abanico curvado, en vez de un rectángulo.
+- **Abdomen**: contorno abombado con dos líneas finas decorativas que
+  insinúan la división en tabletas (no son zonas nuevas, solo estética).
+- **Bíceps/brazo**: forma de huso, más ancha en el centro, estrechándose
+  hacia el hombro y el codo.
+- **Cuádriceps/isquiotibiales**: contorno de gota, más abultado en el
+  muslo y más estrecho hacia la rodilla.
+- **Gemelos/tibiales**: misma idea, abultados arriba y estrechos en el
+  tobillo.
+- **Hombro, glúteos, escapular**: contornos redondeados en vez de
+  esquinas rectas.
+
+**Un aviso honesto sobre lo que no cambié**: una ilustración anatómica
+realista de verdad (como la de tu foto de referencia) es un recurso
+gráfico profesional que no puedo replicar bien dibujando coordenadas SVG
+a mano, sin herramientas de diseño vectorial — esto es una mejora de
+estilo dentro de lo que es razonable construir así, no una réplica exacta
+de esa imagen.
+
+Ninguna zona, nombre ni comportamiento cambió — sigue habiendo
+exactamente las mismas 39 combinaciones de zona/lado de siempre, con la
+misma lógica de selección y mapa de calor; solo cambió el dibujo.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

@@ -3,7 +3,8 @@ import './SelectorCuerpo.css'
 // Silueta corporal (frontal + posterior) con dos modos:
 // - modo="seleccion": el jugador toca todas las zonas (y lados) donde tiene molestia — selección múltiple.
 // - modo="mapa": el entrenador ve cada zona coloreada según cuántas veces se ha reportado.
-// No es anatómicamente exacta (es esquemática), pero cubre las zonas del club.
+// No es anatómicamente exacta (es esquemática, con contornos abultados que
+// recuerdan a la forma de un músculo real), pero cubre las zonas del club.
 // Las zonas con lado (hombro, brazo, codo, antebrazo, muñeca, pectoral,
 // cuádriceps, aductor, rodilla, tibiales, tobillo, pie, escapular,
 // isquiotibiales, gemelos) distinguen lado izquierdo/derecho tal y como
@@ -65,32 +66,35 @@ export default function SelectorCuerpo({
             {modo === 'mapa' && <title>{tituloZona('Cuello/cervicales')}</title>}
           </rect>
 
-          <path d="M30,44 C30,36 40,32 48,34 L48,58 C40,60 30,56 28,50 Z" {...propsZona('Hombro', 'Izquierdo')}>
+          <path d="M28,48 C27,40 34,32 45,32 C50,32 50,38 49,44 L49,58 C42,60 32,57 28,48 Z" {...propsZona('Hombro', 'Izquierdo')}>
             {modo === 'mapa' && <title>{tituloZona('Hombro', 'Izquierdo')}</title>}
           </path>
-          <path d="M90,44 C90,36 80,32 72,34 L72,58 C80,60 90,56 92,50 Z" {...propsZona('Hombro', 'Derecho')}>
+          <path d="M92,48 C93,40 86,32 75,32 C70,32 70,38 71,44 L71,58 C78,60 88,57 92,48 Z" {...propsZona('Hombro', 'Derecho')}>
             {modo === 'mapa' && <title>{tituloZona('Hombro', 'Derecho')}</title>}
           </path>
 
           <rect x="42" y="40" width="36" height="60" rx="12" fill="var(--bg-elevated)" fillOpacity="0.5" stroke="var(--line)" strokeWidth="1" />
 
-          <rect x="44" y="42" width="14" height="18" rx="4" {...propsZona('Pectoral', 'Izquierdo')}>
+          <path d="M58,43 C51,40 45,42 43,48 C42,54 46,59 53,60 C57,60 59,58 59,54 Z" {...propsZona('Pectoral', 'Izquierdo')}>
             {modo === 'mapa' && <title>{tituloZona('Pectoral', 'Izquierdo')}</title>}
-          </rect>
-          <rect x="62" y="42" width="14" height="18" rx="4" {...propsZona('Pectoral', 'Derecho')}>
+          </path>
+          <path d="M62,43 C69,40 75,42 77,48 C78,54 74,59 67,60 C63,60 61,58 61,54 Z" {...propsZona('Pectoral', 'Derecho')}>
             {modo === 'mapa' && <title>{tituloZona('Pectoral', 'Derecho')}</title>}
-          </rect>
+          </path>
           <rect x="45" y="61" width="30" height="13" rx="4" {...propsZona('Esternón/costillas')}>
             {modo === 'mapa' && <title>{tituloZona('Esternón/costillas')}</title>}
           </rect>
-          <rect x="44" y="76" width="32" height="18" rx="4" {...propsZona('Abdomen')}>
+          <path d="M46,76 L74,76 C75,80 75,86 74,92 C68,95 52,95 46,92 C45,86 45,80 46,76 Z" {...propsZona('Abdomen')}>
             {modo === 'mapa' && <title>{tituloZona('Abdomen')}</title>}
-          </rect>
+          </path>
+          <line x1="60" y1="78" x2="60" y2="93" stroke="var(--line)" strokeWidth="0.75" opacity="0.4" pointerEvents="none" />
+          <line x1="51" y1="80" x2="51" y2="91" stroke="var(--line)" strokeWidth="0.5" opacity="0.3" pointerEvents="none" />
+          <line x1="69" y1="80" x2="69" y2="91" stroke="var(--line)" strokeWidth="0.5" opacity="0.3" pointerEvents="none" />
 
-          <path d="M14,50 C10,60 8,80 10,98 L22,100 C24,82 26,64 30,52 Z" {...propsZona('Brazo', 'Izquierdo')}>
+          <path d="M18,50 C11,57 8,70 9,85 C10,93 13,99 19,99 C23,91 25,77 26,64 C27,57 24,52 18,50 Z" {...propsZona('Brazo', 'Izquierdo')}>
             {modo === 'mapa' && <title>{tituloZona('Brazo', 'Izquierdo')}</title>}
           </path>
-          <path d="M106,50 C110,60 112,80 110,98 L98,100 C96,82 94,64 90,52 Z" {...propsZona('Brazo', 'Derecho')}>
+          <path d="M102,50 C109,57 112,70 111,85 C110,93 107,99 101,99 C97,91 95,77 94,64 C93,57 96,52 102,50 Z" {...propsZona('Brazo', 'Derecho')}>
             {modo === 'mapa' && <title>{tituloZona('Brazo', 'Derecho')}</title>}
           </path>
 
@@ -129,10 +133,10 @@ export default function SelectorCuerpo({
             {modo === 'mapa' && <title>{tituloZona('Psoas (flexores cadera)')}</title>}
           </rect>
 
-          <path d="M38,120 C36,140 36,158 40,176 L58,176 C58,156 56,138 56,122 Z" {...propsZona('Cuádriceps', 'Izquierdo')}>
+          <path d="M39,120 C35,132 34,150 36,166 C37,174 41,178 48,178 C53,178 56,174 57,168 C58,150 58,134 55,120 C50,116 43,116 39,120 Z" {...propsZona('Cuádriceps', 'Izquierdo')}>
             {modo === 'mapa' && <title>{tituloZona('Cuádriceps', 'Izquierdo')}</title>}
           </path>
-          <path d="M82,120 C84,140 84,158 80,176 L62,176 C62,156 64,138 64,122 Z" {...propsZona('Cuádriceps', 'Derecho')}>
+          <path d="M81,120 C85,132 86,150 84,166 C83,174 79,178 72,178 C67,178 64,174 63,168 C62,150 62,134 65,120 C70,116 77,116 81,120 Z" {...propsZona('Cuádriceps', 'Derecho')}>
             {modo === 'mapa' && <title>{tituloZona('Cuádriceps', 'Derecho')}</title>}
           </path>
           <rect x="51" y="126" width="8" height="46" rx="4" {...propsZona('Aductor', 'Izquierdo')}>
@@ -149,10 +153,10 @@ export default function SelectorCuerpo({
             {modo === 'mapa' && <title>{tituloZona('Rodilla', 'Derecho')}</title>}
           </circle>
 
-          <path d="M39,194 C38,208 38,222 41,234 L53,234 C54,220 54,206 53,194 Z" {...propsZona('Tibiales', 'Izquierdo')}>
+          <path d="M40,194 C37,204 37,216 39,228 C40,234 43,238 47,238 C51,236 53,230 53,222 C54,210 54,200 52,194 C48,191 43,191 40,194 Z" {...propsZona('Tibiales', 'Izquierdo')}>
             {modo === 'mapa' && <title>{tituloZona('Tibiales', 'Izquierdo')}</title>}
           </path>
-          <path d="M81,194 C82,208 82,222 79,234 L67,234 C66,220 66,206 67,194 Z" {...propsZona('Tibiales', 'Derecho')}>
+          <path d="M80,194 C83,204 83,216 81,228 C80,234 77,238 73,238 C69,236 67,230 67,222 C66,210 66,200 68,194 C72,191 77,191 80,194 Z" {...propsZona('Tibiales', 'Derecho')}>
             {modo === 'mapa' && <title>{tituloZona('Tibiales', 'Derecho')}</title>}
           </path>
 
@@ -180,10 +184,10 @@ export default function SelectorCuerpo({
           </g>
           <circle cx="60" cy="14" r="15" fill="var(--bg-elevated)" stroke="var(--line)" strokeWidth="1" />
           <rect x="52" y="28" width="16" height="12" rx="4" fill="var(--bg-elevated)" fillOpacity="0.5" stroke="var(--line)" strokeWidth="1" />
-          <path d="M30,44 C30,36 40,32 48,34 L48,58 C40,60 30,56 28,50 Z" fill="var(--bg-elevated)" fillOpacity="0.5" stroke="var(--line)" strokeWidth="1" />
-          <path d="M90,44 C90,36 80,32 72,34 L72,58 C80,60 90,56 92,50 Z" fill="var(--bg-elevated)" fillOpacity="0.5" stroke="var(--line)" strokeWidth="1" />
-          <path d="M14,50 C10,60 8,80 10,98 L22,100 C24,82 26,64 30,52 Z" fill="var(--bg-elevated)" fillOpacity="0.5" stroke="var(--line)" strokeWidth="1" />
-          <path d="M106,50 C110,60 112,80 110,98 L98,100 C96,82 94,64 90,52 Z" fill="var(--bg-elevated)" fillOpacity="0.5" stroke="var(--line)" strokeWidth="1" />
+          <path d="M28,48 C27,40 34,32 45,32 C50,32 50,38 49,44 L49,58 C42,60 32,57 28,48 Z" fill="var(--bg-elevated)" fillOpacity="0.5" stroke="var(--line)" strokeWidth="1" />
+          <path d="M92,48 C93,40 86,32 75,32 C70,32 70,38 71,44 L71,58 C78,60 88,57 92,48 Z" fill="var(--bg-elevated)" fillOpacity="0.5" stroke="var(--line)" strokeWidth="1" />
+          <path d="M18,50 C11,57 8,70 9,85 C10,93 13,99 19,99 C23,91 25,77 26,64 C27,57 24,52 18,50 Z" fill="var(--bg-elevated)" fillOpacity="0.5" stroke="var(--line)" strokeWidth="1" />
+          <path d="M102,50 C109,57 112,70 111,85 C110,93 107,99 101,99 C97,91 95,77 94,64 C93,57 96,52 102,50 Z" fill="var(--bg-elevated)" fillOpacity="0.5" stroke="var(--line)" strokeWidth="1" />
           <circle cx="14" cy="103" r="8" fill="var(--bg-elevated)" fillOpacity="0.5" stroke="var(--line)" strokeWidth="1" />
           <circle cx="106" cy="103" r="8" fill="var(--bg-elevated)" fillOpacity="0.5" stroke="var(--line)" strokeWidth="1" />
           <path d="M8,110 C6,120 6,132 9,142 L20,140 C19,128 20,118 21,110 Z" fill="var(--bg-elevated)" fillOpacity="0.5" stroke="var(--line)" strokeWidth="1" />
@@ -193,36 +197,36 @@ export default function SelectorCuerpo({
           <ellipse cx="11" cy="161" rx="8" ry="10" fill="var(--bg-elevated)" fillOpacity="0.5" stroke="var(--line)" strokeWidth="1" />
           <ellipse cx="109" cy="161" rx="8" ry="10" fill="var(--bg-elevated)" fillOpacity="0.5" stroke="var(--line)" strokeWidth="1" />
 
-          <path d="M42,40 C42,36 78,36 78,40 L80,72 C66,78 54,78 40,72 Z" {...propsZona('Zona dorsal (espalda alta)')}>
+          <path d="M42,38 C42,34 78,34 78,38 L80,70 C67,77 53,77 40,70 Z" {...propsZona('Zona dorsal (espalda alta)')}>
             {modo === 'mapa' && <title>{tituloZona('Zona dorsal (espalda alta)')}</title>}
           </path>
-          <path d="M40,46 C40,43 52,42 55,44 L54,62 C48,64 41,60 39,55 Z" {...propsZona('Escapular', 'Izquierdo')}>
+          <path d="M39,44 C39,41 51,40 55,43 L54,60 C47,63 40,58 38,53 Z" {...propsZona('Escapular', 'Izquierdo')}>
             {modo === 'mapa' && <title>{tituloZona('Escapular', 'Izquierdo')}</title>}
           </path>
-          <path d="M80,46 C80,43 68,42 65,44 L66,62 C72,64 79,60 81,55 Z" {...propsZona('Escapular', 'Derecho')}>
+          <path d="M81,44 C81,41 69,40 65,43 L66,60 C73,63 80,58 82,53 Z" {...propsZona('Escapular', 'Derecho')}>
             {modo === 'mapa' && <title>{tituloZona('Escapular', 'Derecho')}</title>}
           </path>
-          <path d="M41,74 C41,70 79,70 79,74 L80,98 C66,102 54,102 40,98 Z" {...propsZona('Zona lumbar')}>
+          <path d="M41,72 C41,68 79,68 79,72 L80,96 C66,101 54,101 40,96 Z" {...propsZona('Zona lumbar')}>
             {modo === 'mapa' && <title>{tituloZona('Zona lumbar')}</title>}
           </path>
-          <path d="M38,100 C38,94 82,94 82,100 L82,118 C68,124 52,124 38,118 Z" {...propsZona('Glúteos')}>
+          <path d="M37,98 C37,92 45,88 60,88 C75,88 83,92 83,98 C83,110 76,120 60,120 C44,120 37,110 37,98 Z" {...propsZona('Glúteos')}>
             {modo === 'mapa' && <title>{tituloZona('Glúteos')}</title>}
           </path>
 
-          <path d="M38,120 C36,140 36,158 40,176 L58,176 C58,156 56,138 56,122 Z" {...propsZona('Isquiotibiales', 'Izquierdo')}>
+          <path d="M39,120 C35,132 34,150 36,166 C37,174 41,178 48,178 C53,178 56,174 57,168 C58,150 58,134 55,120 C50,116 43,116 39,120 Z" {...propsZona('Isquiotibiales', 'Izquierdo')}>
             {modo === 'mapa' && <title>{tituloZona('Isquiotibiales', 'Izquierdo')}</title>}
           </path>
-          <path d="M82,120 C84,140 84,158 80,176 L62,176 C62,156 64,138 64,122 Z" {...propsZona('Isquiotibiales', 'Derecho')}>
+          <path d="M81,120 C85,132 86,150 84,166 C83,174 79,178 72,178 C67,178 64,174 63,168 C62,150 62,134 65,120 C70,116 77,116 81,120 Z" {...propsZona('Isquiotibiales', 'Derecho')}>
             {modo === 'mapa' && <title>{tituloZona('Isquiotibiales', 'Derecho')}</title>}
           </path>
 
           <circle cx="46" cy="184" r="9" fill="var(--bg-elevated)" fillOpacity="0.5" stroke="var(--line)" strokeWidth="1" />
           <circle cx="74" cy="184" r="9" fill="var(--bg-elevated)" fillOpacity="0.5" stroke="var(--line)" strokeWidth="1" />
 
-          <path d="M39,194 C38,208 38,222 41,234 L53,234 C54,220 54,206 53,194 Z" {...propsZona('Gemelos', 'Izquierdo')}>
+          <path d="M40,194 C37,204 37,216 39,228 C40,234 43,238 47,238 C51,236 53,230 53,222 C54,210 54,200 52,194 C48,191 43,191 40,194 Z" {...propsZona('Gemelos', 'Izquierdo')}>
             {modo === 'mapa' && <title>{tituloZona('Gemelos', 'Izquierdo')}</title>}
           </path>
-          <path d="M81,194 C82,208 82,222 79,234 L67,234 C66,220 66,206 67,194 Z" {...propsZona('Gemelos', 'Derecho')}>
+          <path d="M80,194 C83,204 83,216 81,228 C80,234 77,238 73,238 C69,236 67,230 67,222 C66,210 66,200 68,194 C72,191 77,191 80,194 Z" {...propsZona('Gemelos', 'Derecho')}>
             {modo === 'mapa' && <title>{tituloZona('Gemelos', 'Derecho')}</title>}
           </path>
 
