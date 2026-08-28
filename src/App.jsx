@@ -107,8 +107,14 @@ export default function App() {
     return () => { activo = false }
   }, [session])
 
+  const esStaffCompleto = perfil?.rol === 'entrenador' || perfil?.rol === 'fisio'
+
   useEffect(() => {
-    if (perfil?.rol === 'entrenador') { cargarEquipos(); cargarJugadoresContexto() }
+    if (perfil?.rol === 'fisio') setPestana('fisio')
+  }, [perfil?.rol])
+
+  useEffect(() => {
+    if (esStaffCompleto) { cargarEquipos(); cargarJugadoresContexto() }
   }, [perfil])
 
   async function cargarEquipos() {
@@ -175,7 +181,7 @@ export default function App() {
         </div>
       </header>
 
-      {perfil.rol === 'entrenador' && (
+      {esStaffCompleto && (
         <>
           <nav className="pestanas-nav" ref={menuRef}>
             <button className="menu-desplegable-boton" onClick={() => setMenuAbierto(!menuAbierto)}>
@@ -242,7 +248,7 @@ export default function App() {
       )}
 
       <main className="contenido">
-        {perfil.rol === 'entrenador' ? (
+        {esStaffCompleto ? (
           pestana === 'sesion' ? (
             <SesionDia
               equipoActivo={equipoActivo}
@@ -279,8 +285,6 @@ export default function App() {
               fechaDesde={fechaDesde} fechaHasta={fechaHasta}
             />
           )
-        ) : perfil.rol === 'fisio' ? (
-          <Fisio perfil={perfil} />
         ) : (
           <PlayerForm perfil={perfil} />
         )}

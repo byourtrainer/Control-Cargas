@@ -1844,6 +1844,25 @@ módulo; solo faltaba la pestaña para acceder a la pantalla. La pestaña
 "Lesiones" (con la tabla resumida y las estadísticas de frecuencia) se
 mantiene tal cual, como una vista más rápida para el día a día.
 
+## Fisio y Entrenador ven exactamente lo mismo
+
+Antes, el fisio solo tenía acceso a su propia hoja de registro de
+lesiones — el resto de la app (Resumen, Jugadores, Calendario, Tests...)
+le estaba vetado. Ahora ambos roles ven **la misma navegación completa,
+con las mismas pestañas y los mismos datos**.
+
+Dos cambios, uno en cada lado:
+- **Base de datos**: la función `es_entrenador()` (que usan prácticamente
+  todas las reglas de seguridad de la app) ahora también reconoce al rol
+  "fisio" como equivalente — un único cambio que se propaga
+  automáticamente a todas las tablas, en vez de tener que revisar y
+  actualizar decenas de reglas una por una.
+- **App**: el fisio ya no se queda encerrado en su propia pantalla —
+  recorre exactamente las mismas pestañas que el entrenador. Eso sí, al
+  entrar aterriza directamente en "🩺 Fisio" por defecto (ya que es lo
+  que más va a usar), pero puede navegar a cualquier otra pestaña con
+  total libertad.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.
