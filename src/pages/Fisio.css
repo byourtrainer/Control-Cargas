@@ -208,3 +208,85 @@
   padding-top: 16px;
   border-top: 1px solid var(--line);
 }
+
+/* --- Trasplantado de la antigua página "Lesiones" --- */
+.cuerpo-mapa-card {
+  grid-column: 1 / -1;
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 24px;
+}
+
+.lesiones-frecuentes-card {
+  grid-column: 1 / -1;
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 24px;
+}
+
+.lesiones-frecuentes-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-top: 12px;
+}
+
+.lesiones-frecuentes-grid h4 {
+  font-size: 13px;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+
+@media (max-width: 700px) {
+  .lesiones-frecuentes-grid { grid-template-columns: 1fr; }
+}
+
+.cuerpo-mapa-sub {
+  font-size: 13px;
+  color: var(--text-dim);
+  margin: 4px 0 12px;
+}
+
+.cuerpo-mapa-contexto {
+  font-size: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.cuerpo-mapa-contenido {
+  display: grid;
+  grid-template-columns: 1fr 260px;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 700px) {
+  .cuerpo-mapa-contenido { grid-template-columns: 1fr; }
+}
+
+.cuerpo-mapa-lista h4 {
+  font-size: 13px;
+  color: var(--text-dim);
+  margin: 0 0 12px;
+}
+
+.cuerpo-mapa-ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cuerpo-mapa-ul li {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--text);
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}

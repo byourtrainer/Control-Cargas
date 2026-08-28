@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { hoyISOLocal as hoyISO } from '../lib/fechas'
+import SelectorCuerpo from './SelectorCuerpo'
 import './Fisio.css'
 
 const partesDelCuerpo = [
@@ -41,7 +42,7 @@ const vacio = {
   causa_tipo: '', momento: 'Entrenamiento', tipo_contacto: 'no', gravedad: '', notas: '',
 }
 
-export default function Fisio({ perfil }) {
+export default function Fisio({ perfil, equipoActivo = 'todos', jugadorActivo = 'equipo', fechaDesde, fechaHasta }) {
   const [jugadores, setJugadores] = useState([])
   const [lesiones, setLesiones] = useState([])
   const [form, setForm] = useState(vacio)
@@ -198,6 +199,64 @@ export default function Fisio({ perfil }) {
   }
 
   const lesionesFiltradas = lesiones.filter((l) => (filtroActivas ? l.activa !== false : true))
+
+  const jugadoresEnContexto = jugadores.filter((j) => {
+    if (equipoActivo === 'todos') return true
+    if (equipoActivo === 'sin_asignar') return !j.equipo_id
+    return j.equipo_id === equipoActivo
+  })
+  const nombreJugadorActivo = jugadorActivo !== 'equipo' ? jugadores.find((j) => j.id === jugadorActivo)?.nombre : null
+
+  // --- Mapa corporal de molestias autoinformadas (distinto de los informes formales de arriba) ---
+  const [registrosMapa, setRegistrosMapa] = useState([])
+  const [cargandoMapa, setCargandoMapa] = useState(false)
+
+  useEffect(() => { cargarRegistrosMapa() }, [jugadorActivo, equipoActivo, jugadores, fechaDesde, fechaHasta])
+
+  async function cargarRegistrosMapa() {
+    const ids = jugadorActivo !== 'equipo' ? [jugadorActivo] : jugadoresEnContexto.map((j) => j.id)
+    if (ids.length === 0) { setRegistrosMapa([]); return }
+    setCargandoMapa(true)
+    const { data } = await supabase
+      .from('registros_diarios')
+      .select('jugador_id, fecha, tiene_molestia, zonas_molestia')
+      .in('jugador_id', ids)
+      .eq('tiene_molestia', true)
+      .gte('fecha', fechaDesde)
+      .lte('fecha', fechaHasta)
+    setRegistrosMapa(data || [])
+    setCargandoMapa(false)
+  }
+
+  const frecuenciasMapa = registrosMapa.reduce((acc, r) => {
+    ;(r.zonas_molestia || []).forEach((clave) => { acc[clave] = (acc[clave] || 0) + 1 })
+    return acc
+  }, {})
+  const zonasMolestiaOrdenadas = Object.entries(frecuenciasMapa).sort((a, b) => b[1] - a[1])
+
+  // --- Informes formales más frecuentes (tipos y zonas), respetando el contexto ◎ ---
+  const lesionesEnContexto = lesiones.filter((l) => {
+    if (jugadorActivo !== 'equipo') return l.jugador_id === jugadorActivo
+    const jugador = jugadores.find((j) => j.id === l.jugador_id)
+    if (!jugador) return false
+    if (equipoActivo === 'sin_asignar') return !jugador.equipo_id
+    if (equipoActivo !== 'todos') return jugador.equipo_id === equipoActivo
+    return true
+  }).filter((l) => (!fechaDesde || l.fecha_lesion >= fechaDesde) && (!fechaHasta || l.fecha_lesion <= fechaHasta))
+
+  const conteoTipos = {}
+  lesionesEnContexto.forEach((l) => {
+    const tipos = l.tipos_lesion?.length > 0 ? l.tipos_lesion : [l.tipologia].filter(Boolean)
+    tipos.forEach((t) => { conteoTipos[t] = (conteoTipos[t] || 0) + 1 })
+  })
+  const tiposLesionOrdenados = Object.entries(conteoTipos).sort((a, b) => b[1] - a[1])
+
+  const conteoZonasLesion = {}
+  lesionesEnContexto.forEach((l) => {
+    const zonas = l.partes_cuerpo?.length > 0 ? l.partes_cuerpo : (l.parte_cuerpo ? [l.parte_cuerpo] : [])
+    zonas.forEach((z) => { conteoZonasLesion[z] = (conteoZonasLesion[z] || 0) + 1 })
+  })
+  const zonasLesionOrdenadas = Object.entries(conteoZonasLesion).sort((a, b) => b[1] - a[1])
 
   return (
     <div className="fisio-layout">
@@ -370,6 +429,74 @@ export default function Fisio({ perfil }) {
                 </div>
               </button>
             ))}
+          </div>
+        )}
+      </section>
+
+      <section className="lesiones-frecuentes-card">
+        <h2>Lesiones más frecuentes</h2>
+        <p className="cuerpo-mapa-sub">
+          Basado en los informes formales de arriba. Usa el selector <strong>◎</strong> de la
+          cabecera para ver el conjunto del equipo o de un jugador en concreto.
+        </p>
+        <p className="cuerpo-mapa-contexto mono texto-dim">
+          {nombreJugadorActivo || 'Todo el grupo seleccionado'} · {fechaDesde} → {fechaHasta} · {lesionesEnContexto.length} informe(s)
+        </p>
+        <div className="lesiones-frecuentes-grid">
+          <div>
+            <h4>Tipo de lesión</h4>
+            {tiposLesionOrdenados.length === 0 ? (
+              <p className="texto-dim">Sin informes en este periodo.</p>
+            ) : (
+              <ul className="cuerpo-mapa-ul">
+                {tiposLesionOrdenados.map(([tipo, veces]) => (
+                  <li key={tipo}><span>{tipo}</span><span className="mono">{veces}×</span></li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <div>
+            <h4>Zona del cuerpo</h4>
+            {zonasLesionOrdenadas.length === 0 ? (
+              <p className="texto-dim">Sin informes en este periodo.</p>
+            ) : (
+              <ul className="cuerpo-mapa-ul">
+                {zonasLesionOrdenadas.map(([zona, veces]) => (
+                  <li key={zona}><span>{zona}</span><span className="mono">{veces}×</span></li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <section className="cuerpo-mapa-card">
+        <h2>Mapa corporal de molestias</h2>
+        <p className="cuerpo-mapa-sub">
+          Basado en las molestias que los jugadores reportan en su registro diario de bienestar
+          (no en los informes formales de arriba). Usa el selector <strong>◎</strong> de la
+          cabecera para cambiar el equipo, jugador o rango de fechas.
+        </p>
+        <p className="cuerpo-mapa-contexto mono texto-dim">
+          {nombreJugadorActivo || 'Todo el grupo seleccionado'} · {fechaDesde} → {fechaHasta}
+        </p>
+        {cargandoMapa ? (
+          <p className="mono texto-dim">Cargando…</p>
+        ) : (
+          <div className="cuerpo-mapa-contenido">
+            <SelectorCuerpo modo="mapa" frecuencias={frecuenciasMapa} />
+            <div className="cuerpo-mapa-lista">
+              <h4>Zonas más reportadas</h4>
+              {zonasMolestiaOrdenadas.length === 0 ? (
+                <p className="texto-dim">Sin molestias reportadas en este periodo.</p>
+              ) : (
+                <ul className="cuerpo-mapa-ul">
+                  {zonasMolestiaOrdenadas.map(([zona, veces]) => (
+                    <li key={zona}><span>{zona}</span><span className="mono">{veces}×</span></li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
         )}
       </section>

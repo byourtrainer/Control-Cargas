@@ -6,7 +6,6 @@ import PlayerForm from './pages/PlayerForm'
 import Fisio from './pages/Fisio'
 import CoachDashboard from './pages/CoachDashboard'
 import SesionDia from './pages/SesionDia'
-import Lesiones from './pages/Lesiones'
 import Equipos from './pages/Equipos'
 import Jugadores from './pages/Jugadores'
 import Tests from './pages/Tests'
@@ -24,7 +23,6 @@ const pestanasEntrenador = [
   { clave: 'jugadores', etiqueta: 'Jugadores' },
   { clave: 'sesion', etiqueta: 'Planificación' },
   { clave: 'tests', etiqueta: 'Tests' },
-  { clave: 'lesiones', etiqueta: 'Lesiones' },
   { clave: 'fisio', etiqueta: '🩺 Fisio' },
   { clave: 'referencias', etiqueta: 'Referencias' },
   { clave: 'entrenamiento', etiqueta: '🏋 App Entrenamiento' },
@@ -239,7 +237,7 @@ export default function App() {
                   </label>
                 </div>
                 <p className="contexto-nota">
-                  Este equipo, jugador y rango de fechas se aplican en Resumen y en el mapa corporal de Lesiones.
+                  Este equipo, jugador y rango de fechas se aplican en Resumen y en el mapa corporal de Fisio.
                 </p>
               </div>
             )}
@@ -256,13 +254,12 @@ export default function App() {
               key={saltoPlanificacion?.ts || 'sesion-default'}
             />
           )
-          : pestana === 'lesiones' ? (
-            <Lesiones
-              equipos={equipos} equipoActivo={equipoActivo}
+          : pestana === 'fisio' ? (
+            <Fisio
+              perfil={perfil} equipoActivo={equipoActivo}
               jugadorActivo={jugadorActivo} fechaDesde={fechaDesde} fechaHasta={fechaHasta}
             />
           )
-          : pestana === 'fisio' ? <Fisio perfil={perfil} />
           : pestana === 'referencias' ? <Referencias />
           : pestana === 'calendario' ? <CalendarioClub equipoActivo={equipoActivo} equipos={equipos} onIrAPlanificar={irAPlanificar} />
           : pestana === 'entrenamiento' ? <BibliotecaEjercicios />

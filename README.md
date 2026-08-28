@@ -1863,6 +1863,26 @@ Dos cambios, uno en cada lado:
   que más va a usar), pero puede navegar a cualquier otra pestaña con
   total libertad.
 
+## Lesiones y Fisio, ya consolidados en una sola pestaña
+
+Quitada la duplicación: la pestaña "Lesiones" desaparece como sitio
+aparte — el formulario antiguo y más simple que tenía (escribía en la
+misma tabla que el informe completo del fisio, pero con muchos menos
+campos) se eliminó del todo. Lo único que era información genuinamente
+distinta de esa pestaña — las estadísticas de "Lesiones más frecuentes" y
+el "Mapa corporal de molestias" autoinformadas — se trasplantó dentro de
+la propia pestaña **"🩺 Fisio"**, debajo del historial de informes.
+
+Ahora "Fisio" es el único sitio para todo lo relacionado con lesiones:
+crear/editar informes clínicos completos, ver el historial con
+seguimiento de evolución, y las dos vistas de análisis que antes vivían
+por separado.
+
+De paso, se limpiaron dos archivos huérfanos (`Informes.jsx` y
+`CuerpoLesiones.jsx`) que aparecieron al revisar — prototipos antiguos,
+ya rotos y sin ninguna referencia desde el resto de la app, seguramente
+de un intento anterior de este mismo módulo.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.
