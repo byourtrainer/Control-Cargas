@@ -1913,6 +1913,30 @@ Ninguna zona, nombre ni comportamiento cambió — sigue habiendo
 exactamente las mismas 39 combinaciones de zona/lado de siempre, con la
 misma lógica de selección y mapa de calor; solo cambió el dibujo.
 
+## RPE por sesión, según el método de Foster (2001)
+
+En días con doble sesión (Pista + Gimnasio), el jugador ahora ve **un
+control de RPE por cada sesión** de ese día, no uno solo aplicado a la
+duración sumada — exactamente el método que documenta la literatura
+científica: carga del día = suma de (RPE × duración) de cada sesión por
+separado, evitando que la sesión más reciente domine el recuerdo del
+jugador al valorar "todo el día" de una vez (el mismo "efecto terminal"
+que el propio Foster describió, solo que amplificado entre dos sesiones
+completas en vez de entre los últimos minutos de una).
+
+**Cómo se aplicó sin tocar el resto de la app**: en vez de reescribir
+ACWR, Monotonía y las alertas para que lean varias filas, se añadió un
+disparador en la base de datos que calcula un "RPE efectivo" diario
+ponderado por duración (Σ(RPE×duración) ÷ Σduración) y lo escribe en el
+mismo sitio de siempre — así, `rpe_efectivo × duración_total` da
+exactamente la misma suma de cargas que pide Foster, y todo lo que ya
+existía sigue funcionando sin cambiar ni una línea de esos cálculos.
+
+De paso, arreglado un fallo real que había quedado latente desde que
+añadimos las sesiones múltiples por día: el formulario del jugador
+esperaba como mucho una sesión por día al cargar la duración, así que en
+cuanto hubiera dos, habría fallado silenciosamente.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.
