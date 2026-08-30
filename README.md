@@ -2015,6 +2015,26 @@ día") — ya no hay que buscar por separado:
    en el mapa de calor — para saber de un vistazo a qué corresponde cada
    RPE sin tener que ir a mirar el calendario.
 
+## Arreglado: por qué no veías los informes del fisio en la App
+
+Encontrado el motivo exacto — y no era un problema de permisos, sino de
+una consulta ambigua. La tabla `lesiones` tiene **dos** columnas que
+apuntan a `perfiles` (`jugador_id` y `fisio_id`), y la consulta que trae
+el nombre del jugador no especificaba cuál de las dos usar. Supabase, al
+no poder decidir, rechazaba la consulta entera con un error — que la app
+no mostraba, dejando simplemente la lista vacía en silencio. Por eso en
+el **Table Editor** (que usa acceso de administrador, sin pasar por esa
+consulta) sí se veían, pero en la App no.
+
+Arreglado especificando explícitamente qué relación usar. De paso,
+añadido un aviso visible si esto (u otro fallo de carga) volviera a
+pasar, en vez de quedar en silencio otra vez.
+
+## Jugador filtrado por el equipo del ◎
+
+El desplegable de "Jugador" al crear un informe ahora solo muestra a los
+jugadores del equipo seleccionado arriba, en vez de a todos.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

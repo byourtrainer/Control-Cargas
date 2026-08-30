@@ -81,12 +81,16 @@ export default function Fisio({ perfil, equipoActivo = 'todos', equipos = [], ju
 
   async function cargarTodo() {
     setCargando(true)
-    const [{ data: perfiles }, { data: lesionesData }] = await Promise.all([
+    const [{ data: perfiles }, { data: lesionesData, error: errorLesiones }] = await Promise.all([
       supabase.from('perfiles').select('id, nombre, equipo_id').eq('rol', 'jugador').order('nombre'),
-      supabase.from('lesiones').select('*, perfiles(nombre)').order('fecha_lesion', { ascending: false }),
+      supabase.from('lesiones').select('*, perfiles!lesiones_jugador_id_fkey(nombre)').order('fecha_lesion', { ascending: false }),
     ])
     setJugadores(perfiles || [])
     setLesiones(lesionesData || [])
+    if (errorLesiones) {
+      console.error('Error cargando lesiones:', errorLesiones)
+      setMensaje({ tipo: 'error', texto: 'No se pudo cargar el historial de lesiones. Mira la consola del navegador para más detalle.' })
+    }
     setCargando(false)
   }
 
@@ -315,7 +319,7 @@ export default function Fisio({ perfil, equipoActivo = 'todos', equipos = [], ju
               <span>Jugador</span>
               <select value={form.jugador_id} onChange={(e) => setForm({ ...form, jugador_id: e.target.value })} required>
                 <option value="" disabled>Selecciona un jugador</option>
-                {jugadores.map((j) => <option key={j.id} value={j.id}>{j.nombre}</option>)}
+                {jugadoresEnContexto.map((j) => <option key={j.id} value={j.id}>{j.nombre}</option>)}
               </select>
             </label>
             <label className="campo-lesion">
