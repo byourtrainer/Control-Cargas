@@ -373,6 +373,10 @@
 
   .fisio-imprimir-datos p { font-size: 13px; margin: 0 0 8px; }
 
+  .fisio-imprimir-subtitulo { font-size: 13px; margin: 14px 0 6px; color: var(--text-dim); }
+  .fisio-imprimir-subtitulo:first-child { margin-top: 0; }
+  .fisio-imprimir-tabla-jugador { margin-bottom: 4px; }
+
   .fisio-imprimir-muneco { break-inside: avoid; }
 
   .lesiones-tabla-imprimir {

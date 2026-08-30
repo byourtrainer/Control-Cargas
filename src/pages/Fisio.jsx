@@ -280,6 +280,31 @@ export default function Fisio({ perfil, equipoActivo = 'todos', equipos = [], ju
   })
   const zonasLesionOrdenadas = Object.entries(conteoZonasLesion).sort((a, b) => b[1] - a[1])
 
+  // Desglose por jugador — qué zonas ha reportado/sufrido cada uno, para
+  // cuando se exporta en modo grupo (jugadorActivo === 'equipo').
+  function desglosePorJugador(items, extraerZonas) {
+    const porJugador = {}
+    items.forEach((item) => {
+      const zonas = extraerZonas(item)
+      if (zonas.length === 0) return
+      if (!porJugador[item.jugador_id]) porJugador[item.jugador_id] = new Set()
+      zonas.forEach((z) => porJugador[item.jugador_id].add(z))
+    })
+    return Object.entries(porJugador)
+      .map(([jugadorId, zonasSet]) => ({
+        nombre: jugadores.find((j) => j.id === jugadorId)?.nombre || '—',
+        zonas: [...zonasSet],
+      }))
+      .sort((a, b) => a.nombre.localeCompare(b.nombre))
+  }
+
+  function porcentajesPorZona(conteo) {
+    const total = Object.values(conteo).reduce((a, b) => a + b, 0)
+    return Object.entries(conteo)
+      .sort((a, b) => b[1] - a[1])
+      .map(([zona, veces]) => ({ zona, veces, porcentaje: total > 0 ? Math.round((veces / total) * 100) : 0 }))
+  }
+
   return (
     <div className="fisio-layout">
       <section className="fisio-form-card no-imprimir">
@@ -468,6 +493,9 @@ export default function Fisio({ perfil, equipoActivo = 'todos', equipos = [], ju
                 : equipos.find((e) => e.id === equipoActivo)?.logo_base64,
               lesionesLista: lesionesEnContexto,
               frecuenciasZonas: conteoZonasLesion,
+              porJugador: jugadorActivo === 'equipo'
+                ? desglosePorJugador(lesionesEnContexto, (l) => (l.partes_cuerpo?.length > 0 ? l.partes_cuerpo : (l.parte_cuerpo ? [l.parte_cuerpo] : [])))
+                : null,
             })}
           >
             🖶 Exportar este historial
@@ -509,7 +537,25 @@ export default function Fisio({ perfil, equipoActivo = 'todos', equipos = [], ju
       </section>
 
       <section className="cuerpo-mapa-card no-imprimir">
-        <h2>Mapa corporal de molestias</h2>
+        <div className="fisio-historial-cabecera">
+          <h2>Mapa corporal de molestias</h2>
+          <button
+            className="pizarra-boton" disabled={registrosMapa.length === 0}
+            onClick={() => exportar({
+              tipo: 'molestias',
+              modo: jugadorActivo !== 'equipo' ? 'jugador' : 'equipo',
+              titulo: nombreJugadorActivo || (equipos.find((e) => e.id === equipoActivo)?.nombre) || 'Todo el club',
+              escudo: jugadorActivo !== 'equipo'
+                ? equipos.find((e) => e.id === jugadores.find((j) => j.id === jugadorActivo)?.equipo_id)?.logo_base64
+                : equipos.find((e) => e.id === equipoActivo)?.logo_base64,
+              frecuenciasZonas: frecuenciasMapa,
+              rango: `${fechaDesde} → ${fechaHasta}`,
+              porJugador: jugadorActivo === 'equipo' ? desglosePorJugador(registrosMapa, (r) => r.zonas_molestia || []) : null,
+            })}
+          >
+            🖶 Exportar este historial
+          </button>
+        </div>
         <p className="cuerpo-mapa-sub">
           Basado en las molestias que los jugadores reportan en su registro diario de bienestar
           (no en los informes formales de arriba). Usa el selector <strong>◎</strong> de la
@@ -611,10 +657,14 @@ export default function Fisio({ perfil, equipoActivo = 'todos', equipos = [], ju
 
           <div className="fisio-titulo-imprimir">
             <h2>
-              {vistaImprimir.tipo === 'lesion' ? 'Informe de lesión' : vistaImprimir.tipo === 'jugador' ? 'Historial lesivo — jugador' : 'Historial lesivo — equipo'}
+              {vistaImprimir.tipo === 'lesion' ? 'Informe de lesión'
+                : vistaImprimir.tipo === 'molestias' ? 'Historial de molestias reportadas'
+                : vistaImprimir.tipo === 'jugador' ? 'Historial lesivo — jugador' : 'Historial lesivo — equipo'}
             </h2>
             <p>{vistaImprimir.titulo}</p>
-            <p>{nombreEntrenador ? `Fisioterapia · ${nombreEntrenador}` : 'Fisioterapia'} · {hoyISO()}</p>
+            <p>
+              {nombreEntrenador ? `Fisioterapia · ${nombreEntrenador}` : 'Fisioterapia'} · {vistaImprimir.rango || hoyISO()}
+            </p>
           </div>
 
           {vistaImprimir.tipo === 'lesion' ? (
@@ -650,31 +700,61 @@ export default function Fisio({ perfil, equipoActivo = 'todos', equipos = [], ju
               </div>
             </div>
           ) : (
-            <div className="fisio-imprimir-cuerpo">
-              <table className="lesiones-tabla-imprimir">
-                <thead>
-                  <tr>
-                    {vistaImprimir.tipo === 'equipo' && <th>Jugador</th>}
-                    <th>Fecha</th><th>Zona</th><th>Tipo</th><th>Gravedad</th><th>Estado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {vistaImprimir.lesionesLista.map((l) => (
-                    <tr key={l.id}>
-                      {vistaImprimir.tipo === 'equipo' && <td>{l.perfiles?.nombre || '—'}</td>}
-                      <td className="mono">{l.fecha_lesion}</td>
-                      <td>{(l.partes_cuerpo?.length > 0 ? l.partes_cuerpo : [l.parte_cuerpo]).filter(Boolean).join(', ') || '—'}</td>
-                      <td>{(l.tipos_lesion?.length > 0 ? l.tipos_lesion : [l.tipologia]).filter(Boolean).join(', ') || '—'}</td>
-                      <td>{l.gravedad || '—'}</td>
-                      <td>{l.activa === false ? 'Alta' : 'Activa'}</td>
+            <>
+              {vistaImprimir.tipo !== 'molestias' && (
+                <table className="lesiones-tabla-imprimir">
+                  <thead>
+                    <tr>
+                      {vistaImprimir.tipo === 'equipo' && <th>Jugador</th>}
+                      <th>Fecha</th><th>Zona</th><th>Tipo</th><th>Gravedad</th><th>Estado</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-              <div className="fisio-imprimir-muneco">
-                <SelectorCuerpo modo="mapa" frecuencias={vistaImprimir.frecuenciasZonas} />
+                  </thead>
+                  <tbody>
+                    {vistaImprimir.lesionesLista.map((l) => (
+                      <tr key={l.id}>
+                        {vistaImprimir.tipo === 'equipo' && <td>{l.perfiles?.nombre || '—'}</td>}
+                        <td className="mono">{l.fecha_lesion}</td>
+                        <td>{(l.partes_cuerpo?.length > 0 ? l.partes_cuerpo : [l.parte_cuerpo]).filter(Boolean).join(', ') || '—'}</td>
+                        <td>{(l.tipos_lesion?.length > 0 ? l.tipos_lesion : [l.tipologia]).filter(Boolean).join(', ') || '—'}</td>
+                        <td>{l.gravedad || '—'}</td>
+                        <td>{l.activa === false ? 'Alta' : 'Activa'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+
+              <div className="fisio-imprimir-cuerpo">
+                <div>
+                  {vistaImprimir.porJugador && (
+                    <>
+                      <h4 className="fisio-imprimir-subtitulo">Por jugador</h4>
+                      <table className="lesiones-tabla-imprimir fisio-imprimir-tabla-jugador">
+                        <thead><tr><th>Jugador</th><th>Zonas reportadas</th></tr></thead>
+                        <tbody>
+                          {vistaImprimir.porJugador.map((j) => (
+                            <tr key={j.nombre}><td>{j.nombre}</td><td>{j.zonas.join(', ')}</td></tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </>
+                  )}
+
+                  <h4 className="fisio-imprimir-subtitulo">Resumen por zona (% del total)</h4>
+                  <table className="lesiones-tabla-imprimir">
+                    <thead><tr><th>Zona</th><th>Veces</th><th>%</th></tr></thead>
+                    <tbody>
+                      {porcentajesPorZona(vistaImprimir.frecuenciasZonas).map((f) => (
+                        <tr key={f.zona}><td>{f.zona}</td><td className="mono">{f.veces}×</td><td className="mono">{f.porcentaje}%</td></tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="fisio-imprimir-muneco">
+                  <SelectorCuerpo modo="mapa" frecuencias={vistaImprimir.frecuenciasZonas} />
+                </div>
               </div>
-            </div>
+            </>
           )}
 
           <div className="fisio-pie-fijo-imprimir">

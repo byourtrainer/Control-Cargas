@@ -1986,6 +1986,18 @@ probablemente te hubieras dado cuenta. La centralicé en un solo sitio
 (`App.css`, que se carga siempre) para que funcione igual en toda la
 app a partir de ahora.
 
+## Exportación de Fisio ampliada: molestias, desglose por jugador, y porcentajes
+
+- **Exportar también las molestias informales** — nuevo botón "🖶
+  Exportar este historial" en "Mapa corporal de molestias", con las
+  mismas fechas que tengas seleccionadas en el ◎.
+- **Desglose por jugador** cuando exportas en modo grupo (ya sea
+  lesiones formales o molestias): una tabla con cada jugador y las zonas
+  que ha reportado o sufrido — no solo el total del equipo.
+- **Resumen en % por zona**, junto al muñeco corporal en los tres tipos
+  de exportación — cuántas veces y qué porcentaje representa cada zona
+  sobre el total de esa exportación.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.
