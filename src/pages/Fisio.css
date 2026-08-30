@@ -290,3 +290,112 @@
   padding-bottom: 8px;
   border-bottom: 1px solid var(--line);
 }
+
+/* --- Estilo estándar de campos de formulario (igual que el resto de la app) --- */
+.campo-lesion {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--text-dim);
+  margin-bottom: 16px;
+}
+
+.campo-lesion input, .campo-lesion select, .campo-lesion textarea {
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 14px;
+}
+
+.campo-lesion textarea { resize: vertical; }
+
+.campo-lesion input:focus, .campo-lesion select:focus, .campo-lesion textarea:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.campo-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text-dim);
+  margin-bottom: 16px;
+}
+
+.campo-checkbox input { accent-color: var(--accent); width: 16px; height: 16px; }
+
+.fila-doble {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 700px) {
+  .fila-doble { grid-template-columns: 1fr; }
+}
+
+/* --- Exportación / impresión (informe individual, historial jugador/equipo) --- */
+.fisio-imprimir { display: none; }
+.fisio-cabecera-fija-imprimir { display: none; }
+.fisio-pie-fijo-imprimir { display: none; }
+.fisio-logo-fijo { display: none; width: 42px; height: 42px; object-fit: contain; }
+
+@media print {
+  .fisio-imprimir { display: block; }
+
+  .fisio-cabecera-fija-imprimir {
+    display: block;
+    position: fixed;
+    top: 6mm;
+    left: 0;
+    right: 0;
+    height: 0;
+  }
+  .fisio-logo-fijo { display: block; position: fixed; top: 6mm; }
+  .fisio-logo-fijo-izq { left: 10mm; }
+  .fisio-logo-fijo-der { right: 10mm; }
+
+  .fisio-titulo-imprimir { margin-bottom: 14px; margin-top: 18mm; }
+  .fisio-titulo-imprimir h2 { font-size: 24px; margin-bottom: 2px; }
+  .fisio-titulo-imprimir p { margin: 1px 0; font-size: 12px; }
+
+  .fisio-imprimir-cuerpo {
+    display: grid;
+    grid-template-columns: 1fr 260px;
+    gap: 24px;
+    align-items: start;
+  }
+
+  .fisio-imprimir-datos p { font-size: 13px; margin: 0 0 8px; }
+
+  .fisio-imprimir-muneco { break-inside: avoid; }
+
+  .lesiones-tabla-imprimir {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  .lesiones-tabla-imprimir th, .lesiones-tabla-imprimir td {
+    text-align: left;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .fisio-pie-fijo-imprimir {
+    display: flex;
+    justify-content: space-between;
+    position: fixed;
+    bottom: 6mm;
+    left: 10mm;
+    right: 10mm;
+    font-size: 9px;
+    color: var(--text-faint);
+    border-top: 1px solid var(--line);
+    padding-top: 4px;
+  }
+}

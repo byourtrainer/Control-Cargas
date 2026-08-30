@@ -42,7 +42,7 @@ const vacio = {
   causa_tipo: '', momento: 'Entrenamiento', tipo_contacto: 'no', gravedad: '', notas: '',
 }
 
-export default function Fisio({ perfil, equipoActivo = 'todos', jugadorActivo = 'equipo', fechaDesde, fechaHasta }) {
+export default function Fisio({ perfil, equipoActivo = 'todos', equipos = [], jugadorActivo = 'equipo', fechaDesde, fechaHasta }) {
   const [jugadores, setJugadores] = useState([])
   const [lesiones, setLesiones] = useState([])
   const [form, setForm] = useState(vacio)
@@ -55,7 +55,29 @@ export default function Fisio({ perfil, equipoActivo = 'todos', jugadorActivo = 
   const [notaEvolucion, setNotaEvolucion] = useState('')
   const [guardandoNota, setGuardandoNota] = useState(false)
 
-  useEffect(() => { cargarTodo() }, [])
+  // --- Exportación: informe individual / historial de jugador / historial de equipo ---
+  const [logoEntrenador, setLogoEntrenador] = useState(null)
+  const [nombreEntrenador, setNombreEntrenador] = useState(null)
+  const [vistaImprimir, setVistaImprimir] = useState(null) // { tipo: 'lesion'|'jugador'|'equipo', ...datos }
+
+  useEffect(() => { cargarTodo(); cargarLogoEntrenador() }, [])
+
+  async function cargarLogoEntrenador() {
+    const { data } = await supabase.from('perfiles').select('nombre, logo_base64').eq('rol', 'entrenador').limit(1).maybeSingle()
+    setLogoEntrenador(data?.logo_base64 || null)
+    setNombreEntrenador(data?.nombre || null)
+  }
+
+  function exportar(vista) {
+    setVistaImprimir(vista)
+    setTimeout(() => window.print(), 100)
+  }
+
+  useEffect(() => {
+    function alTerminarImprimir() { setVistaImprimir(null) }
+    window.addEventListener('afterprint', alTerminarImprimir)
+    return () => window.removeEventListener('afterprint', alTerminarImprimir)
+  }, [])
 
   async function cargarTodo() {
     setCargando(true)
@@ -260,7 +282,7 @@ export default function Fisio({ perfil, equipoActivo = 'todos', jugadorActivo = 
 
   return (
     <div className="fisio-layout">
-      <section className="fisio-form-card">
+      <section className="fisio-form-card no-imprimir">
         <h2>{editandoId ? 'Editar informe de lesión' : 'Nuevo informe de lesión'}</h2>
         <form onSubmit={manejarEnvio}>
           <div className="fila-doble">
@@ -400,7 +422,7 @@ export default function Fisio({ perfil, equipoActivo = 'todos', jugadorActivo = 
         </form>
       </section>
 
-      <section className="fisio-historial-card">
+      <section className="fisio-historial-card no-imprimir">
         <div className="fisio-historial-cabecera">
           <h3>Historial de lesiones</h3>
           <label className="fisio-filtro-activas">
@@ -433,8 +455,24 @@ export default function Fisio({ perfil, equipoActivo = 'todos', jugadorActivo = 
         )}
       </section>
 
-      <section className="lesiones-frecuentes-card">
-        <h2>Lesiones más frecuentes</h2>
+      <section className="lesiones-frecuentes-card no-imprimir">
+        <div className="fisio-historial-cabecera">
+          <h2>Lesiones más frecuentes</h2>
+          <button
+            className="pizarra-boton" disabled={lesionesEnContexto.length === 0}
+            onClick={() => exportar({
+              tipo: jugadorActivo !== 'equipo' ? 'jugador' : 'equipo',
+              titulo: nombreJugadorActivo || (equipos.find((e) => e.id === equipoActivo)?.nombre) || 'Todo el club',
+              escudo: jugadorActivo !== 'equipo'
+                ? equipos.find((e) => e.id === jugadores.find((j) => j.id === jugadorActivo)?.equipo_id)?.logo_base64
+                : equipos.find((e) => e.id === equipoActivo)?.logo_base64,
+              lesionesLista: lesionesEnContexto,
+              frecuenciasZonas: conteoZonasLesion,
+            })}
+          >
+            🖶 Exportar este historial
+          </button>
+        </div>
         <p className="cuerpo-mapa-sub">
           Basado en los informes formales de arriba. Usa el selector <strong>◎</strong> de la
           cabecera para ver el conjunto del equipo o de un jugador en concreto.
@@ -470,7 +508,7 @@ export default function Fisio({ perfil, equipoActivo = 'todos', jugadorActivo = 
         </div>
       </section>
 
-      <section className="cuerpo-mapa-card">
+      <section className="cuerpo-mapa-card no-imprimir">
         <h2>Mapa corporal de molestias</h2>
         <p className="cuerpo-mapa-sub">
           Basado en las molestias que los jugadores reportan en su registro diario de bienestar
@@ -502,7 +540,7 @@ export default function Fisio({ perfil, equipoActivo = 'todos', jugadorActivo = 
       </section>
 
       {verLesion && (
-        <div className="fisio-modal-fondo" onClick={() => setVerLesion(null)}>
+        <div className="fisio-modal-fondo no-imprimir" onClick={() => setVerLesion(null)}>
           <div className="fisio-modal" onClick={(e) => e.stopPropagation()}>
             <div className="fisio-modal-cabecera">
               <h3>{verLesion.perfiles?.nombre}</h3>
@@ -543,12 +581,105 @@ export default function Fisio({ perfil, equipoActivo = 'todos', jugadorActivo = 
             </div>
 
             <div className="fisio-modal-botones">
+              <button
+                className="pizarra-boton"
+                onClick={() => exportar({
+                  tipo: 'lesion',
+                  titulo: verLesion.perfiles?.nombre || '—',
+                  escudo: equipos.find((e) => e.id === jugadores.find((j) => j.id === verLesion.jugador_id)?.equipo_id)?.logo_base64,
+                  lesion: verLesion,
+                })}
+              >
+                🖶 Exportar informe
+              </button>
               <button className="pizarra-boton" onClick={() => empezarEdicion(verLesion)}>✎ Editar informe</button>
               {verLesion.activa !== false && (
                 <button className="pizarra-boton" onClick={() => marcarAlta(verLesion)}>✓ Dar de alta</button>
               )}
               <button className="btn-eliminar-sesion" onClick={() => eliminarLesion(verLesion.id)}>Eliminar</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {vistaImprimir && (
+        <div className="fisio-imprimir">
+          <div className="fisio-cabecera-fija-imprimir">
+            {logoEntrenador && <img src={logoEntrenador} alt="Logo del entrenador" className="fisio-logo-fijo fisio-logo-fijo-izq" />}
+            {vistaImprimir.escudo && <img src={vistaImprimir.escudo} alt="Escudo" className="fisio-logo-fijo fisio-logo-fijo-der" />}
+          </div>
+
+          <div className="fisio-titulo-imprimir">
+            <h2>
+              {vistaImprimir.tipo === 'lesion' ? 'Informe de lesión' : vistaImprimir.tipo === 'jugador' ? 'Historial lesivo — jugador' : 'Historial lesivo — equipo'}
+            </h2>
+            <p>{vistaImprimir.titulo}</p>
+            <p>{nombreEntrenador ? `Fisioterapia · ${nombreEntrenador}` : 'Fisioterapia'} · {hoyISO()}</p>
+          </div>
+
+          {vistaImprimir.tipo === 'lesion' ? (
+            <div className="fisio-imprimir-cuerpo">
+              <div className="fisio-imprimir-datos">
+                <p><strong>Fecha de lesión:</strong> {vistaImprimir.lesion.fecha_lesion}</p>
+                {vistaImprimir.lesion.motivo_consulta && <p><strong>Motivo de consulta:</strong> {vistaImprimir.lesion.motivo_consulta}</p>}
+                {vistaImprimir.lesion.partes_cuerpo?.length > 0 && <p><strong>Zona:</strong> {vistaImprimir.lesion.partes_cuerpo.join(', ')}</p>}
+                {vistaImprimir.lesion.lateralidad && vistaImprimir.lesion.lateralidad !== 'no_aplicable' && (
+                  <p><strong>Lateralidad:</strong> {vistaImprimir.lesion.lateralidad === 'derecha' ? 'Derecha' : 'Izquierda'}</p>
+                )}
+                {vistaImprimir.lesion.tipos_lesion?.length > 0 && <p><strong>Tipo:</strong> {vistaImprimir.lesion.tipos_lesion.join(', ')}</p>}
+                {vistaImprimir.lesion.gravedad && (
+                  <p><strong>Gravedad:</strong> {opcionesGravedad.find((g) => g.valor === vistaImprimir.lesion.gravedad)?.etiqueta}</p>
+                )}
+                {vistaImprimir.lesion.causa_tipo && <p><strong>Causa:</strong> {vistaImprimir.lesion.causa_tipo}</p>}
+                {vistaImprimir.lesion.momento && <p><strong>Momento:</strong> {vistaImprimir.lesion.momento}</p>}
+                {vistaImprimir.lesion.fecha_retorno_estimada && <p><strong>Retorno estimado:</strong> {vistaImprimir.lesion.fecha_retorno_estimada}</p>}
+                {vistaImprimir.lesion.fecha_alta && <p><strong>Fecha de alta:</strong> {vistaImprimir.lesion.fecha_alta}</p>}
+                {vistaImprimir.lesion.notas && <p><strong>Notas:</strong> {vistaImprimir.lesion.notas}</p>}
+                {vistaImprimir.lesion.notas_evolucion && (
+                  <>
+                    <p><strong>Evolución:</strong></p>
+                    <p className="fisio-evolucion-texto">{vistaImprimir.lesion.notas_evolucion}</p>
+                  </>
+                )}
+              </div>
+              <div className="fisio-imprimir-muneco">
+                <SelectorCuerpo
+                  modo="mapa"
+                  frecuencias={Object.fromEntries((vistaImprimir.lesion.partes_cuerpo || []).map((z) => [z, 1]))}
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="fisio-imprimir-cuerpo">
+              <table className="lesiones-tabla-imprimir">
+                <thead>
+                  <tr>
+                    {vistaImprimir.tipo === 'equipo' && <th>Jugador</th>}
+                    <th>Fecha</th><th>Zona</th><th>Tipo</th><th>Gravedad</th><th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {vistaImprimir.lesionesLista.map((l) => (
+                    <tr key={l.id}>
+                      {vistaImprimir.tipo === 'equipo' && <td>{l.perfiles?.nombre || '—'}</td>}
+                      <td className="mono">{l.fecha_lesion}</td>
+                      <td>{(l.partes_cuerpo?.length > 0 ? l.partes_cuerpo : [l.parte_cuerpo]).filter(Boolean).join(', ') || '—'}</td>
+                      <td>{(l.tipos_lesion?.length > 0 ? l.tipos_lesion : [l.tipologia]).filter(Boolean).join(', ') || '—'}</td>
+                      <td>{l.gravedad || '—'}</td>
+                      <td>{l.activa === false ? 'Alta' : 'Activa'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="fisio-imprimir-muneco">
+                <SelectorCuerpo modo="mapa" frecuencias={vistaImprimir.frecuenciasZonas} />
+              </div>
+            </div>
+          )}
+
+          <div className="fisio-pie-fijo-imprimir">
+            <span>Control de Cargas</span>
+            <span>{hoyISO()}</span>
           </div>
         </div>
       )}

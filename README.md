@@ -1952,6 +1952,40 @@ la app para "Todos los equipos" y "Sin asignar". Ahora, si tienes
 "Todos los equipos" seleccionado al crear un evento con duración,
 correctamente se crea la sesión para todos los jugadores del club.
 
+## Fisio: estilos arreglados, y exportación de informes con muñeco corporal
+
+- **Arreglado el aspecto sin estilo del formulario** (campos blancos,
+  desbordados) — las clases `campo-lesion`, `campo-checkbox` y
+  `fila-doble` se usaban en el formulario pero nunca se habían definido
+  en `Fisio.css` (venían de la antigua página "Lesiones", ya borrada) —
+  ahora usan exactamente el mismo estilo que el resto de la app.
+
+- **Exportación de informes**, con la misma estética que el resto de
+  documentos de la app (escudo del equipo, logo del entrenador, tema
+  claro de impresión):
+  - **Un informe de lesión individual** — botón "🖶 Exportar informe"
+    dentro del propio informe.
+  - **Historial lesivo de un jugador** — botón "🖶 Exportar este
+    historial" en "Lesiones más frecuentes", usando el jugador
+    seleccionado con el selector ◎.
+  - **Historial lesivo de un equipo** — el mismo botón, pero con "Todos
+    los equipos" o un equipo concreto seleccionado en el ◎.
+  - Los tres incluyen el **muñeco corporal con la escala roja** (más
+    incidencias = rojo más intenso) — para el informe individual muestra
+    la zona afectada; para los historiales, la frecuencia real de esa
+    persona o de todo el equipo.
+
+## Un fallo más grande que encontré de paso: "no-imprimir" no funcionaba en todas partes
+
+Al construir esto, descubrí que la clase que oculta los botones y menús
+al exportar a PDF (`no-imprimir`) **solo estaba definida en 3 páginas
+sueltas** (Tests, Resumen, Perfil físico) — ni Fisio, ni Calendario, ni
+Sesiones de Pizarra la tenían, así que sus exportaciones llevaban tiempo
+imprimiendo también los botones y menús de la pantalla, sin que
+probablemente te hubieras dado cuenta. La centralicé en un solo sitio
+(`App.css`, que se carga siempre) para que funcione igual en toda la
+app a partir de ahora.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

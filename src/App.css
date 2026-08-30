@@ -274,6 +274,12 @@
 }
 
 @media print {
+  /* Se centraliza aquí porque estaba definida solo en 3 páginas sueltas
+     (Tests, CoachDashboard, PerfilFisico) — cualquier otra página que
+     use esta clase (Fisio, SesionesPizarra, CalendarioClub...) no la
+     tenía y por tanto no ocultaba nada al exportar. */
+  .no-imprimir { display: none !important; }
+
   /* --- Tema de impresión: informe claro y profesional, separado del tema
      oscuro de la app. Como casi todo el CSS usa var(--variable), redefinir
      estas variables transforma automáticamente fondos, texto y bordes en

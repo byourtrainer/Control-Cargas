@@ -256,7 +256,7 @@ export default function App() {
           )
           : pestana === 'fisio' ? (
             <Fisio
-              perfil={perfil} equipoActivo={equipoActivo}
+              perfil={perfil} equipoActivo={equipoActivo} equipos={equipos}
               jugadorActivo={jugadorActivo} fechaDesde={fechaDesde} fechaHasta={fechaHasta}
             />
           )
