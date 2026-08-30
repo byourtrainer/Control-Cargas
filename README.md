@@ -1998,6 +1998,23 @@ app a partir de ahora.
   de exportación — cuántas veces y qué porcentaje representa cada zona
   sobre el total de esa exportación.
 
+## Bienestar, Alertas y RPE de la semana, unificados bajo una sola fecha
+
+Las tres secciones ahora van seguidas, una debajo de otra, y comparten el
+**mismo selector de fecha** (el que ya había en "Bienestar y RPE del
+día") — ya no hay que buscar por separado:
+
+1. **Bienestar y RPE del día** (con el selector de fecha).
+2. **Alertas** — antes fijas a "hoy" sin poder cambiar; ahora se
+   recalculan para el día que elijas arriba, título incluido ("Alertas
+   de hoy" o "Alertas del 28 ago", según toque). Esto es justo lo que
+   hacía falta para el fisio: seleccionar cualquier día y ver qué
+   molestias se reportaron esa fecha en concreto, no solo la de hoy.
+3. **RPE de la semana** — ahora con un marcador junto a cada día: ⚽ si
+   hubo partido, ● si hubo sesión de entrenamiento, igual que ya se hace
+   en el mapa de calor — para saber de un vistazo a qué corresponde cada
+   RPE sin tener que ir a mirar el calendario.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

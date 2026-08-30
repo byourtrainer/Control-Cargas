@@ -383,6 +383,16 @@
 
 .rpe-semana-tabla th:first-child { text-align: left; }
 
+.rpe-semana-marcador {
+  display: block;
+  font-size: 10px;
+  margin-top: 2px;
+}
+
+.rpe-semana-leyenda-partido, .rpe-semana-leyenda-sesion {
+  font-size: 11px;
+}
+
 .rpe-semana-nombre {
   padding: 8px 8px 8px 0;
   white-space: nowrap;

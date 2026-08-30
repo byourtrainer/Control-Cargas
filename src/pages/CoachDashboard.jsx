@@ -302,6 +302,10 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
     () => new Set(sesiones.filter((s) => s.mdx === 'MD').map((s) => s.fecha)),
     [sesiones]
   )
+  const diasEntrenamiento = useMemo(
+    () => new Set(sesiones.filter((s) => s.mdx !== 'MD').map((s) => s.fecha)),
+    [sesiones]
+  )
 
   const jugadoresFiltrados = useMemo(() => {
     if (equipoActivo === 'todos') return jugadores
@@ -495,10 +499,10 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
       .sort((a, b) => a.diasConRpe - b.diasConRpe || a.nombre.localeCompare(b.nombre))
   }, [jugadoresFiltrados, registros, diasRpeSemana])
 
-  // --- Alertas de hoy: control diario, independiente del rango/vista elegidos ---
-  const alertasHoy = useMemo(() => {
-    const hoy = diasAtras(0)
-    const ayer = diasAtras(1)
+  // --- Alertas del día seleccionado: control diario, independiente del rango/vista de los gráficos ---
+  const alertasDelDia = useMemo(() => {
+    const hoy = fechaEstadoDia
+    const ayer = (() => { const d = new Date(hoy + 'T00:00:00'); d.setDate(d.getDate() - 1); return fechaISOLocal(d) })()
     const sinRpeAyer = []
     const enRiesgo = []
     const conMolestiaHoy = []
@@ -507,8 +511,8 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
     const sesionInusual = []
     const caidaBienestar = []
 
-    // Sesiones de los últimos 7 días (para saber qué días hubo entreno/partido de verdad)
-    const inicioSemana = diasAtras(6)
+    // Sesiones de los 7 días anteriores a la fecha seleccionada (para saber qué días hubo entreno/partido de verdad)
+    const inicioSemana = (() => { const d = new Date(hoy + 'T00:00:00'); d.setDate(d.getDate() - 6); return fechaISOLocal(d) })()
     const sesionesSemana = sesiones.filter((s) => s.fecha >= inicioSemana && s.fecha <= hoy)
 
     const mediaHoy = mediaEquipoRPE(hoy, jugadoresFiltrados, registros)
@@ -552,7 +556,7 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
     })
 
     return { sinRpeAyer, enRiesgo, conMolestiaHoy, respuestaAtipica, huecosDatos, sesionInusual, caidaBienestar }
-  }, [jugadoresFiltrados, registros, sesiones, metodoACWR])
+  }, [jugadoresFiltrados, registros, sesiones, metodoACWR, fechaEstadoDia])
 
   // --- Mapa de calor jugador × día ---
   const diasMapaCalor = useMemo(() => {
@@ -718,9 +722,81 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
         )}
       </section>
 
+      <section className="alertas-card no-imprimir">
+        <h3>Alertas {fechaEstadoDia === diasAtras(0) ? 'de hoy' : `del ${new Date(fechaEstadoDia + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}`}</h3>
+        <div className="alertas-grid">
+          <div className={`alerta-bloque ${alertasDelDia.sinRpeAyer.length ? 'alerta-activa' : ''}`}>
+            <span className="alerta-titulo">Sin RPE de ayer</span>
+            {alertasDelDia.sinRpeAyer.length === 0 ? (
+              <span className="alerta-ok">✓ Todos registraron</span>
+            ) : (
+              <span className="alerta-lista">{alertasDelDia.sinRpeAyer.join(', ')}</span>
+            )}
+          </div>
+          <div className={`alerta-bloque ${alertasDelDia.enRiesgo.length ? 'alerta-activa' : ''}`}>
+            <span className="alerta-titulo">En riesgo (ACWR alto/muy alto)</span>
+            {alertasDelDia.enRiesgo.length === 0 ? (
+              <span className="alerta-ok">✓ Nadie en riesgo</span>
+            ) : (
+              <span className="alerta-lista">{alertasDelDia.enRiesgo.join(', ')}</span>
+            )}
+          </div>
+          <div className={`alerta-bloque ${alertasDelDia.conMolestiaHoy.length ? 'alerta-activa' : ''}`}>
+            <span className="alerta-titulo">Molestia reportada hoy</span>
+            {alertasDelDia.conMolestiaHoy.length === 0 ? (
+              <span className="alerta-ok">✓ Sin molestias nuevas</span>
+            ) : (
+              <span className="alerta-lista">{alertasDelDia.conMolestiaHoy.join(', ')}</span>
+            )}
+          </div>
+          <div className={`alerta-bloque ${alertasDelDia.respuestaAtipica.length ? 'alerta-activa' : ''}`}>
+            <span className="alerta-titulo" title="RPE de hoy con una diferencia de 2 puntos o más respecto a la media del equipo">
+              Respuesta atípica hoy
+            </span>
+            {alertasDelDia.respuestaAtipica.length === 0 ? (
+              <span className="alerta-ok">✓ Respuestas homogéneas</span>
+            ) : (
+              <span className="alerta-lista">{alertasDelDia.respuestaAtipica.join(', ')}</span>
+            )}
+          </div>
+          <div className={`alerta-bloque ${alertasDelDia.huecosDatos.length ? 'alerta-activa' : ''}`}>
+            <span className="alerta-titulo" title="Sesiones de los últimos 7 días sin RPE registrado">
+              Huecos de RPE (últimos 7 días)
+            </span>
+            {alertasDelDia.huecosDatos.length === 0 ? (
+              <span className="alerta-ok">✓ Sin huecos</span>
+            ) : (
+              <span className="alerta-lista">{alertasDelDia.huecosDatos.join(', ')}</span>
+            )}
+          </div>
+          <div className={`alerta-bloque ${alertasDelDia.sesionInusual.length ? 'alerta-activa' : ''}`}>
+            <span className="alerta-titulo" title="Carga de hoy con una diferencia de 1.5 desviaciones estándar o más respecto a sus sesiones reales de las últimas 3 semanas">
+              Sesión inusual hoy (vs su propio histórico)
+            </span>
+            {alertasDelDia.sesionInusual.length === 0 ? (
+              <span className="alerta-ok">✓ Cargas dentro de lo habitual</span>
+            ) : (
+              <span className="alerta-lista">{alertasDelDia.sesionInusual.join(', ')}</span>
+            )}
+          </div>
+          <div className={`alerta-bloque ${alertasDelDia.caidaBienestar.length ? 'alerta-activa' : ''}`}>
+            <span className="alerta-titulo" title="Caída de -0.5 o más en el delta diario de Bienestar (modelo de Manu Sola Arjona: diferencia Agudo-Basal de hoy vs. la de ayer)">
+              Caída de Bienestar hoy
+            </span>
+            {alertasDelDia.caidaBienestar.length === 0 ? (
+              <span className="alerta-ok">✓ Sin caídas notables</span>
+            ) : (
+              <span className="alerta-lista">{alertasDelDia.caidaBienestar.join(', ')}</span>
+            )}
+          </div>
+        </div>
+      </section>
+
       <section className="rpe-semana-card no-imprimir">
         <h3>RPE de la semana</h3>
-        <p className="texto-dim bienestar-hoy-sub">Qué ha aportado cada jugador, día a día, en los últimos 7 días.</p>
+        <p className="texto-dim bienestar-hoy-sub">
+          Qué ha aportado cada jugador, día a día, en los últimos 7 días. <span className="rpe-semana-leyenda-partido">⚽</span> partido · <span className="rpe-semana-leyenda-sesion">●</span> sesión.
+        </p>
         {rpeSemana.length === 0 ? (
           <p className="texto-dim">No hay jugadores en el grupo activo.</p>
         ) : (
@@ -732,6 +808,8 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
                   {diasRpeSemana.map((fecha) => (
                     <th key={fecha}>
                       {new Date(fecha + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' })}
+                      {diasPartido.has(fecha) && <span className="rpe-semana-marcador" title="Partido">⚽</span>}
+                      {!diasPartido.has(fecha) && diasEntrenamiento.has(fecha) && <span className="rpe-semana-marcador" title="Sesión de entrenamiento">●</span>}
                     </th>
                   ))}
                 </tr>
@@ -757,76 +835,6 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
             </table>
           </div>
         )}
-      </section>
-
-      <section className="alertas-card no-imprimir">
-        <h3>Alertas de hoy</h3>
-        <div className="alertas-grid">
-          <div className={`alerta-bloque ${alertasHoy.sinRpeAyer.length ? 'alerta-activa' : ''}`}>
-            <span className="alerta-titulo">Sin RPE de ayer</span>
-            {alertasHoy.sinRpeAyer.length === 0 ? (
-              <span className="alerta-ok">✓ Todos registraron</span>
-            ) : (
-              <span className="alerta-lista">{alertasHoy.sinRpeAyer.join(', ')}</span>
-            )}
-          </div>
-          <div className={`alerta-bloque ${alertasHoy.enRiesgo.length ? 'alerta-activa' : ''}`}>
-            <span className="alerta-titulo">En riesgo (ACWR alto/muy alto)</span>
-            {alertasHoy.enRiesgo.length === 0 ? (
-              <span className="alerta-ok">✓ Nadie en riesgo</span>
-            ) : (
-              <span className="alerta-lista">{alertasHoy.enRiesgo.join(', ')}</span>
-            )}
-          </div>
-          <div className={`alerta-bloque ${alertasHoy.conMolestiaHoy.length ? 'alerta-activa' : ''}`}>
-            <span className="alerta-titulo">Molestia reportada hoy</span>
-            {alertasHoy.conMolestiaHoy.length === 0 ? (
-              <span className="alerta-ok">✓ Sin molestias nuevas</span>
-            ) : (
-              <span className="alerta-lista">{alertasHoy.conMolestiaHoy.join(', ')}</span>
-            )}
-          </div>
-          <div className={`alerta-bloque ${alertasHoy.respuestaAtipica.length ? 'alerta-activa' : ''}`}>
-            <span className="alerta-titulo" title="RPE de hoy con una diferencia de 2 puntos o más respecto a la media del equipo">
-              Respuesta atípica hoy
-            </span>
-            {alertasHoy.respuestaAtipica.length === 0 ? (
-              <span className="alerta-ok">✓ Respuestas homogéneas</span>
-            ) : (
-              <span className="alerta-lista">{alertasHoy.respuestaAtipica.join(', ')}</span>
-            )}
-          </div>
-          <div className={`alerta-bloque ${alertasHoy.huecosDatos.length ? 'alerta-activa' : ''}`}>
-            <span className="alerta-titulo" title="Sesiones de los últimos 7 días sin RPE registrado">
-              Huecos de RPE (últimos 7 días)
-            </span>
-            {alertasHoy.huecosDatos.length === 0 ? (
-              <span className="alerta-ok">✓ Sin huecos</span>
-            ) : (
-              <span className="alerta-lista">{alertasHoy.huecosDatos.join(', ')}</span>
-            )}
-          </div>
-          <div className={`alerta-bloque ${alertasHoy.sesionInusual.length ? 'alerta-activa' : ''}`}>
-            <span className="alerta-titulo" title="Carga de hoy con una diferencia de 1.5 desviaciones estándar o más respecto a sus sesiones reales de las últimas 3 semanas">
-              Sesión inusual hoy (vs su propio histórico)
-            </span>
-            {alertasHoy.sesionInusual.length === 0 ? (
-              <span className="alerta-ok">✓ Cargas dentro de lo habitual</span>
-            ) : (
-              <span className="alerta-lista">{alertasHoy.sesionInusual.join(', ')}</span>
-            )}
-          </div>
-          <div className={`alerta-bloque ${alertasHoy.caidaBienestar.length ? 'alerta-activa' : ''}`}>
-            <span className="alerta-titulo" title="Caída de -0.5 o más en el delta diario de Bienestar (modelo de Manu Sola Arjona: diferencia Agudo-Basal de hoy vs. la de ayer)">
-              Caída de Bienestar hoy
-            </span>
-            {alertasHoy.caidaBienestar.length === 0 ? (
-              <span className="alerta-ok">✓ Sin caídas notables</span>
-            ) : (
-              <span className="alerta-lista">{alertasHoy.caidaBienestar.join(', ')}</span>
-            )}
-          </div>
-        </div>
       </section>
 
       <section className="tarjetas-resumen no-imprimir">
