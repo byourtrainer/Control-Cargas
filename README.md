@@ -1937,6 +1937,21 @@ añadimos las sesiones múltiples por día: el formulario del jugador
 esperaba como mucho una sesión por día al cargar la duración, así que en
 cuanto hubiera dos, habría fallado silenciosamente.
 
+## Arreglado: la segunda sesión del día no se creaba con "Todos los equipos" seleccionado
+
+Encontrado el motivo exacto de que la sesión de Gimnasio no apareciera:
+al guardar un evento del Calendario con el selector **"Todos los
+equipos"** activo, la función que crea las sesiones de los jugadores
+buscaba jugadores con `equipo_id = "todos"` literalmente — que no
+existe ninguno — así que no creaba nada, sin ningún aviso de error (el
+evento del calendario sí se guardaba bien, dando la falsa sensación de
+que todo había ido correctamente).
+
+Arreglado usando la misma lógica seleccionadora que ya usa el resto de
+la app para "Todos los equipos" y "Sin asignar". Ahora, si tienes
+"Todos los equipos" seleccionado al crear un evento con duración,
+correctamente se crea la sesión para todos los jugadores del club.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

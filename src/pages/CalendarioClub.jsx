@@ -152,8 +152,14 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], o
 
     let idsJugadores = []
     if (modoDestino === 'equipo') {
-      const { data } = await supabase.from('perfiles').select('id').eq('rol', 'jugador').eq('equipo_id', equipoActivo)
-      idsJugadores = (data || []).map((j) => j.id)
+      const { data } = await supabase.from('perfiles').select('id, equipo_id').eq('rol', 'jugador')
+      idsJugadores = (data || [])
+        .filter((j) => {
+          if (equipoActivo === 'todos') return true
+          if (equipoActivo === 'sin_asignar') return !j.equipo_id
+          return j.equipo_id === equipoActivo
+        })
+        .map((j) => j.id)
     } else if (modoDestino === 'jugador') {
       idsJugadores = [jugadorSeleccionado]
     }

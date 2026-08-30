@@ -67,13 +67,13 @@ export default function PlayerForm({ perfil }) {
   const [guardandoBienestar, setGuardandoBienestar] = useState(false)
   const [mensajeBienestar, setMensajeBienestar] = useState(null)
 
-  // RPE
-  const [rpe, setRpe] = useState(5)
+  // RPE — uno por cada sesión del día (Pista/Gimnasio pueden ir por separado)
+  const [sesionesDia, setSesionesDia] = useState([]) // [{ id, tipo_sesion, duracion_min, rpe }]
+  const [rpesPorSesion, setRpesPorSesion] = useState({}) // { [sesionId]: valor }
   const [notas, setNotas] = useState('')
   const [guardandoRpe, setGuardandoRpe] = useState(false)
   const [mensajeRpe, setMensajeRpe] = useState(null)
 
-  const [duracionDia, setDuracionDia] = useState(null)
   const [cargandoDuracion, setCargandoDuracion] = useState(true)
   const [equipos, setEquipos] = useState([])
   const [equipoId, setEquipoId] = useState(perfil.equipo_id || '')
@@ -85,7 +85,7 @@ export default function PlayerForm({ perfil }) {
   useEffect(() => {
     if (vista !== 'dia') return
     cargarRegistroDia()
-    cargarDuracionDia()
+    cargarSesionesDia()
   }, [vista, fechaSeleccionada])
 
   async function cargarRegistroDia() {
@@ -110,11 +110,9 @@ export default function PlayerForm({ perfil }) {
       setTieneMolestia(false)
       setZonasMolestia([])
     }
-    if (data && data.rpe !== null) {
-      setRpe(data.rpe)
+    if (data) {
       setNotas(data.notas || '')
     } else {
-      setRpe(5)
       setNotas('')
     }
     setMensajeBienestar(null)
@@ -164,15 +162,19 @@ export default function PlayerForm({ perfil }) {
     if (nuevoId) setEditandoEquipo(false)
   }
 
-  async function cargarDuracionDia() {
+  async function cargarSesionesDia() {
     setCargandoDuracion(true)
     const { data } = await supabase
       .from('sesiones')
-      .select('duracion_min')
+      .select('id, tipo_sesion, duracion_min, rpe')
       .eq('fecha', fechaSeleccionada)
       .eq('jugador_id', perfil.id)
-      .maybeSingle()
-    setDuracionDia(data ? data.duracion_min : null)
+      .order('tipo_sesion')
+    const sesiones = data || []
+    setSesionesDia(sesiones)
+    const iniciales = {}
+    sesiones.forEach((s) => { iniciales[s.id] = s.rpe ?? 5 })
+    setRpesPorSesion(iniciales)
     setCargandoDuracion(false)
   }
 
@@ -212,18 +214,27 @@ export default function PlayerForm({ perfil }) {
     setGuardandoRpe(true)
     setMensajeRpe(null)
 
-    const { error } = await supabase.from('registros_diarios').upsert({
+    // Primero se asegura de que exista el registro del día (para que el
+    // disparador de sesiones tenga dónde escribir el RPE efectivo), y
+    // luego se guarda el RPE de cada sesión por separado.
+    const { error: errorNotas } = await supabase.from('registros_diarios').upsert({
       jugador_id: perfil.id,
       fecha: fechaSeleccionada,
-      rpe,
       notas: notas || null,
     }, { onConflict: 'jugador_id,fecha' })
 
-    if (error) {
+    let errorSesiones = null
+    for (const sesion of sesionesDia) {
+      const { error } = await supabase.from('sesiones').update({ rpe: rpesPorSesion[sesion.id] }).eq('id', sesion.id)
+      if (error) errorSesiones = error
+    }
+
+    if (errorNotas || errorSesiones) {
       setMensajeRpe({ tipo: 'error', texto: 'No se pudo guardar. Inténtalo de nuevo.' })
     } else {
       setMensajeRpe({ tipo: 'ok', texto: 'RPE guardado.' })
       cargarRegistroDia()
+      cargarSesionesDia()
     }
     setGuardandoRpe(false)
   }
@@ -443,33 +454,47 @@ export default function PlayerForm({ perfil }) {
               </div>
 
               <form onSubmit={guardarRpe}>
-                <div className="rpe-bloque">
-                  <div className="rpe-cabecera">
-                    <span>Esfuerzo percibido</span>
-                    <span className="rpe-valor mono" style={{ color: colorParaValor(rpe, 10) }}>
-                      {rpe} · {descripcionesRPE[rpe]}
-                    </span>
-                  </div>
-                  <input
-                    type="range" min="0" max="10" value={rpe}
-                    onChange={(e) => setRpe(Number(e.target.value))}
-                    className="slider slider-rpe slider-gradiente"
-                  />
-                  <div className="rpe-escala">
-                    <span>Ningún esfuerzo</span><span>Máximo</span>
-                  </div>
-                </div>
-
-                {cargandoDuracion ? null : duracionDia !== null ? (
-                  <div className="carga-preview mono">
-                    Duración (fijada por el entrenador): <strong>{duracionDia} min</strong>
-                    {' '}→ Carga estimada: <strong>{rpe * duracionDia}</strong> u.a.
+                {cargandoDuracion ? (
+                  <p className="mono texto-dim">Cargando…</p>
+                ) : sesionesDia.length === 0 ? (
+                  <div className="aviso-pendiente mono">
+                    El entrenador aún no ha indicado ninguna sesión para este día.
                   </div>
                 ) : (
-                  <div className="aviso-pendiente mono">
-                    El entrenador aún no ha indicado la duración de la sesión de este día.
-                    Puedes guardar tu RPE igualmente — la carga se calculará en cuanto la añada.
-                  </div>
+                  <>
+                    {sesionesDia.map((sesion) => {
+                      const valor = rpesPorSesion[sesion.id] ?? 5
+                      return (
+                        <div className="rpe-bloque" key={sesion.id}>
+                          <div className="rpe-cabecera">
+                            <span>Esfuerzo percibido{sesion.tipo_sesion ? ` — ${sesion.tipo_sesion}` : ''}</span>
+                            <span className="rpe-valor mono" style={{ color: colorParaValor(valor, 10) }}>
+                              {valor} · {descripcionesRPE[valor]}
+                            </span>
+                          </div>
+                          <input
+                            type="range" min="0" max="10" value={valor}
+                            onChange={(e) => setRpesPorSesion({ ...rpesPorSesion, [sesion.id]: Number(e.target.value) })}
+                            className="slider slider-rpe slider-gradiente"
+                          />
+                          <div className="rpe-escala">
+                            <span>Ningún esfuerzo</span><span>Máximo</span>
+                          </div>
+                          <div className="carga-preview mono">
+                            Duración: <strong>{sesion.duracion_min} min</strong>
+                            {' '}→ Carga de esta sesión: <strong>{valor * sesion.duracion_min}</strong> u.a.
+                          </div>
+                        </div>
+                      )
+                    })}
+                    {sesionesDia.length > 1 && (
+                      <div className="carga-preview carga-preview-total mono">
+                        Carga total del día: <strong>
+                          {sesionesDia.reduce((suma, s) => suma + (rpesPorSesion[s.id] ?? 5) * s.duracion_min, 0)}
+                        </strong> u.a.
+                      </div>
+                    )}
+                  </>
                 )}
 
                 <label className="campo-notas">
