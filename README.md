@@ -2035,6 +2035,40 @@ pasar, en vez de quedar en silencio otra vez.
 El desplegable de "Jugador" al crear un informe ahora solo muestra a los
 jugadores del equipo seleccionado arriba, en vez de a todos.
 
+## Muñeco corporal: sustituido por una base anatómica real
+
+El muñeco de molestias/lesiones ya no es un dibujo esquemático hecho a
+mano — ahora usa como fondo dos **fotografías 3D reales** (frontal y
+posterior, misma postura, mismo estilo) que nos proporcionaste, atenuadas
+a un tono neutro para que sirvan de base sin competir visualmente con los
+colores de las zonas.
+
+**Trabajo hecho con las imágenes**:
+- Recortado el margen blanco y el reflejo del suelo.
+- Atenuado el color (mucho menos saturado, más brillo, menos contraste)
+  para que quede como fondo, no como protagonista.
+- Probé a quitar el fondo blanco con transparencia automática, pero
+  distorsionaba las sombras del músculo (se veía mal) — así que se quedó
+  el fondo blanco tal cual, enmarcado en una "tarjeta" clara dentro del
+  tema oscuro de la app, en vez de forzar algo que no funcionaba bien.
+- Las 39 zonas clicables de siempre se recolocaron por completo para
+  encajar con la nueva postura (brazos en cruz, muy distinta a la
+  anterior) — leídas a mano sobre una cuadrícula de referencia para
+  acertar las coordenadas.
+- Las zonas ahora son resaltados translúcidos sobre la foto real, no
+  dibujos por sí solos — el detalle muscular lo aporta la propia
+  fotografía.
+
+**Aviso legal importante**: estas imágenes tienen licencia de Magnific
+(magnific.com), que en su versión gratuita **exige atribución visible**
+— por eso verás la línea "Designed by Magnific" debajo del muñeco en
+toda la app. No se puede quitar sin pasar a una cuenta de pago de
+Magnific.
+
+Ningún nombre de zona cambió — se comprobó uno por uno contra el resto de
+la app para confirmar que los datos ya guardados (molestias reportadas,
+informes de lesión) se siguen viendo correctamente con el nuevo diseño.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.
