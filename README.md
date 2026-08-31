@@ -2069,6 +2069,46 @@ Ningún nombre de zona cambió — se comprobó uno por uno contra el resto de
 la app para confirmar que los datos ya guardados (molestias reportadas,
 informes de lesión) se siguen viendo correctamente con el nuevo diseño.
 
+## Muñeco corporal: vuelta al fondo oscuro y a las formas dibujadas
+
+Revertido el experimento de la foto de fondo — no encajaba bien con el
+tema oscuro de la app. Vuelta a la silueta dibujada (fondo oscuro,
+formas curvas tipo músculo), tal y como estaba antes de probar la
+imagen. Las fotos que compartiste sirvieron igualmente: se usaron como
+referencia para revisar que las proporciones y curvas de cada zona
+(pectoral, cuádriceps, gemelos, hombro...) se parecen razonablemente a
+la anatomía real, sin necesidad de incrustar la imagen en sí.
+
+Ninguna zona ni su nombre cambiaron — mismas 39 combinaciones de
+siempre, mismo comportamiento de selección y mapa de calor.
+
+## Muñeco corporal: trazados anatómicos reales, no dibujados a mano
+
+Encontré una librería de código abierto (`react-muscle-highlighter`, de
+soroojshehryar, licencia MIT — sin exigir ningún crédito visible como
+pasaba con Magnific) que trae cada músculo ya como su propio trazado
+vectorial ilustrado, con lado izquierdo/derecho, y hasta la silueta
+corporal completa. La descargaste y me la subiste, y a partir de ahí:
+
+- **32 de nuestras 39 zonas** ahora usan ese trazado real (extraído y
+  adaptado con un script, no copiado a mano) — pectoral, abdomen,
+  cuádriceps, aductor, gemelos, isquiotibiales, escapular, y muchas
+  más, en ambas vistas.
+- **La vista posterior mejoró especialmente**: antes las "zonas eco" de
+  brazos/piernas eran círculos simples de relleno; ahora usan también
+  trazado real, porque esta librería resulta que sí tenía datos
+  específicos de espalda para casi todo.
+- **5 zonas pequeñas siguen dibujadas a mano** (Codo, Muñeca, Cadera,
+  Psoas, Esternón/costillas) — no existían en el set original. Sus
+  posiciones son una estimación proporcional sobre el nuevo lienzo (bastante
+  más grande: 724×1448 en vez de nuestro esquema anterior) — puede que
+  necesiten un ajuste fino una vez las veas; dímelo si alguna se ve
+  descolocada y la corrijo con coordenadas exactas.
+
+Ningún nombre de zona cambió — se comprobó que las 39 combinaciones
+siguen siendo exactamente las mismas, así que las molestias y lesiones
+ya guardadas se seguirán viendo bien con el nuevo dibujo.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.
