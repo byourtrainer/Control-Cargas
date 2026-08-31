@@ -2,7 +2,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 24px;
-  max-width: 460px;
+  max-width: 420px;
   margin: 0 auto;
 }
 
@@ -15,17 +15,9 @@
   margin: 0 0 8px;
 }
 
-.cuerpo-tarjeta-clara {
-  background: #F5F3EE;
-  border-radius: 12px;
-  padding: 10px 6px;
-}
-
 .cuerpo-svg {
   width: 100%;
-  max-width: 220px;
-  display: block;
-  margin: 0 auto;
+  max-width: 180px;
 }
 
 .zona-cuerpo {
@@ -37,19 +29,5 @@
 }
 
 .zona-cuerpo-clicable:hover {
-  opacity: 0.8;
-}
-
-.zona-decorativa {
-  fill: transparent;
-  stroke: none;
-  pointer-events: none;
-}
-
-.cuerpo-credito {
-  grid-column: 1 / -1;
-  font-size: 10px;
-  color: var(--text-faint);
-  text-align: center;
-  margin-top: 4px;
+  opacity: 0.75;
 }
