@@ -15,7 +15,7 @@ import './SelectorCuerpo.css'
 // siguen dibujados a mano, en el mismo estilo que antes.
 
 function colorMapa(count, max) {
-  if (!count) return 'var(--bg-elevated)'
+  if (!count) return 'var(--line-strong)'
   const ratio = max > 0 ? count / max : 0
   const alpha = 0.28 + ratio * 0.62
   return `rgba(234, 92, 74, ${alpha.toFixed(2)})`
@@ -98,9 +98,9 @@ export default function SelectorCuerpo({
       const activo = zonasSeleccionadas.includes(claveZona(zona, lado))
       return activo
         ? { fill: 'var(--accent)', fillOpacity: 0.55, stroke: 'var(--accent)', strokeWidth: 2 }
-        : { fill: 'var(--bg-elevated)', fillOpacity: 0.9, stroke: 'var(--line-strong)', strokeWidth: 1 }
+        : { fill: 'var(--line-strong)', fillOpacity: 0.55, stroke: 'var(--text-faint)', strokeWidth: 1.5 }
     }
-    return { fill: colorMapa(frecuencias[claveZona(zona, lado)] || 0, max), stroke: 'var(--line-strong)', strokeWidth: 1 }
+    return { fill: colorMapa(frecuencias[claveZona(zona, lado)] || 0, max), stroke: 'var(--text-faint)', strokeWidth: 1.5 }
   }
 
   function propsZona(zona, lado = null) {
@@ -123,7 +123,7 @@ export default function SelectorCuerpo({
 
   function renderDecorativa(trazados, key) {
     return trazados.map((trazado, i) => (
-      <path key={`${key}-${i}`} d={trazado} fill="var(--bg-elevated)" fillOpacity="0.5" stroke="var(--line)" strokeWidth="1" pointerEvents="none" />
+      <path key={`${key}-${i}`} d={trazado} fill="var(--line-strong)" fillOpacity="0.35" stroke="var(--text-faint)" strokeWidth="1" pointerEvents="none" />
     ))
   }
 
@@ -132,7 +132,7 @@ export default function SelectorCuerpo({
       <div className="cuerpo-columna">
         <h4>Vista frontal</h4>
         <svg viewBox="0 0 724 1448" className="cuerpo-svg">
-          <path d={CONTORNO_FRONTAL} fill="none" stroke="var(--line)" strokeWidth="2" opacity="0.5" />
+          <path d={CONTORNO_FRONTAL} fill="none" stroke="var(--text-faint)" strokeWidth="2.5" opacity="0.9" />
 
           {Object.entries(ZONAS_FRONTAL).map(([clave, trazados]) => {
             const [zona, lado] = clave.split('|')
@@ -167,7 +167,7 @@ export default function SelectorCuerpo({
       <div className="cuerpo-columna">
         <h4>Vista posterior</h4>
         <svg viewBox="724 0 724 1448" className="cuerpo-svg">
-          <path d={CONTORNO_POSTERIOR} fill="none" stroke="var(--line)" strokeWidth="2" opacity="0.5" />
+          <path d={CONTORNO_POSTERIOR} fill="none" stroke="var(--text-faint)" strokeWidth="2.5" opacity="0.9" />
 
           {Object.entries(DECORATIVAS_POSTERIOR).map(([key, trazados]) => renderDecorativa(trazados, `dec-${key}`))}
 
@@ -176,10 +176,10 @@ export default function SelectorCuerpo({
             return renderZona(zona, lado || null, trazados, clave)
           })}
 
-          <circle cx="832" cy="655" r="30" fill="var(--bg-elevated)" fillOpacity="0.5" stroke="var(--line)" strokeWidth="1" />
-          <circle cx="1340" cy="655" r="30" fill="var(--bg-elevated)" fillOpacity="0.5" stroke="var(--line)" strokeWidth="1" />
-          <circle cx="796" cy="900" r="24" fill="var(--bg-elevated)" fillOpacity="0.5" stroke="var(--line)" strokeWidth="1" />
-          <circle cx="1376" cy="900" r="24" fill="var(--bg-elevated)" fillOpacity="0.5" stroke="var(--line)" strokeWidth="1" />
+          <circle cx="832" cy="655" r="30" fill="var(--line-strong)" fillOpacity="0.35" stroke="var(--text-faint)" strokeWidth="1" />
+          <circle cx="1340" cy="655" r="30" fill="var(--line-strong)" fillOpacity="0.35" stroke="var(--text-faint)" strokeWidth="1" />
+          <circle cx="796" cy="900" r="24" fill="var(--line-strong)" fillOpacity="0.35" stroke="var(--text-faint)" strokeWidth="1" />
+          <circle cx="1376" cy="900" r="24" fill="var(--line-strong)" fillOpacity="0.35" stroke="var(--text-faint)" strokeWidth="1" />
         </svg>
       </div>
 
