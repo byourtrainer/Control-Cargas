@@ -140,25 +140,25 @@ export default function SelectorCuerpo({
           })}
 
           {/* Zonas sin trazado real en el set original — dibujadas a mano */}
-          <rect x="322" y="300" width="80" height="55" rx="10" {...propsZona('Esternón/costillas')}>
+          <rect x="322" y="320" width="80" height="45" rx="10" {...propsZona('Esternón/costillas')}>
             {modo === 'mapa' && <title>{tituloZona('Esternón/costillas')}</title>}
           </rect>
-          <path d="M270,560 C270,545 454,545 454,560 L462,635 C400,665 324,665 262,635 Z" {...propsZona('Cadera')}>
+          <path d="M270,560 C270,545 454,545 454,560 L462,620 C400,650 324,650 262,620 Z" {...propsZona('Cadera')}>
             {modo === 'mapa' && <title>{tituloZona('Cadera')}</title>}
           </path>
-          <rect x="300" y="605" width="124" height="60" rx="18" {...propsZona('Psoas (flexores cadera)')}>
+          <rect x="300" y="600" width="124" height="55" rx="18" {...propsZona('Psoas (flexores cadera)')}>
             {modo === 'mapa' && <title>{tituloZona('Psoas (flexores cadera)')}</title>}
           </rect>
-          <circle cx="108" cy="655" r="30" {...propsZona('Codo', 'Izquierdo')}>
+          <circle cx="150" cy="555" r="26" {...propsZona('Codo', 'Izquierdo')}>
             {modo === 'mapa' && <title>{tituloZona('Codo', 'Izquierdo')}</title>}
           </circle>
-          <circle cx="616" cy="655" r="30" {...propsZona('Codo', 'Derecho')}>
+          <circle cx="574" cy="555" r="26" {...propsZona('Codo', 'Derecho')}>
             {modo === 'mapa' && <title>{tituloZona('Codo', 'Derecho')}</title>}
           </circle>
-          <circle cx="72" cy="900" r="24" {...propsZona('Muñeca', 'Izquierdo')}>
+          <circle cx="160" cy="695" r="20" {...propsZona('Muñeca', 'Izquierdo')}>
             {modo === 'mapa' && <title>{tituloZona('Muñeca', 'Izquierdo')}</title>}
           </circle>
-          <circle cx="652" cy="900" r="24" {...propsZona('Muñeca', 'Derecho')}>
+          <circle cx="565" cy="695" r="20" {...propsZona('Muñeca', 'Derecho')}>
             {modo === 'mapa' && <title>{tituloZona('Muñeca', 'Derecho')}</title>}
           </circle>
         </svg>
@@ -176,10 +176,10 @@ export default function SelectorCuerpo({
             return renderZona(zona, lado || null, trazados, clave)
           })}
 
-          <circle cx="832" cy="655" r="30" fill="var(--line-strong)" fillOpacity="0.35" stroke="var(--text-faint)" strokeWidth="1" />
-          <circle cx="1340" cy="655" r="30" fill="var(--line-strong)" fillOpacity="0.35" stroke="var(--text-faint)" strokeWidth="1" />
-          <circle cx="796" cy="900" r="24" fill="var(--line-strong)" fillOpacity="0.35" stroke="var(--text-faint)" strokeWidth="1" />
-          <circle cx="1376" cy="900" r="24" fill="var(--line-strong)" fillOpacity="0.35" stroke="var(--text-faint)" strokeWidth="1" />
+          <circle cx="874" cy="555" r="26" fill="var(--line-strong)" fillOpacity="0.35" stroke="var(--text-faint)" strokeWidth="1" />
+          <circle cx="1298" cy="555" r="26" fill="var(--line-strong)" fillOpacity="0.35" stroke="var(--text-faint)" strokeWidth="1" />
+          <circle cx="884" cy="695" r="20" fill="var(--line-strong)" fillOpacity="0.35" stroke="var(--text-faint)" strokeWidth="1" />
+          <circle cx="1289" cy="695" r="20" fill="var(--line-strong)" fillOpacity="0.35" stroke="var(--text-faint)" strokeWidth="1" />
         </svg>
       </div>
 
