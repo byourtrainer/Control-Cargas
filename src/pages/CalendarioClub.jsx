@@ -209,7 +209,7 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], o
       notas: form.notas || null,
       intensidad: form.intensidad.length > 0 ? form.intensidad : null,
       duracion_min: form.duracionMin === '' ? null : Number(form.duracionMin),
-      tipo_sesion: esEntrenamiento ? (form.tipoSesion || null) : null,
+      tipo_sesion: esEntrenamiento ? (form.tipoSesion || null) : 'Partido',
     }
     const { error } = editandoId
       ? await supabase.from('eventos_calendario').update(datos).eq('id', editandoId)
@@ -528,6 +528,12 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], o
               </label>
             )}
           </div>
+          {form.duracionMin === '' && (
+            <p className="texto-faint calendario-club-duracion-nota">
+              Sin duración, no se generará la sesión del día — el jugador no verá el cuestionario
+              de RPE para este evento hasta que la rellenes (sea entrenamiento o partido).
+            </p>
+          )}
           {form.duracionMin !== '' && (
             <p className="texto-faint calendario-club-duracion-nota">
               Al guardar, esta duración se aplicará a {modoDestino === 'equipo' ? 'todos los jugadores del equipo activo' : 'este jugador'}{' '}

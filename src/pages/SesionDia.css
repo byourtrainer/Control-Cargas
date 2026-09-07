@@ -158,3 +158,96 @@
   padding: 8px 12px 8px 0;
   border-bottom: 1px solid var(--line);
 }
+
+/* --- Diario de sesiones --- */
+.diario-sesiones-card {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin-top: 16px;
+}
+
+.diario-sesiones-cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  font-family: inherit;
+}
+
+.diario-sesiones-cabecera h3 { font-size: 15px; margin: 0; }
+
+.diario-sesiones-plegar {
+  font-size: 12px;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+
+.diario-sesiones-sub {
+  font-size: 12px;
+  margin: 6px 0 12px;
+}
+
+.diario-sesiones-buscador {
+  width: 100%;
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+
+.diario-sesiones-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: 560px;
+  overflow-y: auto;
+}
+
+.diario-sesiones-entrada {
+  border-left: 2px solid var(--line-strong);
+  padding-left: 14px;
+}
+
+.diario-sesiones-fecha {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.diario-sesiones-tipo {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--accent);
+  background: rgba(200,255,77,0.1);
+  border-radius: 999px;
+  padding: 2px 9px;
+}
+
+.diario-sesiones-bloque { margin-bottom: 8px; }
+
+.diario-sesiones-nombres {
+  font-size: 11px;
+  color: var(--text-faint);
+  margin-bottom: 2px;
+}
+
+.diario-sesiones-contenido {
+  font-size: 13px;
+  color: var(--text-dim);
+  white-space: pre-wrap;
+  line-height: 1.5;
+}

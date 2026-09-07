@@ -249,7 +249,8 @@ export default function App() {
         {esStaffCompleto ? (
           pestana === 'sesion' ? (
             <SesionDia
-              equipoActivo={equipoActivo}
+              equipoActivo={equipoActivo} jugadorActivo={jugadorActivo}
+              fechaDesde={fechaDesde} fechaHasta={fechaHasta}
               fechaInicial={saltoPlanificacion?.fecha}
               key={saltoPlanificacion?.ts || 'sesion-default'}
             />

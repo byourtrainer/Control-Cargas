@@ -16,7 +16,7 @@ function formatearFechaLarga(fechaISO) {
 // Clave interna para agrupar sesiones por tipo dentro del mapa (el tipo puede venir en blanco)
 const claveTipo = (tipo) => tipo || '__sin_tipo__'
 
-export default function SesionDia({ equipoActivo = 'todos', fechaInicial }) {
+export default function SesionDia({ equipoActivo = 'todos', jugadorActivo = 'equipo', fechaDesde, fechaHasta, fechaInicial }) {
   const [fecha, setFecha] = useState(fechaInicial || hoyISO())
   const [modoAsignacion, setModoAsignacion] = useState('grupo') // 'grupo' | 'individual'
   const [jugadores, setJugadores] = useState([])
@@ -175,7 +175,77 @@ export default function SesionDia({ equipoActivo = 'todos', fechaInicial }) {
     jugadores.flatMap((j) => Object.values(sesionesDelDia[j.id] || {}).map((s) => s.tipo_sesion || 'Sin tipo'))
   )]
 
+  // --- Diario de sesiones: historial navegable del contenido ya escrito en Planificación ---
+  const [diarioAbierto, setDiarioAbierto] = useState(false)
+  const [cargandoDiario, setCargandoDiario] = useState(false)
+  const [entradasDiario, setEntradasDiario] = useState([])
+  const [busquedaDiario, setBusquedaDiario] = useState('')
+
+  useEffect(() => {
+    if (diarioAbierto) cargarDiario()
+  }, [diarioAbierto, equipoActivo, jugadorActivo, fechaDesde, fechaHasta])
+
+  async function cargarDiario() {
+    setCargandoDiario(true)
+    let idsJugadores = []
+    let mapaNombres = {}
+    if (jugadorActivo !== 'equipo') {
+      idsJugadores = [jugadorActivo]
+      const { data: perfil } = await supabase.from('perfiles').select('id, nombre').eq('id', jugadorActivo).maybeSingle()
+      if (perfil) mapaNombres[perfil.id] = perfil.nombre
+    } else {
+      const { data: perfiles } = await supabase.from('perfiles').select('id, nombre, equipo_id').eq('rol', 'jugador')
+      const filtrados = (perfiles || []).filter((j) => {
+        if (equipoActivo === 'todos') return true
+        if (equipoActivo === 'sin_asignar') return !j.equipo_id
+        return j.equipo_id === equipoActivo
+      })
+      idsJugadores = filtrados.map((j) => j.id)
+      filtrados.forEach((j) => { mapaNombres[j.id] = j.nombre })
+    }
+    if (idsJugadores.length === 0) { setEntradasDiario([]); setCargandoDiario(false); return }
+
+    const { data } = await supabase
+      .from('sesiones')
+      .select('fecha, tipo_sesion, contenido, jugador_id')
+      .in('jugador_id', idsJugadores)
+      .not('contenido', 'is', null)
+      .gte('fecha', fechaDesde || '2000-01-01')
+      .lte('fecha', fechaHasta || hoyISO())
+      .order('fecha', { ascending: false })
+
+    // Agrupa por (fecha, tipo) — si todos los jugadores de ese día/tipo tienen el
+    // mismo contenido (el caso normal, "todo el grupo"), se muestra una sola vez;
+    // si difiere entre jugadores, se listan por separado.
+    const grupos = {}
+    ;(data || []).forEach((fila) => {
+      const clave = `${fila.fecha}|${fila.tipo_sesion || ''}`
+      if (!grupos[clave]) grupos[clave] = { fecha: fila.fecha, tipo_sesion: fila.tipo_sesion, porContenido: {} }
+      const c = fila.contenido
+      if (!grupos[clave].porContenido[c]) grupos[clave].porContenido[c] = []
+      grupos[clave].porContenido[c].push(mapaNombres[fila.jugador_id] || '—')
+    })
+
+    const entradas = Object.values(grupos).map((g) => ({
+      fecha: g.fecha,
+      tipo_sesion: g.tipo_sesion,
+      bloques: Object.entries(g.porContenido).map(([contenido, nombres]) => ({ contenido, nombres })),
+    }))
+    entradas.sort((a, b) => b.fecha.localeCompare(a.fecha))
+    setEntradasDiario(entradas)
+    setCargandoDiario(false)
+  }
+
+  const textoNombreJugador = jugadorActivo !== 'equipo' ? jugadores.find((j) => j.id === jugadorActivo)?.nombre : null
+
+  const entradasFiltradas = entradasDiario.filter((e) => {
+    if (!busquedaDiario.trim()) return true
+    const q = busquedaDiario.trim().toLowerCase()
+    return e.bloques.some((b) => b.contenido.toLowerCase().includes(q))
+  })
+
   return (
+    <>
     <div className="sesion-layout">
       <div className="sesion-columna-calendario">
         <CalendarioEntrenador
@@ -315,5 +385,50 @@ export default function SesionDia({ equipoActivo = 'todos', fechaInicial }) {
         )}
       </section>
     </div>
+
+    <section className="diario-sesiones-card no-imprimir">
+      <button type="button" className="diario-sesiones-cabecera" onClick={() => setDiarioAbierto((a) => !a)}>
+        <h3>📔 Diario de sesiones{textoNombreJugador ? ` — ${textoNombreJugador}` : ''}</h3>
+        <span className="diario-sesiones-plegar">{diarioAbierto ? '▲ Ocultar' : '▼ Mostrar'}</span>
+      </button>
+
+      {diarioAbierto && (
+        <>
+          <p className="texto-dim diario-sesiones-sub">
+            Lo que se ha escrito en "Contenido de la sesión" a lo largo del tiempo, para el equipo,
+            jugador y fechas que tengas seleccionados arriba en el ◎.
+          </p>
+          <input
+            type="text" className="diario-sesiones-buscador" value={busquedaDiario}
+            onChange={(e) => setBusquedaDiario(e.target.value)}
+            placeholder="Buscar por palabra dentro del contenido…"
+          />
+
+          {cargandoDiario ? (
+            <p className="mono texto-dim">Cargando…</p>
+          ) : entradasFiltradas.length === 0 ? (
+            <p className="texto-dim">No hay contenido de sesión guardado en este periodo.</p>
+          ) : (
+            <div className="diario-sesiones-lista">
+              {entradasFiltradas.map((e, i) => (
+                <div className="diario-sesiones-entrada" key={i}>
+                  <div className="diario-sesiones-fecha">
+                    <span className="capitalizada">{formatearFechaLarga(e.fecha)}</span>
+                    {e.tipo_sesion && <span className="diario-sesiones-tipo">{e.tipo_sesion}</span>}
+                  </div>
+                  {e.bloques.map((b, j) => (
+                    <div className="diario-sesiones-bloque" key={j}>
+                      {e.bloques.length > 1 && <p className="diario-sesiones-nombres">{b.nombres.join(', ')}</p>}
+                      <p className="diario-sesiones-contenido">{b.contenido}</p>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </section>
+  </>
   )
 }

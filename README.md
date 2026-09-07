@@ -2109,6 +2109,75 @@ Ningún nombre de zona cambió — se comprobó que las 39 combinaciones
 siguen siendo exactamente las mismas, así que las molestias y lesiones
 ya guardadas se seguirán viendo bien con el nuevo dibujo.
 
+## Arreglado: los puntos de "partido" aparecían en días de entreno normal
+
+Encontrado el motivo exacto: los gráficos de Carga, Bienestar, Strain y
+Monotonía marcaban "día de partido" según la etiqueta `mdx = "MD"` de
+las sesiones — pero ese campo es la etiqueta de **ciclo de
+periodización** que el entrenador elige libremente en Planificación para
+cualquier sesión de entrenamiento normal (para indicar "este día tiene
+la intensidad de un día de partido"), no indica que ese día haya un
+partido de verdad.
+
+Arreglado: ahora el marcador de partido se basa en los **eventos reales
+del Calendario** de tipo Amistoso, Liga, Europa, Copa del Rey o
+Play-Off — exactamente los 5 tipos que mencionaste, y ningún otro
+("Entrenamiento" nunca se contará como partido). Afecta a los gráficos
+principales, la tabla "RPE de la semana", y el mapa de calor.
+
+## Aclarado: la duración ya funcionaba para cualquier tipo de evento
+
+Repasé el flujo completo, y encontré que había leído mal el código en un
+primer vistazo — el campo "Duración" **ya estaba disponible** para
+partidos (Amistoso, Liga, Europa, Copa del Rey, Play-Off), no solo para
+entrenamientos, y ya generaba la sesión (y por tanto el cuestionario de
+RPE) igual en todos los casos. No hacía falta ningún cambio de código
+para que funcionara.
+
+Lo que sí añadí: un aviso claro bajo el campo de Duración, para
+cualquier tipo de evento, recordando que sin rellenarla no se genera la
+sesión y el jugador no verá el RPE — para que no se pase por alto en un
+partido, donde es menos intuitivo que en un entrenamiento.
+
+## Diario de sesiones — nuevo, dentro de Planificación
+
+Nueva sección plegable **"📔 Diario de sesiones"**, al final de la
+pestaña Planificación — un historial navegable de todo lo que has ido
+escribiendo en "Contenido de la sesión" a lo largo del tiempo, sin crear
+ninguna tabla ni pantalla nueva: reutiliza el mismo campo que ya existía.
+
+- Respeta el equipo, jugador y rango de fechas que tengas seleccionados
+  en el ◎ de la cabecera.
+- Un buscador por palabra dentro del contenido.
+- Cuando todo el grupo comparte el mismo contenido ese día (el caso
+  normal), se muestra una sola vez; si alguna vez pusiste contenido
+  distinto por jugador, se listan por separado con su nombre.
+
+## Sobre el fallo de los partidos (pendiente de tus datos)
+
+Repasé el código de arriba a abajo y no encuentro, solo leyéndolo, ningún
+punto donde se trate distinto un partido de un entrenamiento a la hora de
+generar la sesión. Antes de tocar nada más, necesito que ejecutes las dos
+consultas SQL que te pasé (ver el mensaje anterior) para ver qué está
+pasando realmente en tus datos — con eso delante, o confirmamos que era
+un tema de no rellenar la duración, o encuentro el fallo real si lo hay.
+
+## Encontrado y arreglado: por qué los partidos daban problemas
+
+Con los datos que me pasaste, encontré el motivo real: las sesiones de
+partido **sí se creaban**, pero cada vez que se guardaba el evento se
+duplicaban (cada jugador aparecía dos veces, con la fila idéntica). El
+motivo técnico: usábamos `tipo_sesion = nulo` para indicar "esto es un
+partido" — pero en SQL, un valor nulo nunca se considera igual a otro
+nulo, así que la base de datos nunca reconocía "esto ya existe" al
+volver a guardar, y creaba una fila nueva en vez de actualizar.
+
+Arreglado sustituyendo el nulo por un valor explícito: **"Partido"**, su
+propio tipo de sesión, igual que Pista/Gimnasio/Recuperación. De paso, el
+jugador ahora verá "Esfuerzo percibido — Partido" en el cuestionario de
+RPE, en vez de una etiqueta vacía. La migración también limpia los
+duplicados que ya se hayan generado.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

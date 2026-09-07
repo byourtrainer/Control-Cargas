@@ -264,6 +264,7 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
   const [jugadores, setJugadores] = useState([])
   const [registros, setRegistros] = useState([])
   const [sesiones, setSesiones] = useState([])
+  const [eventosPartido, setEventosPartido] = useState([])
   const [variableGrafico, setVariableGrafico] = useState('carga')
   const [tipoVistaGrafico, setTipoVistaGrafico] = useState('diario')
   const [metodoACWR, setMetodoACWR] = useState('clasico')
@@ -287,24 +288,33 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
 
   async function cargarDatos() {
     setCargando(true)
-    const [{ data: perfiles }, { data: regs }, { data: sess }] = await Promise.all([
+    const [{ data: perfiles }, { data: regs }, { data: sess }, { data: partidos }] = await Promise.all([
       supabase.from('perfiles').select('*, equipos(id, nombre, logo_base64)').eq('rol', 'jugador').order('nombre'),
       supabase.from('registros_diarios').select('*').gte('fecha', diasAtras(400)).order('fecha'),
       supabase.from('sesiones').select('fecha, mdx').gte('fecha', diasAtras(400)),
+      supabase.from('eventos_calendario').select('fecha')
+        .in('tipo', ['Amistoso', 'Liga', 'Europa', 'Copa del Rey', 'Play-Off'])
+        .gte('fecha', diasAtras(400)),
     ])
     setJugadores(perfiles || [])
     setRegistros(regs || [])
     setSesiones(sess || [])
+    setEventosPartido(partidos || [])
     setCargando(false)
   }
 
+  // "Día de partido" se basa en el TIPO real del evento del Calendario
+  // (Amistoso/Liga/Europa/Copa del Rey/Play-Off) — no en la etiqueta de
+  // ciclo "MD" de Planificación, que el entrenador puede poner en
+  // cualquier sesión de entrenamiento normal para marcar su periodización,
+  // sin que eso signifique que ese día haya un partido de verdad.
   const diasPartido = useMemo(
-    () => new Set(sesiones.filter((s) => s.mdx === 'MD').map((s) => s.fecha)),
-    [sesiones]
+    () => new Set(eventosPartido.map((e) => e.fecha)),
+    [eventosPartido]
   )
   const diasEntrenamiento = useMemo(
-    () => new Set(sesiones.filter((s) => s.mdx !== 'MD').map((s) => s.fecha)),
-    [sesiones]
+    () => new Set(sesiones.filter((s) => !diasPartido.has(s.fecha)).map((s) => s.fecha)),
+    [sesiones, diasPartido]
   )
 
   const jugadoresFiltrados = useMemo(() => {
