@@ -208,7 +208,7 @@
 
 .pizarra-galeria {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 16px;
   margin-top: 12px;
 }
@@ -234,7 +234,12 @@
   gap: 6px;
 }
 
-.pizarra-galeria-info strong { font-size: 13px; }
+.pizarra-galeria-info strong {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--text);
+}
 
 .pizarra-galeria-acciones {
   display: flex;

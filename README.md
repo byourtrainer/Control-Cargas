@@ -2178,6 +2178,26 @@ jugador ahora verá "Esfuerzo percibido — Partido" en el cuestionario de
 RPE, en vez de una etiqueta vacía. La migración también limpia los
 duplicados que ya se hayan generado.
 
+## Cuatro actualizaciones
+
+- **Pizarra**: nuevo botón "+ Portero" (forma cuadrada, para distinguirlo
+  de un vistazo de los jugadores redondos) — el fondo por defecto ahora
+  es blanco, con las marcas del campo en negro automáticamente (el
+  sistema ya cambiaba el color de las líneas según lo claro/oscuro que
+  fuera el fondo, así que solo hizo falta cambiar el color de partida).
+- **Biblioteca de ejercicios**: título más grande y en negrita (13px →
+  15px), tanto en la pizarra como en el buscador de "Explorar biblioteca"
+  al crear sesiones — para distinguir mejor unos de otros cuando hay
+  muchos.
+- **Historial de Fisio vacío** y **puntos de partido en días de
+  entreno**: repasé ambos códigos a fondo y ya están arreglados desde
+  hace un par de actualizaciones (la del "join" ambiguo en lesiones, y la
+  de basar los partidos en los eventos del calendario en vez del `mdx`)
+  — no encontré ningún otro punto con el fallo antiguo. Todo apunta a que
+  esos dos archivos en concreto (`Fisio.jsx` y `CoachDashboard.jsx`) no
+  llegaron a subirse a GitHub en su momento. Te los vuelvo a dejar en
+  este mismo paquete, junto con los nuevos cambios.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

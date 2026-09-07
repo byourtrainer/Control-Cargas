@@ -183,6 +183,15 @@ function ElementoSVG({ el, seleccionado }) {
       </g>
     )
   }
+  if (el.tipo === 'portero') {
+    return (
+      <g>
+        {anillo}
+        <rect x={el.x - 14} y={el.y - 14} width="28" height="28" rx="5" fill={el.color} stroke="rgba(0,0,0,0.4)" strokeWidth="1.5" />
+        <text x={el.x} y={el.y + 5} textAnchor="middle" fontSize="13" fontWeight="700" fill="#0d1210">{el.numero}</text>
+      </g>
+    )
+  }
   if (el.tipo === 'cono') {
     return (
       <g transform={transformRotacion}>
@@ -295,7 +304,7 @@ function ElementoSVG({ el, seleccionado }) {
 export default function PizarraTactica() {
   const svgRef = useRef(null)
   const [fondo, setFondo] = useState('campo_completo')
-  const [colorCampo, setColorCampo] = useState('#1f6b3a')
+  const [colorCampo, setColorCampo] = useState('#ffffff')
   const [elementos, setElementos] = useState([])
   const [lineas, setLineas] = useState([])
   const [seleccionId, setSeleccionId] = useState(null)
@@ -757,6 +766,9 @@ export default function PizarraTactica() {
     if (tipo === 'jugador') {
       base.color = colorNuevoElemento
       base.numero = elementos.filter((e) => e.tipo === 'jugador').length + 1
+    } else if (tipo === 'portero') {
+      base.color = '#f5d130'
+      base.numero = 1
     } else if (tipo === 'cono' || tipo === 'valla' || tipo === 'bidon') {
       base.color = colorNuevoElemento
       base.tamano = tamanoNuevoElemento
@@ -1199,6 +1211,7 @@ export default function PizarraTactica() {
         <div className="pizarra-separador" />
 
         <button className="pizarra-boton" onClick={() => anadirElemento('jugador')}>+ Jugador</button>
+        <button className="pizarra-boton" onClick={() => anadirElemento('portero')}>+ Portero</button>
         <select value={tipoObstaculoNuevo} onChange={(e) => setTipoObstaculoNuevo(e.target.value)}>
           {['cono', 'valla', 'bidon'].map((t) => <option key={t} value={t}>{etiquetaObstaculo[t]}</option>)}
         </select>
@@ -1495,9 +1508,9 @@ export default function PizarraTactica() {
               )}
               <button className="btn-eliminar-sesion" onClick={eliminarSeleccionado}>Eliminar</button>
             </>
-          ) : seleccionado.tipo === 'jugador' ? (
+          ) : seleccionado.tipo === 'jugador' || seleccionado.tipo === 'portero' ? (
             <>
-              <h4>Jugador #{seleccionado.numero}</h4>
+              <h4>{seleccionado.tipo === 'portero' ? 'Portero' : 'Jugador'} #{seleccionado.numero}</h4>
               <label className="campo-sesion">
                 <span>Número</span>
                 <input
