@@ -147,7 +147,7 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], o
     setMensaje(null)
   }
 
-  async function crearSesionesDesdeEvento(datosEvento) {
+  async function crearSesionesDesdeEvento(datosEvento, eventoId) {
     if (!datosEvento.duracion_min) return { ok: true }
 
     let idsJugadores = []
@@ -165,15 +165,41 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], o
     }
     if (idsJugadores.length === 0) return { ok: true }
 
-    const filas = idsJugadores.map((jugador_id) => ({
+    // Si alguno de estos jugadores ya tenía una sesión vinculada a ESTE
+    // evento concreto (por ejemplo, se está editando un evento ya
+    // guardado), se actualiza esa misma fila — conservando su id y, por
+    // tanto, el RPE que el jugador ya hubiera puesto — en vez de crear
+    // una fila nueva que dejaría la antigua huérfana con el RPE
+    // desconectado. Solo se inserta una fila nueva para quien no tuviera
+    // ya una.
+    let existentes = []
+    if (eventoId) {
+      const { data } = await supabase.from('sesiones').select('id, jugador_id').eq('evento_id', eventoId)
+      existentes = data || []
+    }
+    const idSesionPorJugador = Object.fromEntries(existentes.map((s) => [s.jugador_id, s.id]))
+
+    const datosComunes = {
       fecha: datosEvento.fecha,
-      jugador_id,
       duracion_min: datosEvento.duracion_min,
       tipo_sesion: datosEvento.tipo_sesion,
       contenido: datosEvento.notas,
       mdx: datosEvento.tipo !== 'Entrenamiento' ? 'MD' : null,
-    }))
-    const { error } = await supabase.from('sesiones').upsert(filas, { onConflict: 'fecha,jugador_id,tipo_sesion' })
+      evento_id: eventoId || null,
+    }
+
+    let error = null
+    for (const jugador_id of idsJugadores) {
+      if (idSesionPorJugador[jugador_id]) {
+        const { error: e } = await supabase.from('sesiones').update(datosComunes).eq('id', idSesionPorJugador[jugador_id])
+        if (e) error = e
+      } else {
+        const { error: e } = await supabase
+          .from('sesiones')
+          .upsert({ ...datosComunes, jugador_id }, { onConflict: 'fecha,jugador_id,tipo_sesion' })
+        if (e) error = e
+      }
+    }
     return { ok: !error }
   }
 
@@ -211,14 +237,20 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], o
       duracion_min: form.duracionMin === '' ? null : Number(form.duracionMin),
       tipo_sesion: esEntrenamiento ? (form.tipoSesion || null) : 'Partido',
     }
-    const { error } = editandoId
-      ? await supabase.from('eventos_calendario').update(datos).eq('id', editandoId)
-      : await supabase.from('eventos_calendario').insert(datos)
+    let error
+    let eventoIdFinal = editandoId
+    if (editandoId) {
+      ;({ error } = await supabase.from('eventos_calendario').update(datos).eq('id', editandoId))
+    } else {
+      const resultado = await supabase.from('eventos_calendario').insert(datos).select('id').single()
+      error = resultado.error
+      eventoIdFinal = resultado.data?.id
+    }
 
     if (error) {
       setMensaje({ tipo: 'error', texto: 'No se pudo guardar el evento.' })
     } else {
-      const resultadoSesiones = await crearSesionesDesdeEvento(datos)
+      const resultadoSesiones = await crearSesionesDesdeEvento(datos, eventoIdFinal)
       setForm(vacio)
       setEditandoId(null)
       setMensaje(

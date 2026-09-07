@@ -2198,6 +2198,27 @@ duplicados que ya se hayan generado.
   llegaron a subirse a GitHub en su momento. Te los vuelvo a dejar en
   este mismo paquete, junto con los nuevos cambios.
 
+## Cambiar el tipo de un evento ya no desconecta el RPE de los jugadores
+
+Ahora cada sesión queda **enlazada al evento del calendario** que la
+generó. Si te equivocas de tipo de evento (por ejemplo, pusiste
+"Entrenamiento" y en realidad era un "Amistoso") y lo corriges después
+de pasado el día, la app actualiza **esa misma fila** de la sesión — no
+crea una nueva — así que el RPE que el jugador ya hubiera puesto se
+mantiene intacto, solo cambia la etiqueta del tipo de sesión.
+
+Antes de este cambio, editar el tipo de un evento ya guardado dejaba la
+sesión antigua (con el RPE) huérfana, sin conexión al evento corregido,
+y creaba una fila nueva vacía en su lugar — dando la sensación de que el
+dato se había perdido, aunque en realidad seguía en la base de datos,
+solo que desconectado.
+
+La migración también intenta enlazar retroactivamente las sesiones que
+ya tenías creadas de antes (solo cuando puede hacerlo sin ambigüedad) —
+para las que no consiga enlazar con seguridad, la primera vez que
+edites ese evento en concreto seguirá el comportamiento antiguo, pero a
+partir de ahí quedará ya enlazada correctamente.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.
