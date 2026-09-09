@@ -47,8 +47,8 @@ export default async function handler(req, res) {
   // 2. Comprobar que quien llama es de verdad un entrenador
   const { data: perfilLlamante } = await supabaseAdmin
     .from('perfiles').select('rol').eq('id', user.id).single()
-  if (!perfilLlamante || perfilLlamante.rol !== 'entrenador') {
-    return res.status(403).json({ error: 'Solo un entrenador puede eliminar jugadores.' })
+  if (!perfilLlamante || (perfilLlamante.rol !== 'entrenador' && perfilLlamante.rol !== 'administrador')) {
+    return res.status(403).json({ error: 'Solo un entrenador o administrador puede eliminar jugadores.' })
   }
 
   // 3. Comprobar que el objetivo es un jugador (nunca se puede borrar a un entrenador por aquí)

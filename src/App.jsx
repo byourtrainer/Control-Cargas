@@ -14,9 +14,11 @@ import CalendarioClub from './pages/CalendarioClub'
 import BibliotecaEjercicios from './pages/BibliotecaEjercicios'
 import PizarraTactica from './pages/PizarraTactica'
 import SesionesPizarra from './pages/SesionesPizarra'
+import PanelAdmin from './pages/PanelAdmin'
 import './App.css'
 
 const pestanasEntrenador = [
+  { clave: 'admin', etiqueta: '🔑 Admin' },
   { clave: 'equipos', etiqueta: 'Equipos' },
   { clave: 'resumen', etiqueta: 'Resumen' },
   { clave: 'calendario', etiqueta: 'Calendario' },
@@ -105,10 +107,12 @@ export default function App() {
     return () => { activo = false }
   }, [session])
 
-  const esStaffCompleto = perfil?.rol === 'entrenador' || perfil?.rol === 'fisio'
+  const esStaffCompleto = perfil?.rol === 'entrenador' || perfil?.rol === 'fisio' || perfil?.rol === 'administrador'
+  const pestanasVisibles = pestanasEntrenador.filter((p) => p.clave !== 'admin' || perfil?.rol === 'administrador')
 
   useEffect(() => {
     if (perfil?.rol === 'fisio') setPestana('fisio')
+    if (perfil?.rol === 'administrador') setPestana('admin')
   }, [perfil?.rol])
 
   useEffect(() => {
@@ -183,12 +187,12 @@ export default function App() {
         <>
           <nav className="pestanas-nav" ref={menuRef}>
             <button className="menu-desplegable-boton" onClick={() => setMenuAbierto(!menuAbierto)}>
-              <span>{pestanasEntrenador.find((p) => p.clave === pestana)?.etiqueta}</span>
+              <span>{pestanasVisibles.find((p) => p.clave === pestana)?.etiqueta}</span>
               <span className={`menu-flecha ${menuAbierto ? 'menu-flecha-abierta' : ''}`}>▾</span>
             </button>
             {menuAbierto && (
               <div className="menu-desplegable-lista">
-                {pestanasEntrenador.map((p) => (
+                {pestanasVisibles.map((p) => (
                   <button
                     key={p.clave}
                     className={`menu-desplegable-item ${pestana === p.clave ? 'menu-desplegable-item-activo' : ''}`}
@@ -247,7 +251,8 @@ export default function App() {
 
       <main className="contenido">
         {esStaffCompleto ? (
-          pestana === 'sesion' ? (
+          pestana === 'admin' ? <PanelAdmin perfil={perfil} />
+          : pestana === 'sesion' ? (
             <SesionDia
               equipoActivo={equipoActivo} jugadorActivo={jugadorActivo}
               fechaDesde={fechaDesde} fechaHasta={fechaHasta}
@@ -265,7 +270,7 @@ export default function App() {
           : pestana === 'calendario' ? <CalendarioClub equipoActivo={equipoActivo} equipos={equipos} onIrAPlanificar={irAPlanificar} />
           : pestana === 'entrenamiento' ? <BibliotecaEjercicios />
           : pestana === 'pizarra' ? <PizarraTactica />
-          : pestana === 'sesiones_pizarra' ? <SesionesPizarra />
+          : pestana === 'sesiones_pizarra' ? <SesionesPizarra perfil={perfil} />
           : pestana === 'jugadores' ? <Jugadores equipoActivo={equipoActivo} />
           : pestana === 'tests' ? <Tests equipoActivo={equipoActivo} />
           : pestana === 'equipos' ? (

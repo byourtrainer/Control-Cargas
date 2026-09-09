@@ -2219,6 +2219,61 @@ para las que no consiga enlazar con seguridad, la primera vez que
 edites ese evento en concreto seguirá el comportamiento antiguo, pero a
 partir de ahí quedará ya enlazada correctamente.
 
+## Roles y multi-club — actualización grande
+
+Añadido el rol **Administrador** (acceso total, a todos los clubes) y
+convertida la app para soportar varios clubes de verdad — cada
+entrenador y fisio ve ahora solo los datos de su propio club, nunca los
+de otro. Se ha revisado y reescrito el permiso de seguridad de:
+perfiles, equipos, sesiones, registros diarios, tests, calendario,
+lesiones, y la biblioteca de la pizarra.
+
+**Aviso honesto**: no tengo acceso directo a tu base de datos para
+comprobar si existe alguna tabla más que se me haya podido escapar (por
+ejemplo, si en algún momento se creó una tabla de comentarios grupales o
+similar de forma que yo no recuerde). Si después de aplicar esto ves que
+el entrenador de un club puede ver algo que no debería, dímelo y lo
+reviso.
+
+### Nueva sección: Panel de Administrador
+
+Pestaña **"🔑 Admin"**, exclusiva del rol administrador, con dos partes:
+
+- **Clubes**: crear clubes nuevos, y crear cuentas de entrenador/fisio
+  para cada uno (con su email y contraseña iniciales) — sin necesidad de
+  que yo te dé un script SQL cada vez.
+- **Clientes y facturación**: el control de tu hoja de cálculo, llevado a
+  la app — cada cliente con sus días de entreno, su programa, y si cobra
+  por sesión o cuota mensual fija; un calendario para marcar los días que
+  entrenó; resumen automático de sesiones y total del mes; y un botón
+  para generar la factura (numerada automáticamente, siguiendo tu propio
+  patrón FS096, FS097...) que se descarga como PDF usando la misma
+  técnica de impresión que ya usa el resto de la app.
+
+### Para aplicarlo, EN ESTE ORDEN
+
+1. Ejecuta `migracion_clubes_y_roles.sql` en Supabase — es la base,
+   tiene que ir primero.
+2. Ejecuta `migracion_clientes_facturacion.sql`.
+3. Ejecuta `migracion_clubes_complemento.sql` — cubre dos tablas que se
+   me habían quedado fuera del primer repaso (interpretaciones y
+   comentarios grupales), encontradas al revisar tu propio historial de
+   archivos.
+4. Sube la app entera a GitHub (hay varios archivos nuevos y cambiados:
+   `App.jsx`, `App.css`, `Fisio.jsx`, `SesionesPizarra.jsx`, el nuevo
+   `PanelAdmin.jsx` + `PanelAdmin.css`, y la nueva función de servidor
+   `api/crear-usuario-club.js`).
+5. **Añade la variable de entorno que ya tenías** (`SUPABASE_SERVICE_ROLE_KEY`)
+   — la nueva función de servidor la reutiliza, no hace falta crear una
+   nueva, pero confirma que sigue puesta en Vercel.
+6. Cambia tu propia cuenta a administrador con `cambiar_a_administrador.sql`
+   (recuerda poner tu correo real en la primera línea).
+7. Entra de nuevo — deberías aterrizar directamente en "🔑 Admin".
+
+También se limpiaron 3 archivos huérfanos de un intento anterior
+(`Lesiones.jsx`, `CuerpoLesiones.jsx`, `Informes.jsx`) que ya no usaba
+ninguna parte de la app.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

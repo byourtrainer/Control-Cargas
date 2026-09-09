@@ -63,7 +63,9 @@ export default function Fisio({ perfil, equipoActivo = 'todos', equipos = [], ju
   useEffect(() => { cargarTodo(); cargarLogoEntrenador() }, [])
 
   async function cargarLogoEntrenador() {
-    const { data } = await supabase.from('perfiles').select('nombre, logo_base64').eq('rol', 'entrenador').limit(1).maybeSingle()
+    let consulta = supabase.from('perfiles').select('nombre, logo_base64').eq('rol', 'entrenador').limit(1)
+    if (perfil?.club_id) consulta = consulta.eq('club_id', perfil.club_id)
+    const { data } = await consulta.maybeSingle()
     setLogoEntrenador(data?.logo_base64 || null)
     setNombreEntrenador(data?.nombre || null)
   }

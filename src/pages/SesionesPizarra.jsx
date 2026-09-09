@@ -18,7 +18,7 @@ function esVideo(ej) {
   return ej.tipo_origen === 'video_grabado'
 }
 
-export default function SesionesPizarra() {
+export default function SesionesPizarra({ perfil }) {
   const [sesiones, setSesiones] = useState([])
   const [biblioteca, setBiblioteca] = useState([])
   const [equipos, setEquipos] = useState([])
@@ -192,7 +192,9 @@ export default function SesionesPizarra() {
   }
 
   async function cargarLogoEntrenador() {
-    const { data } = await supabase.from('perfiles').select('nombre, logo_base64').eq('rol', 'entrenador').limit(1).maybeSingle()
+    let consulta = supabase.from('perfiles').select('nombre, logo_base64').eq('rol', 'entrenador').limit(1)
+    if (perfil?.club_id) consulta = consulta.eq('club_id', perfil.club_id)
+    const { data } = await consulta.maybeSingle()
     setLogoEntrenador(data?.logo_base64 || null)
     setNombreEntrenador(data?.nombre || null)
   }

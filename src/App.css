@@ -103,6 +103,11 @@
   color: #4dc8ff;
 }
 
+.rol-administrador {
+  background: rgba(255, 180, 77, 0.15);
+  color: #ffb44d;
+}
+
 .btn-salir {
   background: none;
   border: 1px solid var(--line-strong);
