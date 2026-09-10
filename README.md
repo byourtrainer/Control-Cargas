@@ -2274,6 +2274,54 @@ También se limpiaron 3 archivos huérfanos de un intento anterior
 (`Lesiones.jsx`, `CuerpoLesiones.jsx`, `Informes.jsx`) que ya no usaba
 ninguna parte de la app.
 
+## Arreglado: guardar ejercicios en una sesión de pizarra (fallo del cambio de roles)
+
+La función antigua `es_entrenador()` (usada en algunas tablas, como la
+que guarda los ejercicios dentro de una sesión de pizarra) nunca se
+actualizó para reconocer al nuevo rol administrador — así que te
+denegaba el acceso en silencio ahí, aunque la sesión en sí se guardara
+bien. Ampliada para incluir también a administrador; esto arregla de
+paso cualquier otra tabla que se me pudiera haber quedado sin migrar
+explícitamente a la nueva estructura de clubes.
+
+## Biblioteca de ejercicios — estilo YouTube
+
+Miniatura en proporción 16:9 (la de YouTube) como protagonista, con el
+título y las etiquetas pequeños y discretos debajo — en vez del recuadro
+con borde y título grande que había. Aplicado tanto en la Pizarra como
+en el buscador de "Explorar biblioteca" al crear sesiones.
+
+## Facturas rediseñadas — calcadas a tu formato real
+
+Usando los dos PDF que me pasaste como referencia exacta (fondo crema,
+título en negro condensado, tabla con cabecera negra, barra negra para
+el TOTAL):
+
+- **Nº de factura editable** — el formulario sugiere el siguiente
+  número en tu propia numeración, pero puedes cambiarlo a mano antes de
+  generar.
+- **IVA e IRPF configurables** por factura — el IVA con su porcentaje
+  editable (por defecto 21%), y el IRPF como casilla opcional (con su
+  propio porcentaje) para cuando facturas a una empresa que lo requiera.
+- **Empresa o particular** — nuevo interruptor en cada cliente; si lo
+  marcas como empresa/autónomo, se abren los campos de NIF, dirección y
+  ciudad — y la factura generada será del tipo "completa" (con esos
+  datos) en vez de "simplificada" (solo tus propios datos), calcando
+  exactamente la diferencia entre tus dos documentos de referencia.
+- **Datos del negocio**, nueva tarjeta para poner una vez tu nombre,
+  dirección, teléfono, correo e IBAN — se usan automáticamente en la
+  cabecera de cualquier factura.
+- Antes de generar cada factura, se abre una ventana de revisión donde
+  puedes ajustar el número, el concepto, la base imponible, el IVA y el
+  IRPF, con el total recalculándose al momento, antes de imprimir.
+
+### Para aplicarlo
+
+1. Ejecuta `migracion_factura_diseno.sql` en Supabase.
+2. Sube `PanelAdmin.jsx` y `PanelAdmin.css`.
+3. Ve a "🔑 Admin" → "💶 Clientes y facturación" → rellena primero
+   "Datos del negocio" (una sola vez) → prueba a generar una factura.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

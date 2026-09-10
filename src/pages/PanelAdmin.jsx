@@ -232,14 +232,28 @@ function SeccionClientes({ perfil }) {
   const [facturaImprimir, setFacturaImprimir] = useState(null)
   const [mostrarForm, setMostrarForm] = useState(false)
   const [editando, setEditando] = useState(null)
+  const [config, setConfig] = useState(null)
+  const [mostrarConfig, setMostrarConfig] = useState(false)
+  const [modalFactura, setModalFactura] = useState(null) // { cliente, ...campos editables } | null
 
-  const vacio = { nombre: '', dias_entreno: '', programa: '', tipo_facturacion: 'sesion', precio: '', activo: true, notas: '' }
+  const vacio = { nombre: '', dias_entreno: '', programa: '', tipo_facturacion: 'sesion', precio: '', activo: true, notas: '', es_empresa: false, nif: '', direccion: '', ciudad_cp: '' }
   const [form, setForm] = useState(vacio)
   const [guardando, setGuardando] = useState(false)
   const [mensaje, setMensaje] = useState(null)
 
-  useEffect(() => { cargarClientes(); cargarFacturas() }, [])
+  useEffect(() => { cargarClientes(); cargarFacturas(); cargarConfig() }, [])
   useEffect(() => { cargarSesionesMes() }, [mesActivo, clientes])
+
+  async function cargarConfig() {
+    const { data } = await supabase.from('configuracion_facturacion').select('*').eq('id', 1).maybeSingle()
+    setConfig(data || { id: 1, nombre: '', direccion: '', telefono: '', email: '', iban: '' })
+  }
+
+  async function guardarConfig(e) {
+    e.preventDefault()
+    await supabase.from('configuracion_facturacion').upsert({ ...config, id: 1 })
+    setMostrarConfig(false)
+  }
 
   async function cargarClientes() {
     setCargando(true)
@@ -250,7 +264,7 @@ function SeccionClientes({ perfil }) {
   }
 
   async function cargarFacturas() {
-    const { data } = await supabase.from('facturas').select('*, clientes(nombre)').order('fecha_emision', { ascending: false }).limit(30)
+    const { data } = await supabase.from('facturas').select('*').order('fecha_emision', { ascending: false }).limit(30)
     setFacturas(data || [])
   }
 
@@ -278,7 +292,7 @@ function SeccionClientes({ perfil }) {
   }
 
   function empezarEdicion(cliente) {
-    setForm({ ...cliente, precio: String(cliente.precio) })
+    setForm({ ...vacio, ...cliente, precio: String(cliente.precio) })
     setEditando(cliente.id)
     setMostrarForm(true)
   }
@@ -287,7 +301,12 @@ function SeccionClientes({ perfil }) {
     e.preventDefault()
     setGuardando(true)
     setMensaje(null)
-    const datos = { ...form, precio: Number(form.precio) || 0 }
+    const datos = {
+      ...form, precio: Number(form.precio) || 0,
+      nif: form.es_empresa ? form.nif : null,
+      direccion: form.es_empresa ? form.direccion : null,
+      ciudad_cp: form.es_empresa ? form.ciudad_cp : null,
+    }
     const { error } = editando
       ? await supabase.from('clientes').update(datos).eq('id', editando)
       : await supabase.from('clientes').insert(datos)
@@ -327,29 +346,60 @@ function SeccionClientes({ perfil }) {
     return 'FS100'
   }
 
-  async function generarFactura(cliente) {
+  async function abrirModalFactura(cliente) {
     const { num, total } = calcularResumen(cliente)
     if (num === 0 && cliente.tipo_facturacion === 'sesion') {
       alert('Este cliente no tiene ninguna sesión registrada este mes.')
       return
     }
-    const numeroFactura = await siguienteNumeroFactura()
+    const numeroSugerido = await siguienteNumeroFactura()
+    setModalFactura({
+      cliente,
+      numero_factura: numeroSugerido,
+      concepto: cliente.programa || 'Entrenamiento personal',
+      base_imponible: String(total),
+      iva_porcentaje: '21',
+      aplica_irpf: false,
+      irpf_porcentaje: '15',
+      num_sesiones: num,
+    })
+  }
+
+  async function confirmarGenerarFactura(e) {
+    e.preventDefault()
+    const m = modalFactura
+    const base = Number(m.base_imponible) || 0
+    const iva = base * (Number(m.iva_porcentaje) / 100)
+    const irpf = m.aplica_irpf ? base * (Number(m.irpf_porcentaje) / 100) : 0
+    const total = base + iva - irpf
+
     const nuevaFactura = {
-      cliente_id: cliente.id,
-      numero_factura: numeroFactura,
+      cliente_id: m.cliente.id,
+      numero_factura: m.numero_factura.trim(),
       fecha_emision: hoyISO(),
       periodo_inicio: primerDiaDelMes(mesActivo),
       periodo_fin: ultimoDiaDelMes(mesActivo),
-      num_sesiones: num,
+      num_sesiones: m.num_sesiones,
+      concepto: m.concepto,
+      base_imponible: base,
+      iva_porcentaje: Number(m.iva_porcentaje),
+      aplica_irpf: m.aplica_irpf,
+      irpf_porcentaje: m.aplica_irpf ? Number(m.irpf_porcentaje) : null,
       total,
+      tipo: m.cliente.es_empresa ? 'completa' : 'simplificada',
+      cliente_nombre: m.cliente.nombre,
+      cliente_nif: m.cliente.es_empresa ? m.cliente.nif : null,
+      cliente_direccion: m.cliente.es_empresa ? m.cliente.direccion : null,
+      cliente_ciudad_cp: m.cliente.es_empresa ? m.cliente.ciudad_cp : null,
     }
     const { data, error } = await supabase.from('facturas').insert(nuevaFactura).select().single()
     if (error) {
-      alert('No se pudo generar la factura.')
+      alert('No se pudo generar la factura: ' + error.message)
       return
     }
+    setModalFactura(null)
     cargarFacturas()
-    setFacturaImprimir({ ...data, cliente })
+    setFacturaImprimir(data)
     setTimeout(() => window.print(), 100)
   }
 
@@ -360,13 +410,34 @@ function SeccionClientes({ perfil }) {
   }, [])
 
   function reimprimirFactura(factura) {
-    const cliente = clientes.find((c) => c.id === factura.cliente_id) || { nombre: factura.clientes?.nombre }
-    setFacturaImprimir({ ...factura, cliente })
+    setFacturaImprimir(factura)
     setTimeout(() => window.print(), 100)
   }
 
   return (
     <div className="panel-admin-seccion">
+      <section className="panel-admin-card no-imprimir">
+        <div className="panel-admin-cabecera-flex">
+          <h2>Datos del negocio (aparecen en tus facturas)</h2>
+          <button className="equipo-cambiar-link" onClick={() => setMostrarConfig((v) => !v)}>
+            {mostrarConfig ? 'Cerrar' : '✎ Editar'}
+          </button>
+        </div>
+        {mostrarConfig && config && (
+          <form onSubmit={guardarConfig} className="panel-admin-form-config">
+            <input type="text" value={config.nombre || ''} onChange={(e) => setConfig({ ...config, nombre: e.target.value })} placeholder="Nombre y apellidos" />
+            <input type="text" value={config.direccion || ''} onChange={(e) => setConfig({ ...config, direccion: e.target.value })} placeholder="Dirección" />
+            <input type="text" value={config.telefono || ''} onChange={(e) => setConfig({ ...config, telefono: e.target.value })} placeholder="Teléfono" />
+            <input type="email" value={config.email || ''} onChange={(e) => setConfig({ ...config, email: e.target.value })} placeholder="Correo" />
+            <input type="text" value={config.iban || ''} onChange={(e) => setConfig({ ...config, iban: e.target.value })} placeholder="IBAN" />
+            <button type="submit" className="btn-principal">Guardar</button>
+          </form>
+        )}
+        {!mostrarConfig && config?.nombre && (
+          <p className="texto-dim mono">{config.nombre} · {config.direccion} · {config.telefono} · {config.email}</p>
+        )}
+      </section>
+
       <section className="panel-admin-card no-imprimir">
         <div className="panel-admin-cabecera-flex">
           <h2>Clientes</h2>
@@ -408,6 +479,28 @@ function SeccionClientes({ perfil }) {
               <input type="checkbox" checked={form.activo} onChange={(e) => setForm({ ...form, activo: e.target.checked })} />
               <span>Cliente activo</span>
             </label>
+            <label className="campo-checkbox">
+              <input type="checkbox" checked={form.es_empresa} onChange={(e) => setForm({ ...form, es_empresa: e.target.checked })} />
+              <span>Es empresa o autónomo (factura completa, con sus datos fiscales)</span>
+            </label>
+            {form.es_empresa && (
+              <div className="panel-admin-datos-empresa">
+                <div className="fila-doble">
+                  <label className="campo-sesion">
+                    <span>NIF / CIF</span>
+                    <input type="text" value={form.nif || ''} onChange={(e) => setForm({ ...form, nif: e.target.value })} required={form.es_empresa} />
+                  </label>
+                  <label className="campo-sesion">
+                    <span>Dirección</span>
+                    <input type="text" value={form.direccion || ''} onChange={(e) => setForm({ ...form, direccion: e.target.value })} required={form.es_empresa} />
+                  </label>
+                </div>
+                <label className="campo-sesion">
+                  <span>Ciudad y código postal</span>
+                  <input type="text" value={form.ciudad_cp || ''} onChange={(e) => setForm({ ...form, ciudad_cp: e.target.value })} placeholder="Ej. 25197 Lleida" required={form.es_empresa} />
+                </label>
+              </div>
+            )}
             {mensaje && <div className={mensaje.tipo === 'ok' ? 'aviso-ok' : 'aviso-error'}>{mensaje.texto}</div>}
             <button type="submit" className="btn-principal" disabled={guardando}>{guardando ? 'Guardando…' : 'Guardar cliente'}</button>
           </form>
@@ -421,7 +514,7 @@ function SeccionClientes({ perfil }) {
           <div className="panel-admin-tabla-clientes-wrap">
             <table className="panel-admin-tabla-clientes">
               <thead>
-                <tr><th>Cliente</th><th>Días</th><th>Programa</th><th>Precio</th><th></th></tr>
+                <tr><th>Cliente</th><th>Días</th><th>Programa</th><th>Precio</th><th>Tipo</th><th></th></tr>
               </thead>
               <tbody>
                 {clientes.map((c) => (
@@ -430,6 +523,7 @@ function SeccionClientes({ perfil }) {
                     <td className="mono">{c.dias_entreno || '—'}</td>
                     <td>{c.programa || '—'}</td>
                     <td className="mono">{c.precio}€ {c.tipo_facturacion === 'mensual' ? '/mes' : '/sesión'}</td>
+                    <td className="texto-faint">{c.es_empresa ? 'Empresa' : 'Particular'}</td>
                     <td className="panel-admin-tabla-acciones">
                       <button type="button" className="equipo-cambiar-link" onClick={(e) => { e.stopPropagation(); empezarEdicion(c) }}>✎</button>
                       <button type="button" className="btn-eliminar-fila" onClick={(e) => { e.stopPropagation(); eliminarCliente(c.id) }}>✕</button>
@@ -476,8 +570,8 @@ function SeccionClientes({ perfil }) {
                 </div>
                 <div className="panel-admin-resumen-cliente">
                   <span>Sesiones: <strong>{num}</strong></span>
-                  <span>Total: <strong>{total.toFixed(2)}€</strong></span>
-                  <button className="btn-principal" onClick={() => generarFactura(cliente)}>🖶 Generar factura</button>
+                  <span>Base: <strong>{total.toFixed(2)}€</strong></span>
+                  <button className="btn-principal" onClick={() => abrirModalFactura(cliente)}>🖶 Generar factura</button>
                 </div>
               </>
             )
@@ -488,7 +582,7 @@ function SeccionClientes({ perfil }) {
       <section className="panel-admin-card no-imprimir">
         <h2>Resumen del mes — todos los clientes</h2>
         <table className="panel-admin-tabla-clientes">
-          <thead><tr><th>Cliente</th><th>Sesiones</th><th>Total</th></tr></thead>
+          <thead><tr><th>Cliente</th><th>Sesiones</th><th>Base</th></tr></thead>
           <tbody>
             {clientes.map((c) => {
               const { num, total } = calcularResumen(c)
@@ -496,7 +590,7 @@ function SeccionClientes({ perfil }) {
             })}
           </tbody>
           <tfoot>
-            <tr><td><strong>Total</strong></td><td></td><td className="mono"><strong>{totalDelMes.toFixed(2)}€</strong></td></tr>
+            <tr><td><strong>Total (sin impuestos)</strong></td><td></td><td className="mono"><strong>{totalDelMes.toFixed(2)}€</strong></td></tr>
           </tfoot>
         </table>
       </section>
@@ -507,15 +601,14 @@ function SeccionClientes({ perfil }) {
           <p className="texto-dim">Todavía no se ha generado ninguna factura.</p>
         ) : (
           <table className="panel-admin-tabla-clientes">
-            <thead><tr><th>Nº</th><th>Cliente</th><th>Fecha</th><th>Periodo</th><th>Sesiones</th><th>Total</th><th></th></tr></thead>
+            <thead><tr><th>Nº</th><th>Cliente</th><th>Fecha</th><th>Tipo</th><th>Total</th><th></th></tr></thead>
             <tbody>
               {facturas.map((f) => (
                 <tr key={f.id}>
                   <td className="mono">{f.numero_factura}</td>
-                  <td>{f.clientes?.nombre}</td>
+                  <td>{f.cliente_nombre}</td>
                   <td className="mono">{f.fecha_emision}</td>
-                  <td className="mono">{f.periodo_inicio} → {f.periodo_fin}</td>
-                  <td className="mono">{f.num_sesiones}</td>
+                  <td className="texto-faint">{f.tipo === 'completa' ? 'Completa' : 'Simplificada'}</td>
                   <td className="mono">{Number(f.total).toFixed(2)}€</td>
                   <td><button type="button" className="equipo-cambiar-link" onClick={() => reimprimirFactura(f)}>🖶 Reimprimir</button></td>
                 </tr>
@@ -525,33 +618,114 @@ function SeccionClientes({ perfil }) {
         )}
       </section>
 
-      {facturaImprimir && (
-        <div className="factura-imprimir">
-          <div className="factura-cabecera-imprimir">
-            <h2>Factura</h2>
-            <p className="mono">{facturaImprimir.numero_factura}</p>
+      {modalFactura && (
+        <div className="pizarra-modal-fondo no-imprimir" onClick={() => setModalFactura(null)}>
+          <div className="pizarra-modal-editar" onClick={(e) => e.stopPropagation()}>
+            <div className="pizarra-modal-cabecera">
+              <h3>Generar factura — {modalFactura.cliente.nombre}</h3>
+              <button type="button" className="pizarra-boton" onClick={() => setModalFactura(null)}>✕ Cerrar</button>
+            </div>
+            <form onSubmit={confirmarGenerarFactura}>
+              <div className="fila-doble">
+                <label className="campo-sesion">
+                  <span>Número de factura</span>
+                  <input type="text" value={modalFactura.numero_factura} onChange={(e) => setModalFactura({ ...modalFactura, numero_factura: e.target.value })} required />
+                </label>
+                <label className="campo-sesion">
+                  <span>Tipo</span>
+                  <input type="text" value={modalFactura.cliente.es_empresa ? 'Completa (empresa/autónomo)' : 'Simplificada (particular)'} disabled />
+                </label>
+              </div>
+              <label className="campo-sesion">
+                <span>Concepto</span>
+                <input type="text" value={modalFactura.concepto} onChange={(e) => setModalFactura({ ...modalFactura, concepto: e.target.value })} required />
+              </label>
+              <label className="campo-sesion">
+                <span>Base imponible (€)</span>
+                <input type="number" step="0.01" value={modalFactura.base_imponible} onChange={(e) => setModalFactura({ ...modalFactura, base_imponible: e.target.value })} required />
+              </label>
+              <div className="fila-doble">
+                <label className="campo-sesion">
+                  <span>IVA (%)</span>
+                  <input type="number" step="0.01" value={modalFactura.iva_porcentaje} onChange={(e) => setModalFactura({ ...modalFactura, iva_porcentaje: e.target.value })} required />
+                </label>
+                <label className="campo-checkbox panel-admin-checkbox-irpf">
+                  <input type="checkbox" checked={modalFactura.aplica_irpf} onChange={(e) => setModalFactura({ ...modalFactura, aplica_irpf: e.target.checked })} />
+                  <span>Aplicar retención IRPF</span>
+                </label>
+              </div>
+              {modalFactura.aplica_irpf && (
+                <label className="campo-sesion">
+                  <span>IRPF (%)</span>
+                  <input type="number" step="0.01" value={modalFactura.irpf_porcentaje} onChange={(e) => setModalFactura({ ...modalFactura, irpf_porcentaje: e.target.value })} required />
+                </label>
+              )}
+              {(() => {
+                const base = Number(modalFactura.base_imponible) || 0
+                const iva = base * (Number(modalFactura.iva_porcentaje) / 100)
+                const irpf = modalFactura.aplica_irpf ? base * (Number(modalFactura.irpf_porcentaje) / 100) : 0
+                const total = base + iva - irpf
+                return (
+                  <p className="panel-admin-total-preview mono">
+                    Base {base.toFixed(2)}€ + IVA {iva.toFixed(2)}€ {modalFactura.aplica_irpf ? `− IRPF ${irpf.toFixed(2)}€` : ''} = <strong>{total.toFixed(2)}€</strong>
+                  </p>
+                )
+              })()}
+              <button type="submit" className="btn-principal">🖶 Generar e imprimir</button>
+            </form>
           </div>
-          <div className="factura-datos-imprimir">
-            <p><strong>Emitida por:</strong> {perfil?.nombre}</p>
-            <p><strong>Fecha de emisión:</strong> {facturaImprimir.fecha_emision}</p>
-            <p><strong>Cliente:</strong> {facturaImprimir.cliente?.nombre}</p>
-            <p><strong>Periodo:</strong> {facturaImprimir.periodo_inicio} → {facturaImprimir.periodo_fin}</p>
-          </div>
-          <table className="factura-tabla-imprimir">
-            <thead><tr><th>Concepto</th><th>Sesiones</th><th>Total</th></tr></thead>
-            <tbody>
-              <tr>
-                <td>{facturaImprimir.cliente?.programa || 'Entrenamiento personal'}</td>
-                <td className="mono">{facturaImprimir.num_sesiones}</td>
-                <td className="mono">{Number(facturaImprimir.total).toFixed(2)}€</td>
-              </tr>
-            </tbody>
-            <tfoot>
-              <tr><td colSpan="2"><strong>Total</strong></td><td className="mono"><strong>{Number(facturaImprimir.total).toFixed(2)}€</strong></td></tr>
-            </tfoot>
-          </table>
         </div>
       )}
+
+      {facturaImprimir && config && (() => {
+        const f = facturaImprimir
+        const iva = f.base_imponible * (f.iva_porcentaje / 100)
+        const irpf = f.aplica_irpf ? f.base_imponible * (f.irpf_porcentaje / 100) : 0
+        return (
+          <div className="factura-imprimir">
+            <h1 className="factura-titulo-imprimir">{f.tipo === 'completa' ? 'FACTURA' : 'FACTURA SIMPLIFICADA'}</h1>
+
+            <div className="factura-fila-superior-imprimir">
+              <div>
+                <p className="factura-etiqueta-imprimir">DATOS</p>
+                <p className="factura-negocio-imprimir">{config.nombre}</p>
+                <p>{config.direccion}</p>
+                <p>{config.telefono}</p>
+                <p>{config.email}</p>
+                <p className="factura-iban-imprimir">IBAN: {config.iban}</p>
+              </div>
+              <div className="factura-fecha-num-imprimir">
+                <p><strong>Fecha:</strong> {f.fecha_emision?.split('-').reverse().join('/')}</p>
+                <p><strong>Factura:</strong> {f.numero_factura}</p>
+              </div>
+            </div>
+
+            {f.tipo === 'completa' && (
+              <div className="factura-cliente-imprimir">
+                <p className="factura-etiqueta-imprimir">CLIENTE</p>
+                <p className="factura-negocio-imprimir">{f.cliente_nombre}</p>
+                <p>{f.cliente_nif}</p>
+                <p>{f.cliente_direccion}</p>
+                <p>{f.cliente_ciudad_cp}</p>
+              </div>
+            )}
+
+            <table className="factura-tabla-imprimir2">
+              <thead><tr><th>CONCEPTO</th><th>BASE IMPONBLE</th></tr></thead>
+              <tbody>
+                <tr><td>{f.concepto}</td><td className="mono">{Number(f.base_imponible).toFixed(2)}€</td></tr>
+              </tbody>
+            </table>
+            <div className="factura-impuestos-imprimir">
+              <div className="factura-linea-impuesto"><span>IVA ({f.iva_porcentaje}%)</span><span className="mono">{iva.toFixed(2)}€</span></div>
+              {f.aplica_irpf && (
+                <div className="factura-linea-impuesto"><span>IRPF (-{f.irpf_porcentaje}%)</span><span className="mono">-{irpf.toFixed(2)}€</span></div>
+              )}
+              <div className="factura-total-imprimir"><span>TOTAL</span><span className="mono">{Number(f.total).toFixed(2)}€</span></div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }

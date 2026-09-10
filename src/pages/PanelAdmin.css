@@ -194,27 +194,152 @@
 
 .panel-admin-resumen-cliente strong { color: var(--accent); }
 
-/* --- Factura imprimible --- */
+/* --- Factura imprimible (diseño calcado a las facturas de referencia) --- */
 .factura-imprimir { display: none; }
 
 @media print {
+  html, body { background: #F5F3EE !important; }
+
   .factura-imprimir {
     display: block;
-    padding: 20mm;
+    background: #F5F3EE;
+    color: #14140f;
+    padding: 20mm 18mm;
+    min-height: 100vh;
+    font-family: Arial, Helvetica, sans-serif;
   }
-  .factura-cabecera-imprimir { margin-bottom: 24px; }
-  .factura-cabecera-imprimir h2 { font-size: 26px; }
-  .factura-datos-imprimir p { font-size: 13px; margin: 0 0 6px; }
-  .factura-tabla-imprimir {
+
+  .factura-titulo-imprimir {
+    font-family: 'Arial Black', Arial, sans-serif;
+    font-weight: 900;
+    font-size: 46px;
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
+    margin: 0 0 34px;
+    color: #14140f;
+  }
+
+  .factura-fila-superior-imprimir {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 22px;
+  }
+
+  .factura-etiqueta-imprimir {
+    font-weight: 700;
+    font-size: 13px;
+    margin: 0 0 4px;
+    text-transform: uppercase;
+  }
+
+  .factura-fila-superior-imprimir p, .factura-cliente-imprimir p {
+    font-size: 13px;
+    margin: 0 0 3px;
+    color: #14140f;
+  }
+
+  .factura-negocio-imprimir { font-weight: 400; }
+  .factura-iban-imprimir { font-weight: 700; margin-top: 4px !important; }
+
+  .factura-fecha-num-imprimir { text-align: left; }
+  .factura-fecha-num-imprimir p { font-size: 13px; }
+
+  .factura-cliente-imprimir { margin-bottom: 26px; }
+
+  .factura-tabla-imprimir2 {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 20px;
-    font-size: 13px;
+    margin-bottom: 4px;
   }
-  .factura-tabla-imprimir th, .factura-tabla-imprimir td {
+  .factura-tabla-imprimir2 thead th {
+    background: #14140f;
+    color: #F5F3EE;
     text-align: left;
-    padding: 8px;
-    border-bottom: 1px solid var(--line);
+    font-size: 13px;
+    font-weight: 700;
+    padding: 12px 16px;
   }
-  .factura-tabla-imprimir tfoot td { border-top: 2px solid var(--line-strong); border-bottom: none; }
+  .factura-tabla-imprimir2 thead th:last-child { text-align: right; }
+  .factura-tabla-imprimir2 tbody td {
+    padding: 16px;
+    font-size: 14px;
+  }
+  .factura-tabla-imprimir2 tbody td:last-child { text-align: right; font-weight: 700; }
+
+  .factura-impuestos-imprimir {
+    border-top: 1px solid #14140f;
+    padding-top: 10px;
+    margin-top: 6px;
+  }
+  .factura-linea-impuesto {
+    display: flex;
+    justify-content: flex-end;
+    gap: 40px;
+    font-size: 14px;
+    padding: 6px 16px;
+  }
+  .factura-linea-impuesto span:last-child { font-weight: 700; min-width: 70px; text-align: right; }
+
+  .factura-total-imprimir {
+    display: flex;
+    justify-content: flex-end;
+    align-items: stretch;
+    gap: 40px;
+    margin-top: 10px;
+  }
+  .factura-total-imprimir span:first-child {
+    background: #14140f;
+    color: #F5F3EE;
+    font-weight: 700;
+    font-size: 14px;
+    padding: 10px 24px;
+    min-width: 180px;
+    text-align: right;
+  }
+  .factura-total-imprimir span:last-child {
+    font-weight: 700;
+    font-size: 15px;
+    min-width: 70px;
+    text-align: right;
+    align-self: center;
+  }
 }
+
+
+.panel-admin-form-config {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.panel-admin-form-config input {
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 13px;
+}
+
+.panel-admin-form-config button { grid-column: 1 / -1; }
+
+@media (max-width: 700px) {
+  .panel-admin-form-config { grid-template-columns: 1fr; }
+}
+
+.panel-admin-datos-empresa {
+  border-left: 2px solid var(--line-strong);
+  padding-left: 14px;
+  margin: 4px 0 8px;
+}
+
+.panel-admin-checkbox-irpf { align-self: flex-end; margin-bottom: 10px; white-space: nowrap; }
+
+.panel-admin-total-preview {
+  font-size: 13px;
+  color: var(--text-dim);
+  margin: 10px 0;
+}
+.panel-admin-total-preview strong { color: var(--accent); font-size: 15px; }
