@@ -2322,6 +2322,40 @@ el TOTAL):
 3. Ve a "🔑 Admin" → "💶 Clientes y facturación" → rellena primero
    "Datos del negocio" (una sola vez) → prueba a generar una factura.
 
+## Seguridad entre clubes — hueco real encontrado y cerrado
+
+Confirmado: la tabla que guarda los ejercicios (series, repeticiones...)
+dentro de una sesión de pizarra nunca llegó a tener aislamiento por
+club — cualquier entrenador o fisio veía el contenido de cualquier club
+ahí. Arreglado. Te incluyo también una consulta de diagnóstico para que
+busquemos juntos si queda alguna otra tabla suelta, en vez de que siga
+adivinando a ciegas.
+
+## El fisio elige su club una vez, y ya no lo puede cambiar él mismo
+
+Si un entrenador o fisio entra sin club asignado todavía (como tu cuenta
+de fisio actual), verá una pantalla para elegirlo antes de nada. Una vez
+elegido, el campo queda bloqueado — ni siquiera él mismo lo puede
+cambiar después, solo un administrador desde el Panel Admin.
+
+## Editar eventos: duración individual por jugador, sin RPE nuevos
+
+Nuevo botón "✎ Personalizar duración por jugador" al editar (o crear) un
+evento de equipo — despliega una fila por jugador donde poner una
+duración distinta a la del grupo, sin que eso cree ninguna sesión nueva
+ni un cuestionario de RPE en blanco para quien ya tuviera uno: se
+actualiza la fila que ya existía para cada jugador.
+
+### Para aplicarlo
+
+1. `migracion_arreglo_pizarra_ejercicios_club.sql` — ejecuta la consulta
+   de diagnóstico al final y pásame lo que te salga.
+2. `migracion_fisio_elige_club.sql`
+3. Sube `App.jsx`, `App.css`, `CalendarioClub.jsx`, `CalendarioClub.css`,
+   y el nuevo `SeleccionarClub.jsx`.
+4. Para tu fisio actual: la próxima vez que entre, verá la pantalla de
+   elegir club automáticamente (no hace falta que hagas nada más).
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

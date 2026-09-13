@@ -58,6 +58,10 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], o
 
   const [jugadoresSinAsignar, setJugadoresSinAsignar] = useState([])
   const [jugadorSeleccionado, setJugadorSeleccionado] = useState('')
+  const [personalizarDuraciones, setPersonalizarDuraciones] = useState(false)
+  const [duracionesPorJugador, setDuracionesPorJugador] = useState({})
+  const [jugadoresPersonalizacion, setJugadoresPersonalizacion] = useState([])
+  const [cargandoPersonalizacion, setCargandoPersonalizacion] = useState(false)
 
   const modoDestino = esEquipoConcreto ? 'equipo' : (esSinAsignar && jugadorSeleccionado ? 'jugador' : null)
   const nombreDestino = esEquipoConcreto
@@ -139,16 +143,45 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], o
     })
     setEditandoId(ev.id)
     setMensaje(null)
+    setPersonalizarDuraciones(false)
+    setDuracionesPorJugador({})
   }
 
   function cancelarEdicion() {
     setForm(vacio)
     setEditandoId(null)
     setMensaje(null)
+    setPersonalizarDuraciones(false)
+    setDuracionesPorJugador({})
   }
 
-  async function crearSesionesDesdeEvento(datosEvento, eventoId) {
-    if (!datosEvento.duracion_min) return { ok: true }
+  async function abrirPersonalizacionDuraciones() {
+    setCargandoPersonalizacion(true)
+    const { data: perfiles } = await supabase.from('perfiles').select('id, nombre, equipo_id').eq('rol', 'jugador').order('nombre')
+    const delEquipo = (perfiles || []).filter((j) => {
+      if (equipoActivo === 'todos') return true
+      if (equipoActivo === 'sin_asignar') return !j.equipo_id
+      return j.equipo_id === equipoActivo
+    })
+    setJugadoresPersonalizacion(delEquipo)
+
+    // Precarga con la duración que cada jugador ya tuviera en este evento
+    // (si se está editando uno existente), o si no, la duración general del formulario.
+    const iniciales = {}
+    if (editandoId) {
+      const { data: existentes } = await supabase.from('sesiones').select('jugador_id, duracion_min').eq('evento_id', editandoId)
+      const mapa = Object.fromEntries((existentes || []).map((s) => [s.jugador_id, s.duracion_min]))
+      delEquipo.forEach((j) => { iniciales[j.id] = String(mapa[j.id] ?? form.duracionMin ?? '') })
+    } else {
+      delEquipo.forEach((j) => { iniciales[j.id] = String(form.duracionMin || '') })
+    }
+    setDuracionesPorJugador(iniciales)
+    setPersonalizarDuraciones(true)
+    setCargandoPersonalizacion(false)
+  }
+
+  async function crearSesionesDesdeEvento(datosEvento, eventoId, duracionesPersonalizadas) {
+    if (!datosEvento.duracion_min && !duracionesPersonalizadas) return { ok: true }
 
     let idsJugadores = []
     if (modoDestino === 'equipo') {
@@ -179,17 +212,23 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], o
     }
     const idSesionPorJugador = Object.fromEntries(existentes.map((s) => [s.jugador_id, s.id]))
 
-    const datosComunes = {
-      fecha: datosEvento.fecha,
-      duracion_min: datosEvento.duracion_min,
-      tipo_sesion: datosEvento.tipo_sesion,
-      contenido: datosEvento.notas,
-      mdx: datosEvento.tipo !== 'Entrenamiento' ? 'MD' : null,
-      evento_id: eventoId || null,
-    }
-
     let error = null
     for (const jugador_id of idsJugadores) {
+      // Si hay duraciones personalizadas por jugador, cada uno usa la
+      // suya (o la del evento si no se ha tocado la suya en concreto);
+      // si no, todos comparten la duración única del evento, como hasta ahora.
+      const duracionDeEste = duracionesPersonalizadas?.[jugador_id] ?? datosEvento.duracion_min
+      if (!duracionDeEste) continue
+
+      const datosComunes = {
+        fecha: datosEvento.fecha,
+        duracion_min: duracionDeEste,
+        tipo_sesion: datosEvento.tipo_sesion,
+        contenido: datosEvento.notas,
+        mdx: datosEvento.tipo !== 'Entrenamiento' ? 'MD' : null,
+        evento_id: eventoId || null,
+      }
+
       if (idSesionPorJugador[jugador_id]) {
         const { error: e } = await supabase.from('sesiones').update(datosComunes).eq('id', idSesionPorJugador[jugador_id])
         if (e) error = e
@@ -250,8 +289,13 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], o
     if (error) {
       setMensaje({ tipo: 'error', texto: 'No se pudo guardar el evento.' })
     } else {
-      const resultadoSesiones = await crearSesionesDesdeEvento(datos, eventoIdFinal)
+      const duracionesAEnviar = personalizarDuraciones
+        ? Object.fromEntries(Object.entries(duracionesPorJugador).map(([id, v]) => [id, v === '' ? null : Number(v)]))
+        : null
+      const resultadoSesiones = await crearSesionesDesdeEvento(datos, eventoIdFinal, duracionesAEnviar)
       setForm(vacio)
+      setPersonalizarDuraciones(false)
+      setDuracionesPorJugador({})
       setEditandoId(null)
       setMensaje(
         !resultadoSesiones.ok
@@ -560,17 +604,48 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], o
               </label>
             )}
           </div>
-          {form.duracionMin === '' && (
+          {form.duracionMin === '' && !personalizarDuraciones && (
             <p className="texto-faint calendario-club-duracion-nota">
               Sin duración, no se generará la sesión del día — el jugador no verá el cuestionario
               de RPE para este evento hasta que la rellenes (sea entrenamiento o partido).
             </p>
           )}
-          {form.duracionMin !== '' && (
+          {form.duracionMin !== '' && !personalizarDuraciones && (
             <p className="texto-faint calendario-club-duracion-nota">
-              Al guardar, esta duración se aplicará a {modoDestino === 'equipo' ? 'todos los jugadores del equipo activo' : 'este jugador'}{' '}
-              ese día — si quieres una duración distinta para cada jugador, usa Planificación en su lugar.
+              Al guardar, esta duración se aplicará a {modoDestino === 'equipo' ? 'todos los jugadores del equipo activo' : 'este jugador'} ese día.
             </p>
+          )}
+
+          {modoDestino === 'equipo' && (
+            <>
+              {!personalizarDuraciones ? (
+                <button type="button" className="equipo-cambiar-link calendario-club-personalizar-link" onClick={abrirPersonalizacionDuraciones} disabled={cargandoPersonalizacion}>
+                  {cargandoPersonalizacion ? 'Cargando…' : '✎ Personalizar duración por jugador'}
+                </button>
+              ) : (
+                <div className="calendario-club-personalizacion">
+                  <div className="panel-admin-cabecera-flex">
+                    <span className="texto-faint">Duración individual por jugador (editar solo quien necesite algo distinto)</span>
+                    <button type="button" className="equipo-cambiar-link" onClick={() => { setPersonalizarDuraciones(false); setDuracionesPorJugador({}) }}>Cancelar</button>
+                  </div>
+                  {jugadoresPersonalizacion.map((j) => (
+                    <div className="calendario-club-fila-personalizacion" key={j.id}>
+                      <span>{j.nombre}</span>
+                      <input
+                        type="number" min="0" max="300"
+                        value={duracionesPorJugador[j.id] ?? ''}
+                        onChange={(e) => setDuracionesPorJugador({ ...duracionesPorJugador, [j.id]: e.target.value })}
+                        placeholder="min"
+                      />
+                    </div>
+                  ))}
+                  <p className="texto-faint calendario-club-duracion-nota">
+                    Editar aquí no crea sesiones nuevas ni RPE nuevos para quien ya tuviera uno en
+                    este evento — solo actualiza la duración de cada uno.
+                  </p>
+                </div>
+              )}
+            </>
           )}
 
           <label className="campo-sesion">

@@ -15,6 +15,7 @@ import BibliotecaEjercicios from './pages/BibliotecaEjercicios'
 import PizarraTactica from './pages/PizarraTactica'
 import SesionesPizarra from './pages/SesionesPizarra'
 import PanelAdmin from './pages/PanelAdmin'
+import SeleccionarClub from './pages/SeleccionarClub'
 import './App.css'
 
 const pestanasEntrenador = [
@@ -156,6 +157,10 @@ export default function App() {
         <div className="mono">No se ha encontrado tu perfil todavía. Prueba a recargar en unos segundos.</div>
       </div>
     )
+  }
+
+  if ((perfil.rol === 'entrenador' || perfil.rol === 'fisio') && !perfil.club_id) {
+    return <SeleccionarClub perfil={perfil} onElegido={(clubId) => setPerfil({ ...perfil, club_id: clubId })} />
   }
 
   const jugadoresParaContexto = jugadoresContexto.filter((j) => {

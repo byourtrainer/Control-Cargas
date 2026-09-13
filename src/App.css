@@ -367,3 +367,26 @@
 .contexto-panel, .menu-desplegable-lista {
   max-width: calc(100vw - 48px);
 }
+
+.seleccionar-club-tarjeta {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 28px;
+  max-width: 380px;
+  text-align: left;
+}
+
+.seleccionar-club-tarjeta h2 { font-size: 18px; margin-bottom: 8px; }
+.seleccionar-club-tarjeta p { font-size: 13px; margin-bottom: 18px; }
+
+.seleccionar-club-tarjeta select {
+  width: 100%;
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  margin-bottom: 14px;
+}
