@@ -52,7 +52,15 @@ function eventoIncluyeFecha(ev, fecha) {
   return fecha >= ev.fecha && fecha <= fin
 }
 
-export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], onIrAPlanificar }) {
+const opcionesMDx = ['MD', 'MD+1', 'MD+2', 'MD+/-3', 'MD-2', 'MD-1']
+const claveTipo = (tipo) => tipo || '__sin_tipo__'
+
+function formatearFechaLarga(fechaISO) {
+  const d = new Date(fechaISO + 'T00:00:00')
+  return d.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+}
+
+export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], jugadorActivo = 'equipo', fechaDesde, fechaHasta }) {
   const esSinAsignar = equipoActivo === 'sin_asignar'
   const esEquipoConcreto = equipoActivo !== 'todos' && !esSinAsignar
 
@@ -77,6 +85,233 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], o
   const [mensaje, setMensaje] = useState(null)
   const [borrandoId, setBorrandoId] = useState(null)
   const [editandoId, setEditandoId] = useState(null)
+
+  // --- Pestaña interna del panel del día: Evento / Contenido ---
+  const [subVistaPanel, setSubVistaPanel] = useState('evento')
+
+  // --- Contenido de la sesión (fusionado desde la antigua Planificación) ---
+  const [modoAsignacionContenido, setModoAsignacionContenido] = useState('grupo')
+  const [jugadoresContenido, setJugadoresContenido] = useState([])
+  const [sesionesDelDiaContenido, setSesionesDelDiaContenido] = useState({})
+  const [duracionGrupoContenido, setDuracionGrupoContenido] = useState(60)
+  const [duracionesIndividualesContenido, setDuracionesIndividualesContenido] = useState({})
+  const [microcicloContenido, setMicrocicloContenido] = useState('')
+  const [mdxContenido, setMdxContenido] = useState('')
+  const [tipoSesionContenido, setTipoSesionContenido] = useState('')
+  const [contenidoTexto, setContenidoTexto] = useState('')
+  const [editandoContenidoTexto, setEditandoContenidoTexto] = useState(false)
+  const [guardandoContenido, setGuardandoContenido] = useState(false)
+  const [mensajeContenido, setMensajeContenido] = useState(null)
+  const [cargandoContenido, setCargandoContenido] = useState(true)
+
+  useEffect(() => {
+    if (subVistaPanel === 'contenido') cargarJugadoresYSesionContenido()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subVistaPanel, fechaSeleccionada, modoDestino, jugadorSeleccionado, equipoActivo])
+
+  useEffect(() => {
+    const clave = claveTipo(tipoSesionContenido)
+    const filas = jugadoresContenido.map((j) => sesionesDelDiaContenido[j.id]?.[clave]).filter(Boolean)
+    const primera = filas[0]
+    setDuracionGrupoContenido(primera ? primera.duracion_min : 60)
+    setMicrocicloContenido(primera?.microciclo || '')
+    setMdxContenido(primera?.mdx || '')
+    setContenidoTexto(primera?.contenido || '')
+    setEditandoContenidoTexto(false)
+    const indivInicial = {}
+    jugadoresContenido.forEach((j) => {
+      const fila = sesionesDelDiaContenido[j.id]?.[clave]
+      indivInicial[j.id] = fila ? String(fila.duracion_min) : ''
+    })
+    setDuracionesIndividualesContenido(indivInicial)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tipoSesionContenido, sesionesDelDiaContenido, jugadoresContenido])
+
+  async function cargarJugadoresYSesionContenido() {
+    setCargandoContenido(true)
+    setMensajeContenido(null)
+    let lista = []
+    if (modoDestino === 'jugador') {
+      const encontrado = jugadoresSinAsignar.find((j) => j.id === jugadorSeleccionado)
+      lista = encontrado ? [encontrado] : []
+    } else if (modoDestino === 'equipo') {
+      const { data: perfiles } = await supabase.from('perfiles').select('id, nombre, equipo_id').eq('rol', 'jugador').order('nombre')
+      lista = (perfiles || []).filter((j) => {
+        if (equipoActivo === 'todos') return true
+        if (equipoActivo === 'sin_asignar') return !j.equipo_id
+        return j.equipo_id === equipoActivo
+      })
+    }
+    setJugadoresContenido(lista)
+
+    const ids = lista.map((j) => j.id)
+    const { data: sesionesData } = ids.length > 0
+      ? await supabase.from('sesiones').select('*').eq('fecha', fechaSeleccionada).in('jugador_id', ids)
+      : { data: [] }
+
+    const mapa = {}
+    ;(sesionesData || []).forEach((s) => {
+      if (!mapa[s.jugador_id]) mapa[s.jugador_id] = {}
+      mapa[s.jugador_id][claveTipo(s.tipo_sesion)] = s
+    })
+    setSesionesDelDiaContenido(mapa)
+    setCargandoContenido(false)
+  }
+
+  async function guardarGrupoContenido(e) {
+    e.preventDefault()
+    if (jugadoresContenido.length === 0) return
+    setGuardandoContenido(true)
+    setMensajeContenido(null)
+    const filas = jugadoresContenido.map((j) => ({
+      fecha: fechaSeleccionada, jugador_id: j.id, duracion_min: duracionGrupoContenido,
+      microciclo: microcicloContenido || null, mdx: mdxContenido || null,
+      tipo_sesion: tipoSesionContenido || null, contenido: contenidoTexto || null,
+    }))
+    const { error } = await supabase.from('sesiones').upsert(filas, { onConflict: 'fecha,jugador_id,tipo_sesion' })
+    if (error) {
+      setMensajeContenido({ tipo: 'error', texto: 'No se pudo guardar la sesión.' })
+    } else {
+      setMensajeContenido({ tipo: 'ok', texto: `Sesión guardada para ${jugadoresContenido.length} jugador(es).` })
+      cargarJugadoresYSesionContenido()
+    }
+    setGuardandoContenido(false)
+  }
+
+  async function guardarIndividualContenido(e) {
+    e.preventDefault()
+    const filas = jugadoresContenido
+      .filter((j) => duracionesIndividualesContenido[j.id] !== '' && duracionesIndividualesContenido[j.id] != null)
+      .map((j) => ({
+        fecha: fechaSeleccionada, jugador_id: j.id, duracion_min: Number(duracionesIndividualesContenido[j.id]),
+        microciclo: microcicloContenido || null, mdx: mdxContenido || null,
+        tipo_sesion: tipoSesionContenido || null, contenido: contenidoTexto || null,
+      }))
+    if (filas.length === 0) {
+      setMensajeContenido({ tipo: 'error', texto: 'Introduce al menos una duración.' })
+      return
+    }
+    setGuardandoContenido(true)
+    setMensajeContenido(null)
+    const { error } = await supabase.from('sesiones').upsert(filas, { onConflict: 'fecha,jugador_id,tipo_sesion' })
+    if (error) {
+      setMensajeContenido({ tipo: 'error', texto: 'No se pudo guardar la sesión.' })
+    } else {
+      setMensajeContenido({ tipo: 'ok', texto: `Sesión guardada para ${filas.length} jugador(es).` })
+      cargarJugadoresYSesionContenido()
+    }
+    setGuardandoContenido(false)
+  }
+
+  async function eliminarSesionJugadorContenido(jugadorId) {
+    setGuardandoContenido(true)
+    const { error } = await supabase.from('sesiones').delete()
+      .eq('fecha', fechaSeleccionada).eq('jugador_id', jugadorId).eq('tipo_sesion', tipoSesionContenido || null)
+    if (!error) cargarJugadoresYSesionContenido()
+    setGuardandoContenido(false)
+  }
+
+  async function eliminarSesionGrupoContenido() {
+    if (!window.confirm(`¿Eliminar la sesión${tipoSesionContenido ? ` de ${tipoSesionContenido}` : ''} de este día para los ${jugadoresContenido.length} jugadores del grupo activo?`)) return
+    setGuardandoContenido(true)
+    const ids = jugadoresContenido.map((j) => j.id)
+    const { error } = await supabase.from('sesiones').delete()
+      .eq('fecha', fechaSeleccionada).in('jugador_id', ids).eq('tipo_sesion', tipoSesionContenido || null)
+    if (!error) {
+      setMensajeContenido({ tipo: 'ok', texto: 'Sesión eliminada.' })
+      cargarJugadoresYSesionContenido()
+    }
+    setGuardandoContenido(false)
+  }
+
+  const claveContenidoActual = claveTipo(tipoSesionContenido)
+  const jugadoresConSesionContenido = jugadoresContenido.filter((j) => sesionesDelDiaContenido[j.id]?.[claveContenidoActual]).length
+  const tiposGuardadosHoyContenido = [...new Set(
+    jugadoresContenido.flatMap((j) => Object.values(sesionesDelDiaContenido[j.id] || {}).map((s) => s.tipo_sesion || 'Sin tipo'))
+  )]
+
+  // --- Diario de sesiones ---
+  const [diarioAbierto, setDiarioAbierto] = useState(false)
+  const [cargandoDiario, setCargandoDiario] = useState(false)
+  const [entradasDiario, setEntradasDiario] = useState([])
+  const [busquedaDiario, setBusquedaDiario] = useState('')
+
+  useEffect(() => {
+    if (diarioAbierto) cargarDiario()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [diarioAbierto, equipoActivo, jugadorActivo, fechaDesde, fechaHasta])
+
+  async function cargarDiario() {
+    setCargandoDiario(true)
+    let idsJugadores = []
+    let mapaNombres = {}
+    if (jugadorActivo !== 'equipo') {
+      idsJugadores = [jugadorActivo]
+      const { data: perfil } = await supabase.from('perfiles').select('id, nombre').eq('id', jugadorActivo).maybeSingle()
+      if (perfil) mapaNombres[perfil.id] = perfil.nombre
+    } else {
+      const { data: perfiles } = await supabase.from('perfiles').select('id, nombre, equipo_id').eq('rol', 'jugador')
+      const filtrados = (perfiles || []).filter((j) => {
+        if (equipoActivo === 'todos') return true
+        if (equipoActivo === 'sin_asignar') return !j.equipo_id
+        return j.equipo_id === equipoActivo
+      })
+      idsJugadores = filtrados.map((j) => j.id)
+      filtrados.forEach((j) => { mapaNombres[j.id] = j.nombre })
+    }
+    if (idsJugadores.length === 0) { setEntradasDiario([]); setCargandoDiario(false); return }
+
+    const { data } = await supabase
+      .from('sesiones')
+      .select('fecha, tipo_sesion, contenido, jugador_id, evento_id')
+      .in('jugador_id', idsJugadores)
+      .not('contenido', 'is', null)
+      .gte('fecha', fechaDesde || '2000-01-01')
+      .lte('fecha', fechaHasta || hoyISO())
+      .order('fecha', { ascending: false })
+
+    let eventosQuery = supabase.from('eventos_calendario').select('id, fecha, tipo, notas')
+      .not('notas', 'is', null)
+      .gte('fecha', fechaDesde || '2000-01-01')
+      .lte('fecha', fechaHasta || hoyISO())
+    if (jugadorActivo !== 'equipo') {
+      eventosQuery = eventosQuery.eq('jugador_id', jugadorActivo)
+    } else if (equipoActivo !== 'todos' && equipoActivo !== 'sin_asignar') {
+      eventosQuery = eventosQuery.eq('equipo_id', equipoActivo)
+    }
+    const { data: eventosConNotas } = await eventosQuery
+    const eventosYaCubiertos = new Set((data || []).map((s) => s.evento_id).filter(Boolean))
+    const eventosHuerfanos = (eventosConNotas || []).filter((e) => !eventosYaCubiertos.has(e.id))
+
+    const grupos = {}
+    ;(data || []).forEach((fila) => {
+      const clave = `${fila.fecha}|${fila.tipo_sesion || ''}`
+      if (!grupos[clave]) grupos[clave] = { fecha: fila.fecha, tipo_sesion: fila.tipo_sesion, porContenido: {} }
+      const c = fila.contenido
+      if (!grupos[clave].porContenido[c]) grupos[clave].porContenido[c] = []
+      grupos[clave].porContenido[c].push(mapaNombres[fila.jugador_id] || '—')
+    })
+    eventosHuerfanos.forEach((ev) => {
+      const clave = `${ev.fecha}|evento-${ev.id}`
+      grupos[clave] = { fecha: ev.fecha, tipo_sesion: ev.tipo, porContenido: { [ev.notas]: ['Nota del evento (sin duración asignada)'] } }
+    })
+
+    const entradas = Object.values(grupos).map((g) => ({
+      fecha: g.fecha,
+      tipo_sesion: g.tipo_sesion,
+      bloques: Object.entries(g.porContenido).map(([contenido, nombres]) => ({ contenido, nombres })),
+    }))
+    entradas.sort((a, b) => b.fecha.localeCompare(a.fecha))
+    setEntradasDiario(entradas)
+    setCargandoDiario(false)
+  }
+
+  const textoNombreJugadorDiario = jugadorActivo !== 'equipo' ? jugadoresContenido.find((j) => j.id === jugadorActivo)?.nombre : null
+  const entradasFiltradasDiario = entradasDiario.filter((e) => {
+    if (!busquedaDiario.trim()) return true
+    const q = busquedaDiario.trim().toLowerCase()
+    return e.bloques.some((b) => b.contenido.toLowerCase().includes(q))
+  })
 
   useEffect(() => {
     if (esSinAsignar) cargarJugadoresSinAsignar()
@@ -368,6 +603,7 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], o
   const hoy = hoyISO()
 
   return (
+    <>
     <div className="calendario-club-layout">
       <div className="calendario-club-titulo-imprimir">
         <h2>Calendario — {nombreDestino}</h2>
@@ -459,15 +695,23 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], o
         </h2>
         <p className="texto-dim calendario-club-equipo">{nombreDestino}</p>
 
-        {eventosDelDiaSeleccionado.length > 0 && modoDestino === 'equipo' && (
-          <button
-            type="button" className="pizarra-boton calendario-club-boton-planificar"
-            onClick={() => onIrAPlanificar?.(fechaSeleccionada, equipoActivo)}
-          >
-            → Poner una duración distinta por jugador
-          </button>
+        {eventosDelDiaSeleccionado.length > 0 && modoDestino === 'equipo' && subVistaPanel === 'evento' && (
+          <p className="texto-faint calendario-club-duracion-nota">
+            → Usa la pestaña "Contenido" de abajo para poner una duración distinta por jugador.
+          </p>
         )}
 
+        <div className="informe-modo calendario-club-subtabs">
+          <button className={`periodo-btn ${subVistaPanel === 'evento' ? 'periodo-activo' : ''}`} onClick={() => setSubVistaPanel('evento')}>
+            Evento
+          </button>
+          <button className={`periodo-btn ${subVistaPanel === 'contenido' ? 'periodo-activo' : ''}`} onClick={() => setSubVistaPanel('contenido')}>
+            Contenido
+          </button>
+        </div>
+
+        {subVistaPanel === 'evento' && (
+        <>
         {eventosDelDiaSeleccionado.length > 0 && (
           <ul className="calendario-club-lista">
             {eventosDelDiaSeleccionado.map((ev) => (
@@ -686,7 +930,182 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], o
             {guardando ? 'Guardando…' : editandoId ? 'Guardar cambios' : '+ Añadir evento'}
           </button>
         </form>
+        </>
+        )}
+
+        {subVistaPanel === 'contenido' && (
+          <>
+            <p className="sesion-sub">
+              {jugadoresConSesionContenido > 0
+                ? `${jugadoresConSesionContenido} de ${jugadoresContenido.length} jugador(es) ya tienen sesión${tipoSesionContenido ? ` de ${tipoSesionContenido}` : ''} guardada este día.`
+                : `Ningún jugador del grupo activo tiene sesión${tipoSesionContenido ? ` de ${tipoSesionContenido}` : ''} guardada este día todavía.`}
+              {tiposGuardadosHoyContenido.length > 0 && (
+                <span className="tipo-sesion-badge"> · Ya guardado hoy: {tiposGuardadosHoyContenido.join(', ')}</span>
+              )}
+            </p>
+
+            {modoDestino === 'equipo' && (
+              <div className="informe-modo">
+                <button
+                  className={`periodo-btn ${modoAsignacionContenido === 'grupo' ? 'periodo-activo' : ''}`}
+                  onClick={() => setModoAsignacionContenido('grupo')}
+                >
+                  Todo el grupo
+                </button>
+                <button
+                  className={`periodo-btn ${modoAsignacionContenido === 'individual' ? 'periodo-activo' : ''}`}
+                  onClick={() => setModoAsignacionContenido('individual')}
+                >
+                  Por jugador
+                </button>
+              </div>
+            )}
+
+            {cargandoContenido ? (
+              <p className="mono texto-dim">Cargando…</p>
+            ) : jugadoresContenido.length === 0 ? (
+              <p className="texto-dim">No hay jugadores en el grupo activo.</p>
+            ) : (
+              <form onSubmit={modoAsignacionContenido === 'grupo' ? guardarGrupoContenido : guardarIndividualContenido}>
+                {modoAsignacionContenido === 'grupo' && (
+                  <label className="campo-sesion">
+                    <span>Duración (minutos) — se aplica a los {jugadoresContenido.length} jugadores del grupo activo</span>
+                    <input
+                      type="number" min="0" max="300" value={duracionGrupoContenido}
+                      onChange={(e) => setDuracionGrupoContenido(Number(e.target.value))}
+                      required
+                    />
+                  </label>
+                )}
+
+                <div className="fila-doble">
+                  <label className="campo-sesion">
+                    <span>Microciclo (opcional{modoAsignacionContenido === 'individual' ? ', se aplica a quien rellenes' : ''})</span>
+                    <input
+                      type="text" value={microcicloContenido} onChange={(e) => setMicrocicloContenido(e.target.value)}
+                      placeholder="Ej. Largo 7, Corto 2"
+                    />
+                  </label>
+                  <label className="campo-sesion">
+                    <span>Tipo de sesión (MDx)</span>
+                    <select value={mdxContenido} onChange={(e) => setMdxContenido(e.target.value)}>
+                      <option value="">Sin especificar</option>
+                      {opcionesMDx.map((op) => <option key={op} value={op}>{op}</option>)}
+                    </select>
+                  </label>
+                </div>
+
+                <label className="campo-sesion">
+                  <span>Lugar / tipo de trabajo — puedes guardar una sesión distinta por cada tipo el mismo día</span>
+                  <select value={tipoSesionContenido} onChange={(e) => setTipoSesionContenido(e.target.value)}>
+                    <option value="">Sin especificar</option>
+                    {opcionesTipoSesion.map((op) => <option key={op} value={op}>{op}</option>)}
+                  </select>
+                </label>
+
+                <div className="campo-sesion">
+                  <span>Contenido de la sesión (solo lo ves tú)</span>
+                  {contenidoTexto && !editandoContenidoTexto ? (
+                    <div className="contenido-sesion-lectura">
+                      <p>{contenidoTexto}</p>
+                      <button type="button" className="equipo-cambiar-link" onClick={() => setEditandoContenidoTexto(true)}>
+                        ✎ Editar contenido de sesión
+                      </button>
+                    </div>
+                  ) : (
+                    <textarea
+                      value={contenidoTexto} onChange={(e) => setContenidoTexto(e.target.value)}
+                      rows={4} placeholder="Ej. Series de velocidad 6x30m, fuerza tren inferior, técnica de carrera…"
+                    />
+                  )}
+                </div>
+
+                {modoAsignacionContenido === 'individual' && (
+                  <div className="duraciones-individuales">
+                    {jugadoresContenido.map((j) => (
+                      <div className="duracion-individual-fila" key={j.id}>
+                        <span className="duracion-individual-nombre">{j.nombre}</span>
+                        <input
+                          type="number" min="0" max="300" placeholder="—"
+                          value={duracionesIndividualesContenido[j.id] ?? ''}
+                          onChange={(e) => setDuracionesIndividualesContenido({ ...duracionesIndividualesContenido, [j.id]: e.target.value })}
+                        />
+                        <span className="duracion-individual-min">min</span>
+                        {sesionesDelDiaContenido[j.id]?.[claveContenidoActual] && (
+                          <button
+                            type="button" className="btn-eliminar-fila" title="Eliminar sesión de este jugador"
+                            onClick={() => eliminarSesionJugadorContenido(j.id)} disabled={guardandoContenido}
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {mensajeContenido && (
+                  <div className={mensajeContenido.tipo === 'ok' ? 'aviso-ok' : 'aviso-error'}>{mensajeContenido.texto}</div>
+                )}
+
+                <button type="submit" className="btn-principal" disabled={guardandoContenido}>
+                  {guardandoContenido ? 'Guardando…' : modoAsignacionContenido === 'grupo' ? 'Guardar para todo el grupo' : 'Guardar duraciones individuales'}
+                </button>
+                {modoAsignacionContenido === 'grupo' && jugadoresConSesionContenido > 0 && (
+                  <button type="button" className="btn-eliminar-sesion" onClick={eliminarSesionGrupoContenido} disabled={guardandoContenido}>
+                    Eliminar sesión{tipoSesionContenido ? ` de ${tipoSesionContenido}` : ''} del grupo
+                  </button>
+                )}
+              </form>
+            )}
+          </>
+        )}
       </section>
     </div>
+
+    <section className="diario-sesiones-card no-imprimir">
+      <button type="button" className="diario-sesiones-cabecera" onClick={() => setDiarioAbierto((a) => !a)}>
+        <h3>📔 Diario de sesiones{textoNombreJugadorDiario ? ` — ${textoNombreJugadorDiario}` : ''}</h3>
+        <span className="diario-sesiones-plegar">{diarioAbierto ? '▲ Ocultar' : '▼ Mostrar'}</span>
+      </button>
+
+      {diarioAbierto && (
+        <>
+          <p className="texto-dim diario-sesiones-sub">
+            Lo que se ha escrito en "Contenido de la sesión" a lo largo del tiempo, para el equipo,
+            jugador y fechas que tengas seleccionados arriba en el ◎.
+          </p>
+          <input
+            type="text" className="diario-sesiones-buscador" value={busquedaDiario}
+            onChange={(e) => setBusquedaDiario(e.target.value)}
+            placeholder="Buscar por palabra dentro del contenido…"
+          />
+
+          {cargandoDiario ? (
+            <p className="mono texto-dim">Cargando…</p>
+          ) : entradasFiltradasDiario.length === 0 ? (
+            <p className="texto-dim">No hay contenido de sesión guardado en este periodo.</p>
+          ) : (
+            <div className="diario-sesiones-lista">
+              {entradasFiltradasDiario.map((e, i) => (
+                <div className="diario-sesiones-entrada" key={i}>
+                  <div className="diario-sesiones-fecha">
+                    <span className="capitalizada">{formatearFechaLarga(e.fecha)}</span>
+                    {e.tipo_sesion && <span className="diario-sesiones-tipo">{e.tipo_sesion}</span>}
+                  </div>
+                  {e.bloques.map((b, j) => (
+                    <div className="diario-sesiones-bloque" key={j}>
+                      {e.bloques.length > 1 && <p className="diario-sesiones-nombres">{b.nombres.join(', ')}</p>}
+                      <p className="diario-sesiones-contenido">{b.contenido}</p>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+    </section>
+  </>
   )
 }

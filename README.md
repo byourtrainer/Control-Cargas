@@ -2356,6 +2356,38 @@ actualiza la fila que ya existía para cada jugador.
 4. Para tu fisio actual: la próxima vez que entre, verá la pantalla de
    elegir club automáticamente (no hace falta que hagas nada más).
 
+## Calendario y Planificación, fusionados en una sola pantalla
+
+"Planificación" desaparece como pestaña independiente — todo vive ahora
+dentro de "Calendario". Al tocar un día, el panel tiene dos pestañas
+internas:
+
+- **Evento** — lo que ya había: tipo, rival/título, duración,
+  intensidad... (incluida la personalización de duración por jugador).
+- **Contenido** — lo que antes era Planificación: duración y contenido
+  de la sesión por grupo o por jugador, con el mismo desglose "Todo el
+  grupo" / "Por jugador" de siempre.
+
+El Diario de sesiones se queda también en esta misma pantalla, al
+final, plegable como hasta ahora.
+
+## El Diario ahora también recoge las notas del Calendario
+
+Cuando escribes contenido en un evento del Calendario **sin** rellenar
+la Duración (por lo que nunca llega a crear una sesión), esa nota ahora
+aparece igualmente en el Diario, marcada como "Nota del evento (sin
+duración asignada)" — para que no se quede escondida solo dentro de ese
+evento en concreto.
+
+### Limpieza
+
+Se eliminaron `SesionDia.jsx`, `SesionDia.css` y `CalendarioEntrenador.jsx`
+(ya no los usa nadie). De paso, encontré que varios estilos de formulario
+(`campo-sesion`, las pestañas tipo "Todo el grupo/Por jugador", el propio
+Diario) solo existían en el archivo que acabamos de borrar — los recuperé
+directamente en `CalendarioClub.css` para que no se rompiera nada al
+fusionar.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

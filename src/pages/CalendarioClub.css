@@ -349,3 +349,153 @@
   font-size: 13px;
   text-align: center;
 }
+
+/* --- Campos de formulario estándar (recuperados tras fusionar Planificación aquí) --- */
+.campo-sesion {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--text-dim);
+  margin-bottom: 16px;
+}
+.campo-sesion input, .campo-sesion select, .campo-sesion textarea {
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 14px;
+}
+.campo-sesion textarea { resize: vertical; }
+.campo-sesion input:focus, .campo-sesion select:focus, .campo-sesion textarea:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.campo-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text-dim);
+  margin-bottom: 16px;
+}
+.campo-checkbox input { accent-color: var(--accent); width: 16px; height: 16px; }
+
+/* --- Pestañas internas (Evento / Contenido, y Todo el grupo / Por jugador) --- */
+.informe-modo {
+  display: inline-flex;
+  gap: 4px;
+  background: var(--bg-elevated);
+  border-radius: 8px;
+  padding: 4px;
+  width: fit-content;
+  margin-bottom: 16px;
+}
+.periodo-btn {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.periodo-activo { background: var(--bg-card); color: var(--text); font-weight: 600; }
+
+.calendario-club-subtabs { margin-top: 14px; }
+
+.sesion-sub { font-size: 12px; color: var(--text-faint); margin-bottom: 4px; }
+
+.tipo-sesion-badge { color: var(--accent); }
+
+.contenido-sesion-lectura {
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  padding: 12px;
+}
+.contenido-sesion-lectura p { font-size: 13px; white-space: pre-wrap; margin-bottom: 8px; }
+
+.duraciones-individuales { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+.duracion-individual-fila {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.duracion-individual-nombre { flex: 1; }
+.duracion-individual-fila input {
+  width: 60px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  padding: 6px 8px;
+  color: var(--text);
+  text-align: center;
+}
+.duracion-individual-min { font-size: 11px; color: var(--text-faint); }
+
+/* --- Diario de sesiones --- */
+.diario-sesiones-card {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin-top: 16px;
+}
+.diario-sesiones-cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  font-family: inherit;
+}
+.diario-sesiones-cabecera h3 { font-size: 15px; margin: 0; }
+.diario-sesiones-plegar { font-size: 12px; color: var(--text-faint); white-space: nowrap; }
+.diario-sesiones-sub { font-size: 12px; margin: 6px 0 12px; }
+.diario-sesiones-buscador {
+  width: 100%;
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+.diario-sesiones-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: 560px;
+  overflow-y: auto;
+}
+.diario-sesiones-entrada { border-left: 2px solid var(--line-strong); padding-left: 14px; }
+.diario-sesiones-fecha {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+.diario-sesiones-tipo {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--accent);
+  background: rgba(200,255,77,0.1);
+  border-radius: 999px;
+  padding: 2px 9px;
+}
+.diario-sesiones-bloque { margin-bottom: 8px; }
+.diario-sesiones-nombres { font-size: 11px; color: var(--text-faint); margin-bottom: 2px; }
+.diario-sesiones-contenido { font-size: 13px; color: var(--text-dim); white-space: pre-wrap; line-height: 1.5; }

@@ -5,7 +5,6 @@ import Login from './pages/Login'
 import PlayerForm from './pages/PlayerForm'
 import Fisio from './pages/Fisio'
 import CoachDashboard from './pages/CoachDashboard'
-import SesionDia from './pages/SesionDia'
 import Equipos from './pages/Equipos'
 import Jugadores from './pages/Jugadores'
 import Tests from './pages/Tests'
@@ -24,7 +23,6 @@ const pestanasEntrenador = [
   { clave: 'resumen', etiqueta: 'Resumen' },
   { clave: 'calendario', etiqueta: 'Calendario' },
   { clave: 'jugadores', etiqueta: 'Jugadores' },
-  { clave: 'sesion', etiqueta: 'Planificación' },
   { clave: 'tests', etiqueta: 'Tests' },
   { clave: 'fisio', etiqueta: '🩺 Fisio' },
   { clave: 'referencias', etiqueta: 'Referencias' },
@@ -46,15 +44,8 @@ export default function App() {
   const [pestana, setPestana] = useState('resumen')
   const [equipos, setEquipos] = useState([])
   const [equipoActivo, setEquipoActivo] = useState('todos')
-  const [saltoPlanificacion, setSaltoPlanificacion] = useState(null) // { fecha, ts } | null
   const [menuAbierto, setMenuAbierto] = useState(false)
   const menuRef = useRef(null)
-
-  function irAPlanificar(fecha, equipoId) {
-    setEquipoActivo(equipoId)
-    setSaltoPlanificacion({ fecha, ts: Date.now() })
-    setPestana('sesion')
-  }
 
   // --- Contexto único: jugador + rango de fechas, compartido entre pestañas ---
   const [jugadoresContexto, setJugadoresContexto] = useState([])
@@ -257,14 +248,6 @@ export default function App() {
       <main className="contenido">
         {esStaffCompleto ? (
           pestana === 'admin' ? <PanelAdmin perfil={perfil} />
-          : pestana === 'sesion' ? (
-            <SesionDia
-              equipoActivo={equipoActivo} jugadorActivo={jugadorActivo}
-              fechaDesde={fechaDesde} fechaHasta={fechaHasta}
-              fechaInicial={saltoPlanificacion?.fecha}
-              key={saltoPlanificacion?.ts || 'sesion-default'}
-            />
-          )
           : pestana === 'fisio' ? (
             <Fisio
               perfil={perfil} equipoActivo={equipoActivo} equipos={equipos}
@@ -272,7 +255,12 @@ export default function App() {
             />
           )
           : pestana === 'referencias' ? <Referencias />
-          : pestana === 'calendario' ? <CalendarioClub equipoActivo={equipoActivo} equipos={equipos} onIrAPlanificar={irAPlanificar} />
+          : pestana === 'calendario' ? (
+            <CalendarioClub
+              equipoActivo={equipoActivo} equipos={equipos}
+              jugadorActivo={jugadorActivo} fechaDesde={fechaDesde} fechaHasta={fechaHasta}
+            />
+          )
           : pestana === 'entrenamiento' ? <BibliotecaEjercicios />
           : pestana === 'pizarra' ? <PizarraTactica />
           : pestana === 'sesiones_pizarra' ? <SesionesPizarra perfil={perfil} />
