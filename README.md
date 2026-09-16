@@ -2409,6 +2409,27 @@ fusionar.
 1. Ejecuta `migracion_notas_e_intensidad_calendario.sql` en Supabase.
 2. Sube `CalendarioClub.jsx` y `CalendarioClub.css`.
 
+## Arreglada la duplicación entre "Evento" y "Contenido"
+
+Tenías razón — duración, tipo de sesión y contenido existían por
+duplicado en las dos pestañas, guardándose por separado y pudiendo
+acabar con valores distintos (o hasta filas repetidas) para el mismo día.
+
+Ahora cada dato vive en un solo sitio:
+
+- **Duración, tipo de sesión y contenido** — solo en la pestaña
+  "Evento" (incluida la personalización por jugador, que ya estaba ahí).
+- **Microciclo y MDx** — solo en la pestaña "Contenido", que ahora
+  además muestra como referencia (sin poder editarlos ahí) los datos que
+  ya pusiste en "Evento", para no tener que ir y venir.
+
+La pestaña "Contenido" ahora trabaja sobre el evento concreto que tengas
+abierto (no sobre "el día" en general) — si no hay ningún evento
+creado/seleccionado, te lo avisa y te manda primero a "Evento". Al crear
+o editar un evento, ya no se cierra el formulario — se queda abierto
+para que puedas pasar directamente a "Contenido" a añadir el microciclo
+sin perder el contexto.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.

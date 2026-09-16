@@ -568,3 +568,6 @@
   border-bottom: 1px solid var(--line);
 }
 .calendario-club-intensidad-dia > span { display: block; margin-bottom: 8px; font-size: 12px; }
+
+.calendario-club-resumen-evento { margin-bottom: 18px; }
+.calendario-club-resumen-evento p { margin-bottom: 4px; }
