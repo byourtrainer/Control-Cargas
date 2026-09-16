@@ -499,3 +499,72 @@
 .diario-sesiones-bloque { margin-bottom: 8px; }
 .diario-sesiones-nombres { font-size: 11px; color: var(--text-faint); margin-bottom: 2px; }
 .diario-sesiones-contenido { font-size: 13px; color: var(--text-dim); white-space: pre-wrap; line-height: 1.5; }
+
+/* --- Días de partido resaltados, para ver de un vistazo la programación de carga alrededor --- */
+.calendario-club-celda-partido {
+  background: rgba(234, 92, 74, 0.16) !important;
+  border: 1px solid rgba(234, 92, 74, 0.5) !important;
+}
+
+/* --- Barra de intensidad del día, en la parte inferior de la casilla --- */
+.calendario-club-barra-intensidad {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  border-radius: 0 0 6px 6px;
+}
+
+/* --- Notas del mes --- */
+.calendario-club-notas-mes {
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+
+.calendario-club-notas-textarea {
+  width: 100%;
+  background: var(--bg-card);
+  border: 1px solid var(--line-strong);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-family: var(--font-body);
+  resize: vertical;
+  margin-top: 8px;
+}
+
+.calendario-club-historial-notas {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.calendario-club-nota-pasada strong {
+  display: block;
+  font-size: 12px;
+  color: var(--accent);
+  margin-bottom: 3px;
+}
+.calendario-club-nota-pasada p {
+  font-size: 13px;
+  color: var(--text-dim);
+  white-space: pre-wrap;
+}
+
+/* --- Intensidad del día, selector rápido en el panel --- */
+.calendario-club-intensidad-dia {
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+}
+.calendario-club-intensidad-dia > span { display: block; margin-bottom: 8px; font-size: 12px; }

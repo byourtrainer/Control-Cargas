@@ -52,6 +52,11 @@ function eventoIncluyeFecha(ev, fecha) {
   return fecha >= ev.fecha && fecha <= fin
 }
 
+/** Cualquier tipo de evento que no sea un entrenamiento normal cuenta como partido. */
+function esPartido(tipo) {
+  return tipo !== 'Entrenamiento'
+}
+
 const opcionesMDx = ['MD', 'MD+1', 'MD+2', 'MD+/-3', 'MD-2', 'MD-1']
 const claveTipo = (tipo) => tipo || '__sin_tipo__'
 
@@ -318,7 +323,74 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], j
     else setJugadorSeleccionado('')
   }, [esSinAsignar])
 
-  useEffect(() => { if (modoDestino) cargarMes() }, [mesVisible, modoDestino, equipoActivo, jugadorSeleccionado])
+  useEffect(() => { if (modoDestino) { cargarMes(); cargarNotaMes() } }, [mesVisible, modoDestino, equipoActivo, jugadorSeleccionado])
+
+  // --- Contexto compartido por notas e intensidad: equipo o jugador individual ---
+  const campoContexto = modoDestino === 'equipo' ? 'equipo_id' : 'jugador_id'
+  const valorContexto = modoDestino === 'equipo' ? equipoActivo : jugadorSeleccionado
+
+  // --- Notas del mes (fijas por mes, consultables como historial después) ---
+  const [notaMesTexto, setNotaMesTexto] = useState('')
+  const [notaMesId, setNotaMesId] = useState(null)
+  const [notaMesCargada, setNotaMesCargada] = useState(false)
+  const [guardandoNota, setGuardandoNota] = useState(false)
+  const [historialNotasAbierto, setHistorialNotasAbierto] = useState(false)
+  const [historialNotas, setHistorialNotas] = useState([])
+  const [cargandoHistorialNotas, setCargandoHistorialNotas] = useState(false)
+
+  async function cargarNotaMes() {
+    setNotaMesCargada(false)
+    const { data } = await supabase.from('notas_calendario').select('*')
+      .eq(campoContexto, valorContexto).eq('anio', mesVisible.getFullYear()).eq('mes', mesVisible.getMonth() + 1)
+      .maybeSingle()
+    setNotaMesTexto(data?.texto || '')
+    setNotaMesId(data?.id || null)
+    setNotaMesCargada(true)
+    setHistorialNotasAbierto(false)
+  }
+
+  async function guardarNotaMes() {
+    setGuardandoNota(true)
+    if (notaMesId) {
+      await supabase.from('notas_calendario').update({ texto: notaMesTexto, actualizado_en: new Date().toISOString() }).eq('id', notaMesId)
+    } else if (notaMesTexto.trim()) {
+      const { data } = await supabase.from('notas_calendario')
+        .insert({ [campoContexto]: valorContexto, anio: mesVisible.getFullYear(), mes: mesVisible.getMonth() + 1, texto: notaMesTexto })
+        .select().single()
+      if (data) setNotaMesId(data.id)
+    }
+    setGuardandoNota(false)
+  }
+
+  async function cargarHistorialNotas() {
+    setCargandoHistorialNotas(true)
+    const { data } = await supabase.from('notas_calendario').select('*')
+      .eq(campoContexto, valorContexto)
+      .order('anio', { ascending: false }).order('mes', { ascending: false })
+    const actual = { anio: mesVisible.getFullYear(), mes: mesVisible.getMonth() + 1 }
+    setHistorialNotas((data || []).filter((n) => n.texto.trim() && !(n.anio === actual.anio && n.mes === actual.mes)))
+    setCargandoHistorialNotas(false)
+  }
+
+  // --- Intensidad por día (independiente de si hay o no evento ese día) ---
+  const [intensidadDias, setIntensidadDias] = useState({}) // fecha -> 'baja'|'media'|'alta'
+  const [guardandoIntensidadDia, setGuardandoIntensidadDia] = useState(false)
+
+  async function establecerIntensidadDia(nivel) {
+    setGuardandoIntensidadDia(true)
+    const yaTiene = intensidadDias[fechaSeleccionada]
+    if (yaTiene === nivel) {
+      await supabase.from('intensidad_dias').delete().eq(campoContexto, valorContexto).eq('fecha', fechaSeleccionada)
+      setIntensidadDias((prev) => { const copia = { ...prev }; delete copia[fechaSeleccionada]; return copia })
+    } else if (yaTiene) {
+      await supabase.from('intensidad_dias').update({ intensidad: nivel }).eq(campoContexto, valorContexto).eq('fecha', fechaSeleccionada)
+      setIntensidadDias((prev) => ({ ...prev, [fechaSeleccionada]: nivel }))
+    } else {
+      await supabase.from('intensidad_dias').insert({ [campoContexto]: valorContexto, fecha: fechaSeleccionada, intensidad: nivel })
+      setIntensidadDias((prev) => ({ ...prev, [fechaSeleccionada]: nivel }))
+    }
+    setGuardandoIntensidadDia(false)
+  }
 
   async function cargarJugadoresSinAsignar() {
     const { data } = await supabase
@@ -341,6 +413,12 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], j
     consulta = modoDestino === 'equipo' ? consulta.eq('equipo_id', equipoActivo) : consulta.eq('jugador_id', jugadorSeleccionado)
     const { data } = await consulta
     setEventos(data || [])
+
+    const { data: intensidades } = await supabase.from('intensidad_dias').select('fecha, intensidad')
+      .eq(campoContexto, valorContexto)
+      .gte('fecha', fechaISOLocal(inicioConsulta)).lte('fecha', fin)
+    setIntensidadDias(Object.fromEntries((intensidades || []).map((i) => [i.fecha, i.intensidad])))
+
     setCargando(false)
   }
 
@@ -629,6 +707,45 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], j
           </div>
         )}
 
+        <div className="calendario-club-notas-mes no-imprimir">
+          <div className="panel-admin-cabecera-flex">
+            <span className="texto-dim capitalizada">📝 Notas de {MESES[mesVisible.getMonth()].toLowerCase()}</span>
+            <button
+              type="button" className="equipo-cambiar-link"
+              onClick={() => { const abrir = !historialNotasAbierto; setHistorialNotasAbierto(abrir); if (abrir) cargarHistorialNotas() }}
+            >
+              {historialNotasAbierto ? '▲ Ocultar meses anteriores' : '▼ Ver meses anteriores'}
+            </button>
+          </div>
+          <textarea
+            className="calendario-club-notas-textarea"
+            value={notaMesTexto}
+            onChange={(e) => setNotaMesTexto(e.target.value)}
+            onBlur={guardarNotaMes}
+            placeholder="Aspectos de la programación general de este mes…"
+            rows={3}
+            disabled={!notaMesCargada}
+          />
+          {guardandoNota && <p className="texto-faint mono">Guardando…</p>}
+
+          {historialNotasAbierto && (
+            <div className="calendario-club-historial-notas">
+              {cargandoHistorialNotas ? (
+                <p className="mono texto-dim">Cargando…</p>
+              ) : historialNotas.length === 0 ? (
+                <p className="texto-dim">No hay notas guardadas de meses anteriores.</p>
+              ) : (
+                historialNotas.map((n) => (
+                  <div className="calendario-club-nota-pasada" key={n.id}>
+                    <strong className="capitalizada">{MESES[n.mes - 1]} {n.anio}</strong>
+                    <p>{n.texto}</p>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+
         <div className="calendario-dias-semana">
           {DIAS_SEMANA.map((d) => <span key={d}>{d}</span>)}
         </div>
@@ -640,12 +757,17 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], j
             const eventosDia = eventos.filter((ev) => eventoIncluyeFecha(ev, fecha))
             const esHoy = fecha === hoy
             const esActiva = fecha === fechaSeleccionada
+            const esDiaPartido = eventosDia.some((ev) => esPartido(ev.tipo))
+            const intensidadDelDia = intensidadDias[fecha]
             return (
               <button
                 key={i}
-                className={`calendario-celda calendario-club-celda ${esHoy ? 'calendario-celda-hoy' : ''} ${esActiva ? 'calendario-celda-activa' : ''}`}
+                className={`calendario-celda calendario-club-celda ${esHoy ? 'calendario-celda-hoy' : ''} ${esActiva ? 'calendario-celda-activa' : ''} ${esDiaPartido ? 'calendario-club-celda-partido' : ''}`}
                 onClick={() => seleccionarDia(fecha)}
               >
+                {intensidadDelDia && (
+                  <span className="calendario-club-barra-intensidad" style={{ background: colorIntensidad[intensidadDelDia] }} />
+                )}
                 <span className="calendario-numero">{d}</span>
                 <span className="calendario-club-puntos no-imprimir">
                   {eventosDia.slice(0, 4).map((ev) => (
@@ -694,6 +816,27 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], j
           {new Date(fechaSeleccionada + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
         </h2>
         <p className="texto-dim calendario-club-equipo">{nombreDestino}</p>
+
+        <div className="calendario-club-intensidad-dia no-imprimir">
+          <span className="texto-faint">Intensidad de este día:</span>
+          <div className="calendario-club-intensidad-selector">
+            {nivelesIntensidad.map((n) => {
+              const activo = intensidadDias[fechaSeleccionada] === n.valor
+              return (
+                <button
+                  key={n.valor} type="button"
+                  className={`calendario-club-intensidad-boton ${activo ? 'calendario-club-intensidad-activo' : ''}`}
+                  style={{ '--color-intensidad': n.color }}
+                  disabled={guardandoIntensidadDia}
+                  onClick={() => establecerIntensidadDia(n.valor)}
+                >
+                  <span className="calendario-club-intensidad-punto" style={{ background: n.color }} />
+                  {n.etiqueta}
+                </button>
+              )
+            })}
+          </div>
+        </div>
 
         {eventosDelDiaSeleccionado.length > 0 && modoDestino === 'equipo' && subVistaPanel === 'evento' && (
           <p className="texto-faint calendario-club-duracion-nota">

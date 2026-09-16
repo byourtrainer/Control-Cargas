@@ -2388,6 +2388,27 @@ Diario) solo existían en el archivo que acabamos de borrar — los recuperé
 directamente en `CalendarioClub.css` para que no se rompiera nada al
 fusionar.
 
+## Calendario: notas del mes, días de partido resaltados, intensidad por día
+
+- **Notas del mes** — un bloc de texto siempre visible al abrir el
+  calendario de un equipo o jugador, justo debajo del título del mes.
+  Se guarda solo al salir del campo (sin botón de guardar). Al cambiar
+  de mes, la nota de ese mes queda fijada — con "▼ Ver meses anteriores"
+  puedes consultar el historial completo de notas de meses pasados.
+- **Días de partido resaltados** — cualquier evento que no sea
+  "Entrenamiento" (Amistoso, Liga, Europa, Copa del Rey, Play-Off) pinta
+  la casilla entera de ese día en rojo suave, para verlo de un vistazo
+  al planificar la carga alrededor.
+- **Intensidad por día** — nuevo selector (verde/amarillo/rojo, los
+  mismos 3 niveles de siempre) siempre visible arriba del panel del día,
+  independiente de si hay o no un evento ese día. Se ve como una barra
+  de color en la parte inferior de cada casilla del mes.
+
+### Para aplicarlo
+
+1. Ejecuta `migracion_notas_e_intensidad_calendario.sql` en Supabase.
+2. Sube `CalendarioClub.jsx` y `CalendarioClub.css`.
+
 ## Próximos pasos posibles
 
 - Añadir las variables específicas de tu Excel de control de cargas.
