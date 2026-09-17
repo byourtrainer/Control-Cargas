@@ -353,12 +353,17 @@ function SeccionClientes({ perfil }) {
       return
     }
     const numeroSugerido = await siguienteNumeroFactura()
+    // El acumulado de sesiones del mes es el TOTAL a pagar por el cliente,
+    // no la base imponible. Se calcula la base "hacia atrás" para que, con
+    // el IVA por defecto, el total de la factura coincida con ese acumulado.
+    const ivaInicial = 21
+    const baseInicial = total / (1 + ivaInicial / 100)
     setModalFactura({
       cliente,
       numero_factura: numeroSugerido,
       concepto: cliente.programa || 'Entrenamiento personal',
-      base_imponible: String(total),
-      iva_porcentaje: '21',
+      base_imponible: baseInicial.toFixed(2),
+      iva_porcentaje: String(ivaInicial),
       aplica_irpf: false,
       irpf_porcentaje: '15',
       num_sesiones: num,
