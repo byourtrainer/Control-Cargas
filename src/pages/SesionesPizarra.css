@@ -472,6 +472,8 @@
 }
 
 .sesiones-modal-item {
+  appearance: none;
+  -webkit-appearance: none;
   background: var(--bg-card);
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -479,8 +481,12 @@
   text-align: left;
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   color: var(--text);
   font-family: var(--font-body);
+  padding: 0;
+  margin: 0;
+  width: 100%;
 }
 
 .sesiones-modal-item:hover { border-color: var(--accent); }
@@ -491,6 +497,7 @@
   object-fit: cover;
   display: block;
   background: #000;
+  flex-shrink: 0;
 }
 
 .sesiones-modal-item-info {
