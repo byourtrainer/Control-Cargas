@@ -234,6 +234,7 @@ function SeccionClientes({ perfil }) {
   const [editando, setEditando] = useState(null)
   const [config, setConfig] = useState(null)
   const [mostrarConfig, setMostrarConfig] = useState(false)
+  const [errorLogoConfig, setErrorLogoConfig] = useState(null)
   const [modalFactura, setModalFactura] = useState(null) // { cliente, ...campos editables } | null
 
   const vacio = { nombre: '', dias_entreno: '', programa: '', tipo_facturacion: 'sesion', precio: '', activo: true, notas: '', es_empresa: false, nif: '', direccion: '', ciudad_cp: '' }
@@ -246,13 +247,30 @@ function SeccionClientes({ perfil }) {
 
   async function cargarConfig() {
     const { data } = await supabase.from('configuracion_facturacion').select('*').eq('id', 1).maybeSingle()
-    setConfig(data || { id: 1, nombre: '', direccion: '', telefono: '', email: '', iban: '' })
+    setConfig(data || { id: 1, nombre: '', direccion: '', telefono: '', email: '', iban: '', logo_base64: null })
   }
 
   async function guardarConfig(e) {
     e.preventDefault()
     await supabase.from('configuracion_facturacion').upsert({ ...config, id: 1 })
     setMostrarConfig(false)
+  }
+
+  function subirLogoConfig(archivo) {
+    if (!archivo) return
+    setErrorLogoConfig(null)
+    if (!archivo.type.startsWith('image/')) {
+      setErrorLogoConfig('El archivo debe ser una imagen.')
+      return
+    }
+    if (archivo.size > 2 * 1024 * 1024) {
+      setErrorLogoConfig('La imagen es demasiado grande (máximo 2 MB). Prueba con una versión más pequeña del logo.')
+      return
+    }
+    const lector = new FileReader()
+    lector.onload = () => setConfig((c) => ({ ...c, logo_base64: lector.result }))
+    lector.onerror = () => setErrorLogoConfig('No se pudo leer la imagen.')
+    lector.readAsDataURL(archivo)
   }
 
   async function cargarClientes() {
@@ -435,6 +453,21 @@ function SeccionClientes({ perfil }) {
             <input type="text" value={config.telefono || ''} onChange={(e) => setConfig({ ...config, telefono: e.target.value })} placeholder="Teléfono" />
             <input type="email" value={config.email || ''} onChange={(e) => setConfig({ ...config, email: e.target.value })} placeholder="Correo" />
             <input type="text" value={config.iban || ''} onChange={(e) => setConfig({ ...config, iban: e.target.value })} placeholder="IBAN" />
+
+            <label className="campo-sesion panel-admin-campo-logo">
+              <span>Logo del negocio (aparece en la factura)</span>
+              <input type="file" accept="image/*" onChange={(e) => subirLogoConfig(e.target.files[0])} />
+            </label>
+            {errorLogoConfig && <div className="aviso-error">{errorLogoConfig}</div>}
+            {config.logo_base64 && (
+              <div className="panel-admin-logo-preview">
+                <img src={config.logo_base64} alt="Logo del negocio" />
+                <button type="button" className="equipo-cambiar-link" onClick={() => setConfig({ ...config, logo_base64: null })}>
+                  ✕ Quitar logo
+                </button>
+              </div>
+            )}
+
             <button type="submit" className="btn-principal">Guardar</button>
           </form>
         )}
@@ -688,7 +721,10 @@ function SeccionClientes({ perfil }) {
         const irpf = f.aplica_irpf ? f.base_imponible * (f.irpf_porcentaje / 100) : 0
         return (
           <div className="factura-imprimir">
-            <h1 className="factura-titulo-imprimir">{f.tipo === 'completa' ? 'FACTURA' : 'FACTURA SIMPLIFICADA'}</h1>
+            <div className="factura-cabecera-imprimir">
+              <h1 className="factura-titulo-imprimir">{f.tipo === 'completa' ? 'FACTURA' : 'FACTURA SIMPLIFICADA'}</h1>
+              {config.logo_base64 && <img src={config.logo_base64} alt="Logo" className="factura-logo-imprimir" />}
+            </div>
 
             <div className="factura-fila-superior-imprimir">
               <div>
