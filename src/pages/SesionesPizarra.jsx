@@ -18,7 +18,7 @@ function esVideo(ej) {
   return ej.tipo_origen === 'video_grabado'
 }
 
-export default function SesionesPizarra({ perfil }) {
+export default function SesionesPizarra() {
   const [sesiones, setSesiones] = useState([])
   const [biblioteca, setBiblioteca] = useState([])
   const [equipos, setEquipos] = useState([])
@@ -192,9 +192,7 @@ export default function SesionesPizarra({ perfil }) {
   }
 
   async function cargarLogoEntrenador() {
-    let consulta = supabase.from('perfiles').select('nombre, logo_base64').eq('rol', 'entrenador').limit(1)
-    if (perfil?.club_id) consulta = consulta.eq('club_id', perfil.club_id)
-    const { data } = await consulta.maybeSingle()
+    const { data } = await supabase.from('perfiles').select('nombre, logo_base64').eq('rol', 'entrenador').limit(1).maybeSingle()
     setLogoEntrenador(data?.logo_base64 || null)
     setNombreEntrenador(data?.nombre || null)
   }
@@ -598,22 +596,31 @@ export default function SesionesPizarra({ perfil }) {
 
             <p className="texto-dim sesiones-modal-contador">{bibliotecaFiltrada.length} ejercicio(s)</p>
 
-            <div className="sesiones-modal-grid">
+            <div className="pizarra-galeria sesiones-modal-grid">
               {bibliotecaFiltrada.map((ej) => (
-                <button key={ej.id} className="sesiones-modal-item" onClick={() => anadirEjercicio(ej)}>
+                <div
+                  key={ej.id} className="pizarra-galeria-item sesiones-modal-item"
+                  role="button" tabIndex={0}
+                  onClick={() => anadirEjercicio(ej)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); anadirEjercicio(ej) } }}
+                >
                   {esVideo(ej) ? (
                     <video src={ej.video_url} muted />
                   ) : (
                     <img src={miniaturaDe(ej)} alt={ej.nombre} />
                   )}
-                  <div className="sesiones-modal-item-info">
+                  <div className="pizarra-galeria-info">
                     <strong>{ej.nombre}</strong>
                     {ej.etiquetas && ej.etiquetas.length > 0 && (
-                      <span className="texto-faint">{ej.etiquetas.join(', ')}</span>
+                      <div className="pizarra-etiquetas-chips">
+                        {ej.etiquetas.map((et) => (
+                          <span key={et} className="pizarra-etiqueta-chip pizarra-etiqueta-chip-lectura">{et}</span>
+                        ))}
+                      </div>
                     )}
+                    <span className="sesiones-modal-item-anadir">+ Añadir</span>
                   </div>
-                  <span className="sesiones-modal-item-anadir">+ Añadir</span>
-                </button>
+                </div>
               ))}
               {bibliotecaFiltrada.length === 0 && <p className="texto-dim">Sin resultados.</p>}
             </div>
