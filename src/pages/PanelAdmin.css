@@ -147,6 +147,8 @@
 
 .panel-admin-tabla-acciones { display: flex; gap: 8px; white-space: nowrap; }
 
+.panel-admin-factura-acciones { display: flex; gap: 10px; align-items: center; white-space: nowrap; }
+
 .panel-admin-tabla-clientes tfoot td {
   border-bottom: none;
   border-top: 2px solid var(--line-strong);
@@ -228,10 +230,14 @@
   }
 
   .factura-logo-imprimir {
-    max-width: 90px;
-    max-height: 90px;
+    max-width: 100px;
+    max-height: 100px;
     object-fit: contain;
     flex-shrink: 0;
+    /* Si el logo tiene fondo blanco (sin transparencia), esto lo funde
+       visualmente con el fondo crudo de la factura en vez de dejar un
+       recuadro blanco. Si el logo ya es transparente no cambia nada. */
+    mix-blend-mode: multiply;
   }
 
   .factura-fila-superior-imprimir {
