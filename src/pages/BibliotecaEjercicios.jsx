@@ -15,7 +15,7 @@ const patrones = [
 ]
 const contraccionesPorFamilia = {
   'Dinámico': ['Balístico', 'Oscilatorio', 'Excéntrico', 'CEA', 'Dinámico General'],
-  'Isométrico': ['ISO-Hold', 'ISO-Catch', 'ISO-Push', 'ISO-Switch'],
+  'Isométrico': ['Iso-Hold', 'Iso-Catch', 'Iso-Push', 'Iso-Switch'],
 }
 const materiales = [
   'Goma', 'Fitball', 'ZeroRM', 'Mancuerna', 'Barra', 'Disco', 'Pelota Tenis', 'Banco',
