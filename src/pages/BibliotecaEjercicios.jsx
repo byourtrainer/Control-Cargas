@@ -119,17 +119,22 @@ export default function BibliotecaEjercicios() {
       setMensaje({ tipo: 'error', texto: 'Ponle un nombre al ejercicio.' })
       return
     }
-    const youtubeId = extraerYoutubeId(form.url_youtube)
-    if (!youtubeId) {
-      setMensaje({ tipo: 'error', texto: 'No reconozco ese enlace de YouTube. Prueba con la URL completa.' })
-      return
+    // El vídeo de YouTube es opcional: muchos ejercicios de la biblioteca
+    // importada solo tienen nombre y etiquetas, sin vídeo todavía.
+    let youtubeId = null
+    if (form.url_youtube.trim()) {
+      youtubeId = extraerYoutubeId(form.url_youtube)
+      if (!youtubeId) {
+        setMensaje({ tipo: 'error', texto: 'No reconozco ese enlace de YouTube. Prueba con la URL completa, o deja el campo vacío.' })
+        return
+      }
     }
 
     setGuardando(true)
     setMensaje(null)
     const payload = {
       nombre: form.nombre.trim(),
-      url_youtube: form.url_youtube.trim(),
+      url_youtube: form.url_youtube.trim() || null,
       youtube_id: youtubeId,
       categoria: form.categoria,
       miembro: form.miembro || null,
@@ -331,7 +336,9 @@ export default function BibliotecaEjercicios() {
           {ejerciciosFiltrados.map((ej) => (
             <div className="biblioteca-tarjeta" key={ej.id}>
               <div className="biblioteca-tarjeta-video">
-                {reproduciendoId === ej.id ? (
+                {!ej.youtube_id ? (
+                  <div className="biblioteca-tarjeta-sin-video">Sin vídeo</div>
+                ) : reproduciendoId === ej.id ? (
                   <>
                     <iframe
                       src={`https://www.youtube.com/embed/${ej.youtube_id}?autoplay=1`}
