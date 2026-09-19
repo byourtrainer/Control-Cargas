@@ -11,6 +11,7 @@ import Tests from './pages/Tests'
 import Referencias from './pages/Referencias'
 import CalendarioClub from './pages/CalendarioClub'
 import BibliotecaEjercicios from './pages/BibliotecaEjercicios'
+import Gimnasio from './pages/Gimnasio'
 import PizarraTactica from './pages/PizarraTactica'
 import SesionesPizarra from './pages/SesionesPizarra'
 import PanelAdmin from './pages/PanelAdmin'
@@ -26,9 +27,10 @@ const pestanasEntrenador = [
   { clave: 'tests', etiqueta: 'Tests' },
   { clave: 'fisio', etiqueta: '🩺 Fisio' },
   { clave: 'referencias', etiqueta: 'Referencias' },
-  { clave: 'entrenamiento', etiqueta: '🏋 App Entrenamiento' },
+  { clave: 'entrenamiento', etiqueta: '📚 Biblioteca Gimnasio' },
+  { clave: 'gimnasio', etiqueta: '🏋 Sesiones Gimnasio' },
   { clave: 'pizarra', etiqueta: '🎯 Pizarra Táctica' },
-  { clave: 'sesiones_pizarra', etiqueta: '📋 Sesiones' },
+  { clave: 'sesiones_pizarra', etiqueta: '📋 Sesiones Pista' },
 ]
 
 const diasAtras = (n) => {
@@ -262,6 +264,7 @@ export default function App() {
             />
           )
           : pestana === 'entrenamiento' ? <BibliotecaEjercicios />
+          : pestana === 'gimnasio' ? <Gimnasio perfil={perfil} />
           : pestana === 'pizarra' ? <PizarraTactica />
           : pestana === 'sesiones_pizarra' ? <SesionesPizarra perfil={perfil} />
           : pestana === 'jugadores' ? <Jugadores equipoActivo={equipoActivo} />
