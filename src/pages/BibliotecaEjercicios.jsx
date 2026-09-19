@@ -2,23 +2,26 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import './BibliotecaEjercicios.css'
 
-const categorias = ['Fuerza', 'Metabólico', 'Velocidad', 'Pliometría', 'Agilidad']
+const categorias = [
+  'Fuerza', 'Metabólico', 'Velocidad', 'Aceleración', 'Deceleración', 'Pliometría',
+  'Agilidad', 'Coordinación', 'Movilidad', 'Olímpico',
+]
 const miembros = ['Central', 'Inferior', 'Superior']
 const lateralidades = ['Mixto', 'Unilateral', 'Bilateral']
 const patrones = [
   'Aducción', 'Abducción', 'Empuje Vertical', 'Tracción Vertical', 'Empuje Horizontal',
   'Tracción Horizontal', 'Bisagra', 'Sentadilla', 'Flexión', 'Extensión',
-  'Inclinación Lateral', 'Rotación', 'Split',
+  'Inclinación Lateral', 'Rotación', 'Split', 'Plancha', 'Carrera', 'CoD', 'Cuadrupédia', 'Hip Lock',
 ]
 const contraccionesPorFamilia = {
-  'Dinámico': ['Balístico', 'Oscilatorio', 'Excéntrico', 'CEA'],
-  'Isométrico': ['Iso-Hold', 'Iso-Catch', 'Iso-Push', 'Iso-Switch'],
+  'Dinámico': ['Balístico', 'Oscilatorio', 'Excéntrico', 'CEA', 'Dinámico General'],
+  'Isométrico': ['ISO-Hold', 'ISO-Catch', 'ISO-Push', 'ISO-Switch'],
 }
 const materiales = [
-  'Goma', 'FitBall', 'ZeroRM', 'Mancuerna', 'Barra', 'Disco', 'Pelota Tenis', 'Banco',
-  'Pica Madera', 'Cono', 'Comba', 'BattleRope', 'Rack', 'Balón Medicinal', 'KettleBell',
+  'Goma', 'Fitball', 'ZeroRM', 'Mancuerna', 'Barra', 'Disco', 'Pelota Tenis', 'Banco',
+  'Pica Madera', 'Cono', 'Comba', 'BattleRope', 'Rack', 'Balón Medicinal', 'Kettlebell',
   'Saco Arena', 'Aquabag', 'Aquaball', 'Chaleco Lastrado', 'Barra Hexagonal', 'Safety Bar',
-  'SlamBall', 'Anillas', 'TRX',
+  'SlamBall', 'Anillas', 'TRX', 'Exergenie', 'Inercial', 'Rueda Abdominal', 'Airbike', 'Globo', 'Box Ball',
 ]
 
 const vacio = {
@@ -32,6 +35,7 @@ function extraerYoutubeId(url) {
     /youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/,
     /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/,
     /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+    /studio\.youtube\.com\/video\/([a-zA-Z0-9_-]{11})/,
   ]
   for (const p of patronesUrl) {
     const m = url.match(p)
