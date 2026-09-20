@@ -5,18 +5,6 @@
   max-width: 900px;
 }
 
-.entrenamiento-video-wrap {
-  padding: 0;
-  overflow: hidden;
-}
-
-.entrenamiento-video-wrap iframe {
-  width: 100%;
-  height: 100%;
-  border: none;
-  display: block;
-}
-
 .entrenamiento-video-boton {
   position: relative;
   padding: 0;
@@ -43,6 +31,71 @@
   color: white;
   text-shadow: 0 2px 8px rgba(0,0,0,0.6);
   background: rgba(0,0,0,0.15);
+}
+
+.entrenamiento-video-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 1000;
+}
+
+.entrenamiento-video-modal {
+  width: min(92vw, 900px);
+  background: var(--bg-elevated);
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.entrenamiento-video-modal-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.entrenamiento-video-modal-cabecera strong {
+  font-size: 14px;
+  color: var(--text);
+}
+
+.entrenamiento-video-cerrar {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+
+.entrenamiento-video-cerrar:hover {
+  color: var(--text);
+}
+
+.entrenamiento-video-modal-cuerpo {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+}
+
+.entrenamiento-video-modal-cuerpo iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
 }
 
 .entrenamiento-variables-lectura {
