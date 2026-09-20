@@ -4,7 +4,7 @@ import './Gimnasio.css'
 
 const itemVacio = {
   ejercicio_id: null, ejercicio: null,
-  series: '', repeticiones: '', repeticiones_por_lado: false, intensidad: '',
+  series: '', repeticiones: '', repeticiones_por_lado: false, intensidad: '', tempo: '',
   tiempo_trabajo: '', descanso_repeticiones: '', descanso_series: '', notas: '',
 }
 
@@ -68,6 +68,7 @@ function SeccionSesiones({ perfil }) {
   const [modalAbierto, setModalAbierto] = useState(false)
   const [bloqueDestinoIdx, setBloqueDestinoIdx] = useState(null)
   const [filtroBiblioteca, setFiltroBiblioteca] = useState('')
+  const [etiquetasFiltroBiblioteca, setEtiquetasFiltroBiblioteca] = useState([])
   const [guardando, setGuardando] = useState(false)
   const [mensaje, setMensaje] = useState(null)
 
@@ -232,6 +233,7 @@ function SeccionSesiones({ perfil }) {
           bloque_id: bloqueGuardado.id, ejercicio_id: it.ejercicio_id, orden: ii,
           series: it.series || null, repeticiones: it.repeticiones || null,
           repeticiones_por_lado: !!it.repeticiones_por_lado, intensidad: it.intensidad || null,
+          tempo: it.tempo || null,
           tiempo_trabajo: it.tiempo_trabajo || null,
           descanso_repeticiones: it.descanso_repeticiones || null,
           descanso_series: it.descanso_series || null,
@@ -262,16 +264,29 @@ function SeccionSesiones({ perfil }) {
     cargarPlantillas()
   }
 
+  const todasLasEtiquetasBiblioteca = useMemo(() => {
+    const set = new Set()
+    ejercicios.forEach((ej) => (ej.etiquetas || []).forEach((et) => set.add(et)))
+    return [...set].sort()
+  }, [ejercicios])
+
+  function alternarEtiquetaFiltroBiblioteca(et) {
+    setEtiquetasFiltroBiblioteca((prev) => (prev.includes(et) ? prev.filter((e) => e !== et) : [...prev, et]))
+  }
+
   const bibliotecaFiltrada = useMemo(() => {
     const q = filtroBiblioteca.trim().toLowerCase()
-    if (!q) return ejercicios
-    return ejercicios.filter((ej) =>
-      ej.nombre.toLowerCase().includes(q) ||
-      (ej.categoria || '').toLowerCase().includes(q) ||
-      (ej.patron || '').toLowerCase().includes(q) ||
-      (ej.material || []).some((m) => m.toLowerCase().includes(q))
-    )
-  }, [ejercicios, filtroBiblioteca])
+    return ejercicios.filter((ej) => {
+      const coincideTexto = !q ||
+        ej.nombre.toLowerCase().includes(q) ||
+        (ej.categoria || '').toLowerCase().includes(q) ||
+        (ej.patron || '').toLowerCase().includes(q) ||
+        (ej.material || []).some((m) => m.toLowerCase().includes(q)) ||
+        (ej.etiquetas || []).some((et) => et.toLowerCase().includes(q))
+      const coincideEtiquetas = etiquetasFiltroBiblioteca.every((et) => (ej.etiquetas || []).includes(et))
+      return coincideTexto && coincideEtiquetas
+    })
+  }, [ejercicios, filtroBiblioteca, etiquetasFiltroBiblioteca])
 
   if (cargando) return <p className="mono texto-dim">Cargando…</p>
 
@@ -370,6 +385,7 @@ function SeccionSesiones({ perfil }) {
                           <span>Por lado</span>
                         </label>
                         <input placeholder="Intensidad" value={it.intensidad} onChange={(e) => actualizarItem(bi, ii, { intensidad: e.target.value })} />
+                        <input placeholder="Tempo (ej. 3-1-1-0)" value={it.tempo} onChange={(e) => actualizarItem(bi, ii, { tempo: e.target.value })} />
                         <input placeholder="Duración / t. trabajo" value={it.tiempo_trabajo} onChange={(e) => actualizarItem(bi, ii, { tiempo_trabajo: e.target.value })} />
                         <input placeholder="Descanso entre reps." value={it.descanso_repeticiones} onChange={(e) => actualizarItem(bi, ii, { descanso_repeticiones: e.target.value })} />
                         <input placeholder="Descanso entre series" value={it.descanso_series} onChange={(e) => actualizarItem(bi, ii, { descanso_series: e.target.value })} />
@@ -408,9 +424,28 @@ function SeccionSesiones({ perfil }) {
 
             <input
               type="text" className="sesiones-modal-buscador" value={filtroBiblioteca}
-              onChange={(e) => setFiltroBiblioteca(e.target.value)} placeholder="Buscar por nombre, categoría, patrón o material…"
+              onChange={(e) => setFiltroBiblioteca(e.target.value)} placeholder="Buscar por nombre, categoría, patrón, material o etiqueta…"
               autoFocus
             />
+
+            {todasLasEtiquetasBiblioteca.length > 0 && (
+              <div className="pizarra-etiquetas-sugeridas sesiones-modal-etiquetas">
+                {todasLasEtiquetasBiblioteca.map((et) => (
+                  <button
+                    key={et} type="button"
+                    className={`pizarra-etiqueta-sugerida ${etiquetasFiltroBiblioteca.includes(et) ? 'sesiones-etiqueta-filtro-activa' : ''}`}
+                    onClick={() => alternarEtiquetaFiltroBiblioteca(et)}
+                  >
+                    {et}
+                  </button>
+                ))}
+                {etiquetasFiltroBiblioteca.length > 0 && (
+                  <button type="button" className="equipo-cambiar-link" onClick={() => setEtiquetasFiltroBiblioteca([])}>
+                    Quitar filtro de etiquetas
+                  </button>
+                )}
+              </div>
+            )}
 
             <p className="texto-dim sesiones-modal-contador">{bibliotecaFiltrada.length} ejercicio(s)</p>
 
@@ -433,6 +468,7 @@ function SeccionSesiones({ perfil }) {
                       <span className="pizarra-etiqueta-chip pizarra-etiqueta-chip-lectura">{ej.categoria}</span>
                       {ej.miembro && <span className="pizarra-etiqueta-chip pizarra-etiqueta-chip-lectura">{ej.miembro}</span>}
                       {ej.patron && <span className="pizarra-etiqueta-chip pizarra-etiqueta-chip-lectura">{ej.patron}</span>}
+                      {(ej.etiquetas || []).map((et) => <span key={et} className="pizarra-etiqueta-chip pizarra-etiqueta-chip-lectura">{et}</span>)}
                     </div>
                     <span className="sesiones-modal-item-anadir">+ Añadir</span>
                   </div>
@@ -667,12 +703,14 @@ function SeccionAsignar({ perfil }) {
   const [asignaciones, setAsignaciones] = useState([])
   const [clientes, setClientes] = useState([])
   const [jugadores, setJugadores] = useState([])
+  const [equipos, setEquipos] = useState([])
   const [plantillas, setPlantillas] = useState([])
   const [programas, setProgramas] = useState([])
   const [cargando, setCargando] = useState(true)
 
-  const [destinatarioTipo, setDestinatarioTipo] = useState('cliente')
-  const [destinatarioId, setDestinatarioId] = useState('')
+  const [destinatarioTipo, setDestinatarioTipo] = useState('jugador')
+  const [equipoFiltro, setEquipoFiltro] = useState('todos') // 'todos' | 'sin_asignar' | equipoId
+  const [idsSeleccionados, setIdsSeleccionados] = useState([])
   const [tipo, setTipo] = useState('sesion')
   const [plantillaId, setPlantillaId] = useState('')
   const [programaId, setProgramaId] = useState('')
@@ -685,18 +723,20 @@ function SeccionAsignar({ perfil }) {
 
   async function cargarTodo() {
     setCargando(true)
-    const [r1, r2, r3, r4, r5] = await Promise.all([
+    const [r1, r2, r3, r4, r5, r6] = await Promise.all([
       supabase.from('gimnasio_asignaciones').select('*').order('fecha_inicio', { ascending: false }),
       supabase.from('clientes').select('id, nombre').order('nombre'),
-      supabase.from('perfiles').select('id, nombre').eq('rol', 'jugador').order('nombre'),
+      supabase.from('perfiles').select('id, nombre, equipo_id').eq('rol', 'jugador').order('nombre'),
       supabase.from('gimnasio_plantillas').select('id, nombre').order('nombre'),
       supabase.from('gimnasio_programas').select('id, nombre').order('nombre'),
+      supabase.from('equipos').select('id, nombre').order('nombre'),
     ])
     setAsignaciones(r1.data || [])
     setClientes(r2.data || [])
     setJugadores(r3.data || [])
     setPlantillas(r4.data || [])
     setProgramas(r5.data || [])
+    setEquipos(r6.data || [])
     setCargando(false)
   }
 
@@ -710,10 +750,38 @@ function SeccionAsignar({ perfil }) {
     return programas.find((p) => p.id === a.programa_id)?.nombre || '—'
   }
 
+  function alCambiarDestinatarioTipo(valor) {
+    setDestinatarioTipo(valor)
+    setIdsSeleccionados([])
+    setEquipoFiltro('todos')
+  }
+
+  const jugadoresFiltrados = useMemo(() => {
+    if (destinatarioTipo !== 'jugador') return []
+    if (equipoFiltro === 'todos') return jugadores
+    if (equipoFiltro === 'sin_asignar') return jugadores.filter((j) => !j.equipo_id)
+    return jugadores.filter((j) => j.equipo_id === equipoFiltro)
+  }, [jugadores, destinatarioTipo, equipoFiltro])
+
+  const listaSeleccionable = destinatarioTipo === 'cliente' ? clientes : jugadoresFiltrados
+  const todoElGrupoMarcado = listaSeleccionable.length > 0 && listaSeleccionable.every((d) => idsSeleccionados.includes(d.id))
+
+  function alternarSeleccionado(id) {
+    setIdsSeleccionados((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
+  }
+
+  function alternarTodoElGrupo() {
+    if (todoElGrupoMarcado) {
+      setIdsSeleccionados((prev) => prev.filter((id) => !listaSeleccionable.some((d) => d.id === id)))
+    } else {
+      setIdsSeleccionados((prev) => [...new Set([...prev, ...listaSeleccionable.map((d) => d.id)])])
+    }
+  }
+
   async function crearAsignacion(e) {
     e.preventDefault()
-    if (!destinatarioId) {
-      setMensaje({ tipo: 'error', texto: 'Elige a quién se lo asignas.' })
+    if (idsSeleccionados.length === 0) {
+      setMensaje({ tipo: 'error', texto: 'Marca al menos un destinatario.' })
       return
     }
     if (tipo === 'sesion' && !plantillaId) {
@@ -730,7 +798,7 @@ function SeccionAsignar({ perfil }) {
     }
     setGuardando(true)
     setMensaje(null)
-    const { error } = await supabase.from('gimnasio_asignaciones').insert({
+    const filas = idsSeleccionados.map((destinatarioId) => ({
       destinatario_tipo: destinatarioTipo,
       destinatario_id: destinatarioId,
       tipo,
@@ -739,12 +807,13 @@ function SeccionAsignar({ perfil }) {
       fecha_inicio: fechaInicio,
       notas: notas || null,
       asignado_por: perfil?.id || null,
-    })
+    }))
+    const { error } = await supabase.from('gimnasio_asignaciones').insert(filas)
     if (error) {
       setMensaje({ tipo: 'error', texto: 'No se pudo asignar: ' + error.message })
     } else {
-      setMensaje({ tipo: 'ok', texto: 'Asignado correctamente.' })
-      setDestinatarioId(''); setPlantillaId(''); setProgramaId(''); setFechaInicio(''); setNotas('')
+      setMensaje({ tipo: 'ok', texto: `Asignado a ${filas.length} destinatario(s).` })
+      setIdsSeleccionados([]); setPlantillaId(''); setProgramaId(''); setFechaInicio(''); setNotas('')
       cargarTodo()
     }
     setGuardando(false)
@@ -756,8 +825,6 @@ function SeccionAsignar({ perfil }) {
     cargarTodo()
   }
 
-  const destinatarios = destinatarioTipo === 'cliente' ? clientes : jugadores
-
   if (cargando) return <p className="mono texto-dim">Cargando…</p>
 
   return (
@@ -765,21 +832,45 @@ function SeccionAsignar({ perfil }) {
       <h3>Asignar sesión o programa</h3>
       <section className="sesiones-form-card">
         <form onSubmit={crearAsignacion}>
-          <div className="fila-doble">
+          <label className="campo-sesion">
+            <span>Destinatarios</span>
+            <select value={destinatarioTipo} onChange={(e) => alCambiarDestinatarioTipo(e.target.value)}>
+              <option value="jugador">Jugadores de equipo</option>
+              <option value="cliente">Clientes de entrenamiento personal</option>
+            </select>
+          </label>
+
+          {destinatarioTipo === 'jugador' && (
             <label className="campo-sesion">
-              <span>Destinatario</span>
-              <select value={destinatarioTipo} onChange={(e) => { setDestinatarioTipo(e.target.value); setDestinatarioId('') }}>
-                <option value="cliente">Cliente de entrenamiento personal</option>
-                <option value="jugador">Jugador de equipo</option>
+              <span>Grupo</span>
+              <select value={equipoFiltro} onChange={(e) => setEquipoFiltro(e.target.value)}>
+                <option value="todos">Todos los equipos</option>
+                {equipos.map((eq) => <option key={eq.id} value={eq.id}>{eq.nombre}</option>)}
+                <option value="sin_asignar">Sin asignar</option>
               </select>
             </label>
-            <label className="campo-sesion">
-              <span>{destinatarioTipo === 'cliente' ? 'Cliente' : 'Jugador'}</span>
-              <select value={destinatarioId} onChange={(e) => setDestinatarioId(e.target.value)} required>
-                <option value="">Elige…</option>
-                {destinatarios.map((d) => <option key={d.id} value={d.id}>{d.nombre}</option>)}
-              </select>
-            </label>
+          )}
+
+          <div className="gimnasio-asignar-lista-card">
+            <div className="gimnasio-asignar-lista-cabecera">
+              <label className="campo-checkbox">
+                <input type="checkbox" checked={todoElGrupoMarcado} onChange={alternarTodoElGrupo} disabled={listaSeleccionable.length === 0} />
+                <span>Seleccionar todo el grupo ({listaSeleccionable.length})</span>
+              </label>
+              <span className="texto-dim">{idsSeleccionados.length} marcado(s)</span>
+            </div>
+            {listaSeleccionable.length === 0 ? (
+              <p className="texto-dim">No hay {destinatarioTipo === 'cliente' ? 'clientes' : 'jugadores'} en este grupo.</p>
+            ) : (
+              <div className="gimnasio-asignar-lista">
+                {listaSeleccionable.map((d) => (
+                  <label key={d.id} className="campo-checkbox gimnasio-asignar-item">
+                    <input type="checkbox" checked={idsSeleccionados.includes(d.id)} onChange={() => alternarSeleccionado(d.id)} />
+                    <span>{d.nombre}</span>
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="fila-doble">
@@ -822,7 +913,7 @@ function SeccionAsignar({ perfil }) {
 
           {mensaje && <div className={mensaje.tipo === 'ok' ? 'aviso-ok' : 'aviso-error'}>{mensaje.texto}</div>}
           <button type="submit" className="btn-principal" disabled={guardando}>
-            {guardando ? 'Asignando…' : '+ Asignar'}
+            {guardando ? 'Asignando…' : `+ Asignar${idsSeleccionados.length > 0 ? ` a ${idsSeleccionados.length}` : ''}`}
           </button>
         </form>
       </section>
