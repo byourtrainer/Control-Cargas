@@ -38,7 +38,7 @@ export default function EntrenamientoJugador({ perfil, onVolver }) {
   const [plantillaAbiertaId, setPlantillaAbiertaId] = useState(null)
   const [plantillaDetalle, setPlantillaDetalle] = useState(null)
   const [cargandoDetalle, setCargandoDetalle] = useState(false)
-  const [reproduciendoId, setReproduciendoId] = useState(null)
+  const [videoModal, setVideoModal] = useState(null)
 
   useEffect(() => { cargarAsignaciones() }, [])
 
@@ -87,7 +87,7 @@ export default function EntrenamientoJugador({ perfil, onVolver }) {
   async function abrirPlantilla(plantillaId) {
     setPlantillaAbiertaId(plantillaId)
     setCargandoDetalle(true)
-    setReproduciendoId(null)
+    setVideoModal(null)
     const { data: bloques } = await supabase
       .from('gimnasio_plantilla_bloques')
       .select('*')
@@ -111,6 +111,7 @@ export default function EntrenamientoJugador({ perfil, onVolver }) {
     setPlantillaAbiertaId(null)
     setPlantillaDetalle(null)
     setFechaAbierta(null)
+    setVideoModal(null)
   }
 
   const primerDiaSemana = (new Date(mesVisible.getFullYear(), mesVisible.getMonth(), 1).getDay() + 6) % 7
@@ -163,21 +164,14 @@ export default function EntrenamientoJugador({ perfil, onVolver }) {
                     {b.items.map((it) => (
                       <div className="sesiones-item-card" key={it.id}>
                         {it.ejercicio?.youtube_id ? (
-                          reproduciendoId === it.id ? (
-                            <div className="sesiones-item-imagen entrenamiento-video-wrap">
-                              <iframe
-                                src={`https://www.youtube.com/embed/${it.ejercicio.youtube_id}?autoplay=1`}
-                                title={it.ejercicio.nombre}
-                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                allowFullScreen
-                              />
-                            </div>
-                          ) : (
-                            <button type="button" className="sesiones-item-imagen entrenamiento-video-boton" onClick={() => setReproduciendoId(it.id)}>
-                              <img src={`https://img.youtube.com/vi/${it.ejercicio.youtube_id}/mqdefault.jpg`} alt={it.ejercicio.nombre} />
-                              <span className="biblioteca-tarjeta-play-icono">▶</span>
-                            </button>
-                          )
+                          <button
+                            type="button"
+                            className="sesiones-item-imagen entrenamiento-video-boton"
+                            onClick={() => setVideoModal({ youtubeId: it.ejercicio.youtube_id, nombre: it.ejercicio.nombre })}
+                          >
+                            <img src={`https://img.youtube.com/vi/${it.ejercicio.youtube_id}/mqdefault.jpg`} alt={it.ejercicio.nombre} />
+                            <span className="biblioteca-tarjeta-play-icono">▶</span>
+                          </button>
                         ) : (
                           <div className="sesiones-item-imagen gimnasio-item-sin-imagen">Sin vídeo</div>
                         )}
@@ -200,6 +194,24 @@ export default function EntrenamientoJugador({ perfil, onVolver }) {
                 )}
               </section>
             ))}
+          </div>
+        )}
+        {videoModal && (
+          <div className="entrenamiento-video-overlay" onClick={() => setVideoModal(null)}>
+            <div className="entrenamiento-video-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="entrenamiento-video-modal-cabecera">
+                <strong>{videoModal.nombre}</strong>
+                <button type="button" className="entrenamiento-video-cerrar" onClick={() => setVideoModal(null)}>✕</button>
+              </div>
+              <div className="entrenamiento-video-modal-cuerpo">
+                <iframe
+                  src={`https://www.youtube-nocookie.com/embed/${videoModal.youtubeId}?autoplay=1&playsinline=1&rel=0`}
+                  title={videoModal.nombre}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+            </div>
           </div>
         )}
       </div>
