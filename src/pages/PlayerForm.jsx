@@ -5,6 +5,7 @@ import Calendario from './Calendario'
 import SelectorCuerpo, { claveZona } from './SelectorCuerpo'
 import PerfilDeportivo from './PerfilDeportivo'
 import CicloMenstrual from './CicloMenstrual'
+import EntrenamientoJugador from './EntrenamientoJugador'
 import './PlayerForm.css'
 
 import { hoyISOLocal as hoyISO } from '../lib/fechas'
@@ -44,7 +45,7 @@ const escalas = [
 ]
 
 export default function PlayerForm({ perfil }) {
-  const [vista, setVista] = useState('calendario') // 'calendario' | 'dia' | 'perfil'
+  const [vista, setVista] = useState('calendario') // 'calendario' | 'dia' | 'perfil' | 'entrenamiento'
   const [fechaSeleccionada, setFechaSeleccionada] = useState(hoyISO())
 
   const [registroDia, setRegistroDia] = useState(null)
@@ -282,6 +283,9 @@ export default function PlayerForm({ perfil }) {
             <button type="button" className="perfil-deportivo-boton" onClick={() => setVista('perfil')}>
               📊 Ver mi Perfil Deportivo
             </button>
+            <button type="button" className="perfil-deportivo-boton" onClick={() => setVista('entrenamiento')}>
+              🏋 Ver mi Entrenamiento
+            </button>
 
             {misDatos.sexo === 'femenino' && <CicloMenstrual jugadorId={perfil.id} editable />}
 
@@ -370,6 +374,8 @@ export default function PlayerForm({ perfil }) {
         </div>
       ) : vista === 'perfil' ? (
         <PerfilDeportivo perfil={perfil} onVolver={() => setVista('calendario')} />
+      ) : vista === 'entrenamiento' ? (
+        <EntrenamientoJugador perfil={perfil} onVolver={() => setVista('calendario')} />
       ) : (
         <div className="player-layout">
           <div className="player-columna-principal">
