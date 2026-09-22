@@ -52,6 +52,7 @@ export default function App() {
   // --- Contexto único: jugador + rango de fechas, compartido entre pestañas ---
   const [jugadoresContexto, setJugadoresContexto] = useState([])
   const [jugadorActivo, setJugadorActivo] = useState('equipo')
+  const [posicionActiva, setPosicionActiva] = useState('todos')
   const [fechaDesde, setFechaDesde] = useState(diasAtras(20))
   const [fechaHasta, setFechaHasta] = useState(diasAtras(0))
   const [contextoAbierto, setContextoAbierto] = useState(false)
@@ -119,12 +120,17 @@ export default function App() {
   }
 
   async function cargarJugadoresContexto() {
-    const { data } = await supabase.from('perfiles').select('id, nombre, equipo_id').eq('rol', 'jugador').order('nombre')
+    const { data } = await supabase.from('perfiles').select('id, nombre, equipo_id, es_portero').eq('rol', 'jugador').order('nombre')
     setJugadoresContexto(data || [])
   }
 
   function alCambiarEquipoActivo(id) {
     setEquipoActivo(id)
+    setJugadorActivo('equipo')
+  }
+
+  function alCambiarPosicionActiva(valor) {
+    setPosicionActiva(valor)
     setJugadorActivo('equipo')
   }
 
@@ -157,13 +163,16 @@ export default function App() {
   }
 
   const jugadoresParaContexto = jugadoresContexto.filter((j) => {
-    if (equipoActivo === 'todos') return true
-    if (equipoActivo === 'sin_asignar') return !j.equipo_id
-    return j.equipo_id === equipoActivo
+    if (equipoActivo === 'sin_asignar' && j.equipo_id) return false
+    if (equipoActivo !== 'todos' && equipoActivo !== 'sin_asignar' && j.equipo_id !== equipoActivo) return false
+    if (posicionActiva === 'porteros' && !j.es_portero) return false
+    if (posicionActiva === 'jugadores' && j.es_portero) return false
+    return true
   })
 
   const etiquetaContexto = [
     equipoActivo === 'todos' ? 'Todos los equipos' : equipoActivo === 'sin_asignar' ? 'Sin asignar' : equipos.find((e) => e.id === equipoActivo)?.nombre || '…',
+    posicionActiva === 'porteros' ? 'Porteros' : posicionActiva === 'jugadores' ? 'Jugadores de campo' : null,
     jugadorActivo !== 'equipo' ? (jugadoresContexto.find((j) => j.id === jugadorActivo)?.nombre || '…') : null,
   ].filter(Boolean).join(' · ')
 
@@ -222,6 +231,14 @@ export default function App() {
                   </select>
                 </label>
                 <label className="contexto-campo">
+                  <span>Posición</span>
+                  <select value={posicionActiva} onChange={(e) => alCambiarPosicionActiva(e.target.value)}>
+                    <option value="todos">Todos</option>
+                    <option value="jugadores">Jugadores de campo</option>
+                    <option value="porteros">Porteros</option>
+                  </select>
+                </label>
+                <label className="contexto-campo">
                   <span>Jugador</span>
                   <select value={jugadorActivo} onChange={(e) => setJugadorActivo(e.target.value)}>
                     <option value="equipo">Todo el grupo</option>
@@ -239,7 +256,7 @@ export default function App() {
                   </label>
                 </div>
                 <p className="contexto-nota">
-                  Este equipo, jugador y rango de fechas se aplican en Resumen y en el mapa corporal de Fisio.
+                  Este equipo y jugador se aplican en Resumen y en el mapa corporal de Fisio. La posición (jugadores de campo / porteros) filtra solo el Resumen.
                 </p>
               </div>
             )}
@@ -280,7 +297,7 @@ export default function App() {
           )
           : (
             <CoachDashboard
-              equipoActivo={equipoActivo} jugadorActivo={jugadorActivo}
+              equipoActivo={equipoActivo} jugadorActivo={jugadorActivo} posicionActiva={posicionActiva}
               fechaDesde={fechaDesde} fechaHasta={fechaHasta}
             />
           )
