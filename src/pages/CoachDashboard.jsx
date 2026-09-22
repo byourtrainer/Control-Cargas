@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+   import { useEffect, useMemo, useState } from 'react'
 import {
   ResponsiveContainer, LineChart, Line, ReferenceArea,
   XAxis, YAxis, CartesianGrid, Tooltip,
@@ -260,7 +260,7 @@ function detectarSesionInusual(suyos, hoyISO) {
   return { cargaHoy: registroHoy.carga, media: Math.round(media), alta: z > 0 }
 }
 
-export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo = 'equipo', fechaDesde, fechaHasta }) {
+export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo = 'equipo', posicionActiva = 'todos', fechaDesde, fechaHasta }) {
   const [jugadores, setJugadores] = useState([])
   const [registros, setRegistros] = useState([])
   const [sesiones, setSesiones] = useState([])
@@ -292,7 +292,7 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
       supabase.from('perfiles').select('*, equipos(id, nombre, logo_base64)').eq('rol', 'jugador').order('nombre'),
       supabase.from('registros_diarios').select('*').gte('fecha', diasAtras(400)).order('fecha'),
       supabase.from('sesiones').select('fecha, mdx').gte('fecha', diasAtras(400)),
-      supabase.from('eventos_calendario').select('fecha')
+      supabase.from('eventos_calendario').select('fecha, equipo_id, jugador_id')
         .in('tipo', ['Amistoso', 'Liga', 'Europa', 'Copa del Rey', 'Play-Off'])
         .gte('fecha', diasAtras(400)),
     ])
@@ -303,25 +303,44 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
     setCargando(false)
   }
 
+  const jugadoresFiltrados = useMemo(() => {
+    let lista = jugadores
+    if (equipoActivo === 'sin_asignar') lista = lista.filter((j) => !j.equipo_id)
+    else if (equipoActivo !== 'todos') lista = lista.filter((j) => j.equipo_id === equipoActivo)
+    if (posicionActiva === 'porteros') lista = lista.filter((j) => j.es_portero)
+    else if (posicionActiva === 'jugadores') lista = lista.filter((j) => !j.es_portero)
+    return lista
+  }, [jugadores, equipoActivo, posicionActiva])
+
   // "Día de partido" se basa en el TIPO real del evento del Calendario
   // (Amistoso/Liga/Europa/Copa del Rey/Play-Off) — no en la etiqueta de
   // ciclo "MD" de Planificación, que el entrenador puede poner en
   // cualquier sesión de entrenamiento normal para marcar su periodización,
   // sin que eso signifique que ese día haya un partido de verdad.
-  const diasPartido = useMemo(
-    () => new Set(eventosPartido.map((e) => e.fecha)),
-    [eventosPartido]
+  // Se limita a los equipos/jugadores realmente visibles en el grupo activo:
+  // un evento de partido de OTRO equipo no debe marcar ese día como partido
+  // aquí, aunque caiga en la misma fecha.
+  const equiposRelevantes = useMemo(
+    () => new Set(jugadoresFiltrados.map((j) => j.equipo_id).filter(Boolean)),
+    [jugadoresFiltrados]
   )
+  const idsJugadoresRelevantes = useMemo(
+    () => new Set(jugadoresFiltrados.map((j) => j.id)),
+    [jugadoresFiltrados]
+  )
+  const diasPartido = useMemo(() => {
+    const fechas = eventosPartido
+      .filter((e) =>
+        (e.equipo_id && equiposRelevantes.has(e.equipo_id)) ||
+        (e.jugador_id && idsJugadoresRelevantes.has(e.jugador_id))
+      )
+      .map((e) => e.fecha)
+    return new Set(fechas)
+  }, [eventosPartido, equiposRelevantes, idsJugadoresRelevantes])
   const diasEntrenamiento = useMemo(
     () => new Set(sesiones.filter((s) => !diasPartido.has(s.fecha)).map((s) => s.fecha)),
     [sesiones, diasPartido]
   )
-
-  const jugadoresFiltrados = useMemo(() => {
-    if (equipoActivo === 'todos') return jugadores
-    if (equipoActivo === 'sin_asignar') return jugadores.filter((j) => !j.equipo_id)
-    return jugadores.filter((j) => j.equipo_id === equipoActivo)
-  }, [jugadores, equipoActivo])
 
   const jugadoresGrafico = useMemo(() => (
     jugadorActivo === 'equipo'
