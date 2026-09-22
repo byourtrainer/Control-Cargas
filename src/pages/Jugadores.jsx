@@ -64,6 +64,12 @@ export default function Jugadores({ equipoActivo = 'todos' }) {
     cargarJugadores()
   }
 
+  async function alternarPortero(j) {
+    const nuevoValor = !j.es_portero
+    setJugadores((prev) => prev.map((p) => (p.id === j.id ? { ...p, es_portero: nuevoValor } : p)))
+    await supabase.from('perfiles').update({ es_portero: nuevoValor }).eq('id', j.id)
+  }
+
   async function eliminarJugador(j) {
     const escrito = window.prompt(
       `Esto eliminará PARA SIEMPRE la cuenta de ${j.nombre} y todos sus datos (registros diarios, tests, lesiones, ciclo...). No se puede deshacer.\n\nEscribe su nombre exacto para confirmar:`
@@ -116,7 +122,7 @@ export default function Jugadores({ equipoActivo = 'todos' }) {
         <table className="jugadores-plantilla-tabla">
           <thead>
             <tr>
-              <th>Jugador</th><th>Equipo</th><th>Peso corporal</th><th>Altura</th>
+              <th>Jugador</th><th>Equipo</th><th>Posición</th><th>Peso corporal</th><th>Altura</th>
               <th>Fecha nacimiento</th><th>Sexo</th><th>Ciclo</th><th>Dado de alta</th><th></th>
             </tr>
           </thead>
@@ -133,6 +139,16 @@ export default function Jugadores({ equipoActivo = 'todos' }) {
                   ) : (
                     <span className="texto-dim">Sin asignar</span>
                   )}
+                </td>
+                <td>
+                  <button
+                    type="button"
+                    className={`posicion-boton ${j.es_portero ? 'posicion-boton-portero' : ''}`}
+                    onClick={() => alternarPortero(j)}
+                    title="Marcar/desmarcar como portero"
+                  >
+                    {j.es_portero ? '🧤 Portero' : 'Jugador de campo'}
+                  </button>
                 </td>
                 <td className="mono">
                   {editandoPeso === j.id ? (
