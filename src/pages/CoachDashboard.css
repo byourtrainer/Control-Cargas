@@ -50,6 +50,26 @@
   gap: 16px;
 }
 
+/* Cuando el grupo activo mezcla jugadores de campo y porteros, las
+   tarjetas de resumen se desdoblan en un bloque por posición para que
+   ninguna media salga contaminada por el otro perfil. */
+.tarjetas-resumen-grupo {
+  margin-bottom: 20px;
+}
+
+.tarjetas-resumen-grupo-titulo {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin: 0 0 10px;
+}
+
+.tarjetas-resumen-grupo-grid {
+  margin-bottom: 0;
+}
+
 .tarjeta-resumen {
   background: var(--bg-card);
   border: 1px solid var(--line);

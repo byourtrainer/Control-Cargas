@@ -313,14 +313,31 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
     setCargando(false)
   }
 
+  // Grupo del equipo activo SIN filtrar por posición — se usa como base para
+  // las comparaciones "vs. su grupo", que siempre deben quedarse dentro de
+  // jugadores de campo o porteros por separado (más abajo, gruposPosicion),
+  // sin importar qué tenga elegido el selector de Posición.
+  const jugadoresEquipo = useMemo(() => {
+    if (equipoActivo === 'sin_asignar') return jugadores.filter((j) => !j.equipo_id)
+    if (equipoActivo !== 'todos') return jugadores.filter((j) => j.equipo_id === equipoActivo)
+    return jugadores
+  }, [jugadores, equipoActivo])
+
   const jugadoresFiltrados = useMemo(() => {
-    let lista = jugadores
-    if (equipoActivo === 'sin_asignar') lista = lista.filter((j) => !j.equipo_id)
-    else if (equipoActivo !== 'todos') lista = lista.filter((j) => j.equipo_id === equipoActivo)
-    if (posicionActiva === 'porteros') lista = lista.filter((j) => j.es_portero)
-    else if (posicionActiva === 'jugadores') lista = lista.filter((j) => !j.es_portero)
-    return lista
-  }, [jugadores, equipoActivo, posicionActiva])
+    if (posicionActiva === 'porteros') return jugadoresEquipo.filter((j) => j.es_portero)
+    if (posicionActiva === 'jugadores') return jugadoresEquipo.filter((j) => !j.es_portero)
+    return jugadoresEquipo
+  }, [jugadoresEquipo, posicionActiva])
+
+  // Jugadores de campo y porteros del equipo activo, siempre separados —
+  // independientemente del selector de Posición. Una sesión dura para un
+  // jugador puede ser floja para un portero (y viceversa), así que cualquier
+  // "media del equipo" para comparar a alguien debe salir de su propio
+  // grupo, nunca de los dos mezclados.
+  const gruposPosicion = useMemo(() => ({
+    jugador: jugadoresEquipo.filter((j) => !j.es_portero),
+    portero: jugadoresEquipo.filter((j) => j.es_portero),
+  }), [jugadoresEquipo])
 
   // "Día de partido" se basa en el TIPO real del evento del Calendario
   // (Amistoso/Liga/Europa/Copa del Rey/Play-Off) — no en la etiqueta de
@@ -449,39 +466,41 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
       }
     }
 
-    const registrosPeriodo = registros.filter((r) =>
-      jugadoresGrafico.some((j) => j.id === r.jugador_id) && r.fecha >= periodoInicio && r.fecha <= periodoFin
-    )
-    const jugadoresConRegistro = jugadoresGrafico.filter((j) =>
-      registrosPeriodo.some((r) => r.jugador_id === j.id && r.rpe !== null && r.rpe !== undefined)
-    ).length
-    const bienestares = registrosPeriodo.map((r) => calcularBienestar(r)).filter((v) => v !== null && v !== undefined)
-    const bienestarMedio = bienestares.length ? bienestares.reduce((a, b) => a + b, 0) / bienestares.length : null
-    const nivelBienestar = clasificarBienestar(bienestarMedio)
+    // Tarjetas de grupo para una lista de jugadores dada — se reutiliza tal
+    // cual, o una vez por posición cuando el grupo mezcla jugadores de campo
+    // y porteros, para que ninguna media salga contaminada por el otro perfil.
+    function tarjetasDeGrupo(lista) {
+      const registrosPeriodo = registros.filter((r) =>
+        lista.some((j) => j.id === r.jugador_id) && r.fecha >= periodoInicio && r.fecha <= periodoFin
+      )
+      const jugadoresConRegistro = lista.filter((j) =>
+        registrosPeriodo.some((r) => r.jugador_id === j.id && r.rpe !== null && r.rpe !== undefined)
+      ).length
+      const bienestares = registrosPeriodo.map((r) => calcularBienestar(r)).filter((v) => v !== null && v !== undefined)
+      const bienestarMedio = bienestares.length ? bienestares.reduce((a, b) => a + b, 0) / bienestares.length : null
+      const nivelBienestar = clasificarBienestar(bienestarMedio)
 
-    const metricasPorJugador = jugadoresGrafico.map((j) => {
-      const suyos = registros.filter((r) => r.jugador_id === j.id)
-      return calcularMetricas(suyos, metodoACWR, periodoFinDate)
-    })
-    const enRiesgo = metricasPorJugador.filter((m) => {
-      const r = clasificarRiesgoACWR(m.acwrPost)
-      return r === 'alta' || r === 'muy_alta'
-    }).length
+      const metricasPorJugador = lista.map((j) => {
+        const suyos = registros.filter((r) => r.jugador_id === j.id)
+        return calcularMetricas(suyos, metodoACWR, periodoFinDate)
+      })
+      const enRiesgo = metricasPorJugador.filter((m) => {
+        const r = clasificarRiesgoACWR(m.acwrPost)
+        return r === 'alta' || r === 'muy_alta'
+      }).length
 
-    const media = (arr) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null)
-    const cargaTotalGrupo = jugadoresGrafico.reduce((acc, j) => (
-      acc + registrosPeriodo.filter((r) => r.jugador_id === j.id).reduce((a, r) => a + (r.carga || 0), 0)
-    ), 0)
-    const cargaMediaJugador = jugadoresGrafico.length ? cargaTotalGrupo / jugadoresGrafico.length : null
-    const acwrMedio = media(metricasPorJugador.map((m) => m.acwrPost).filter((v) => v !== null && v !== undefined))
-    const monotoniaMedia = media(metricasPorJugador.map((m) => m.monotonia).filter((v) => v !== null && v !== undefined))
-    const fatigaMedia = media(metricasPorJugador.map((m) => m.fatiga).filter((v) => v !== null && v !== undefined))
+      const media = (arr) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null)
+      const cargaTotalGrupo = lista.reduce((acc, j) => (
+        acc + registrosPeriodo.filter((r) => r.jugador_id === j.id).reduce((a, r) => a + (r.carga || 0), 0)
+      ), 0)
+      const cargaMediaJugador = lista.length ? cargaTotalGrupo / lista.length : null
+      const acwrMedio = media(metricasPorJugador.map((m) => m.acwrPost).filter((v) => v !== null && v !== undefined))
+      const monotoniaMedia = media(metricasPorJugador.map((m) => m.monotonia).filter((v) => v !== null && v !== undefined))
+      const fatigaMedia = media(metricasPorJugador.map((m) => m.fatiga).filter((v) => v !== null && v !== undefined))
 
-    return {
-      modo: 'grupo',
-      tarjetas: [
-        { etiqueta: 'Jugadores en el grupo', valor: jugadoresGrafico.length },
-        { etiqueta: 'Registraron en el periodo', valor: `${jugadoresConRegistro} / ${jugadoresGrafico.length}` },
+      return [
+        { etiqueta: 'Jugadores en el grupo', valor: lista.length },
+        { etiqueta: 'Registraron en el periodo', valor: `${jugadoresConRegistro} / ${lista.length}` },
         { etiqueta: 'Carga media por jugador', valor: cargaMediaJugador !== null ? Math.round(cargaMediaJugador) : '—' },
         {
           etiqueta: 'Bienestar medio del grupo', valor: traducirBienestar(nivelBienestar),
@@ -491,9 +510,26 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
         { etiqueta: 'Monotonía media del grupo', valor: monotoniaMedia !== null ? monotoniaMedia.toFixed(2) : '—' },
         { etiqueta: 'Fatiga (Strain) media del grupo', valor: fatigaMedia !== null ? Math.round(fatigaMedia) : '—' },
         { etiqueta: 'En riesgo (ACWR alto/muy alto)', valor: enRiesgo, tono: enRiesgo > 0 ? 'alto' : null },
-      ],
+      ]
     }
-  }, [jugadorActivo, jugadoresGrafico, registros, metodoACWR, buckets])
+
+    // Si el filtro de Posición está en "Todos" y el grupo activo tiene a la
+    // vez jugadores de campo y porteros, se desdobla en dos bloques de
+    // tarjetas en vez de dar una única media mezclada.
+    const hayPorteros = jugadoresGrafico.some((j) => j.es_portero)
+    const hayCampo = jugadoresGrafico.some((j) => !j.es_portero)
+    if (posicionActiva === 'todos' && hayPorteros && hayCampo) {
+      return {
+        modo: 'grupo_dividido',
+        grupos: [
+          { etiqueta: 'Jugadores de campo', tarjetas: tarjetasDeGrupo(jugadoresGrafico.filter((j) => !j.es_portero)) },
+          { etiqueta: '🧤 Porteros', tarjetas: tarjetasDeGrupo(jugadoresGrafico.filter((j) => j.es_portero)) },
+        ],
+      }
+    }
+
+    return { modo: 'grupo', tarjetas: tarjetasDeGrupo(jugadoresGrafico) }
+  }, [jugadorActivo, jugadoresGrafico, registros, metodoACWR, buckets, posicionActiva])
 
   // --- Bienestar de hoy: vistazo rápido antes de empezar la sesión, independiente del rango elegido ---
   // --- Bienestar y RPE del día: vistazo por jugador, para una fecha elegible (por defecto hoy) ---
@@ -508,6 +544,7 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
         return {
           id: j.id,
           nombre: j.nombre,
+          esPortero: !!j.es_portero,
           valor,
           nivel: clasificarBienestar(valor),
           molestia: !!registro?.tiene_molestia,
@@ -533,7 +570,7 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
           return { fecha, rpe: registro?.rpe ?? null }
         })
         const diasConRpe = celdas.filter((c) => c.rpe !== null).length
-        return { id: j.id, nombre: j.nombre, celdas, diasConRpe }
+        return { id: j.id, nombre: j.nombre, esPortero: !!j.es_portero, celdas, diasConRpe }
       })
       .sort((a, b) => a.diasConRpe - b.diasConRpe || a.nombre.localeCompare(b.nombre))
   }, [jugadoresFiltrados, registros, diasRpeSemana])
@@ -554,48 +591,53 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
     const inicioSemana = (() => { const d = new Date(hoy + 'T00:00:00'); d.setDate(d.getDate() - 6); return fechaISOLocal(d) })()
     const sesionesSemana = sesiones.filter((s) => s.fecha >= inicioSemana && s.fecha <= hoy)
 
-    const mediaHoy = mediaEquipoRPE(hoy, jugadoresFiltrados, registros)
+    // Media de RPE de hoy, calculada por separado para jugadores de campo y
+    // para porteros — nunca mezclados, aunque el selector esté en "Todos".
+    const mediaHoyCampo = mediaEquipoRPE(hoy, gruposPosicion.jugador, registros)
+    const mediaHoyPorteros = mediaEquipoRPE(hoy, gruposPosicion.portero, registros)
 
     jugadoresFiltrados.forEach((j) => {
       const suyos = registros.filter((r) => r.jugador_id === j.id)
+      const etiqueta = `${j.es_portero ? '🧤 ' : ''}${j.nombre}`
 
       const registroAyer = suyos.find((r) => r.fecha === ayer)
       if (!registroAyer || registroAyer.rpe === null || registroAyer.rpe === undefined) {
-        sinRpeAyer.push(j.nombre)
+        sinRpeAyer.push(etiqueta)
       }
 
       const metricas = calcularMetricas(suyos, metodoACWR, new Date(hoy + 'T00:00:00'))
       const riesgo = clasificarRiesgoACWR(metricas.acwrPost)
-      if (riesgo === 'alta' || riesgo === 'muy_alta') enRiesgo.push(j.nombre)
+      if (riesgo === 'alta' || riesgo === 'muy_alta') enRiesgo.push(etiqueta)
 
       const registroHoy = suyos.find((r) => r.fecha === hoy)
-      if (registroHoy?.tiene_molestia) conMolestiaHoy.push(`${j.nombre} (${(registroHoy.zonas_molestia || []).join(', ') || 'sin zona'})`)
+      if (registroHoy?.tiene_molestia) conMolestiaHoy.push(`${etiqueta} (${(registroHoy.zonas_molestia || []).join(', ') || 'sin zona'})`)
 
-      if (mediaHoy !== null && registroHoy?.rpe !== null && registroHoy?.rpe !== undefined) {
-        const desviacion = registroHoy.rpe - mediaHoy
+      const mediaHoyGrupo = j.es_portero ? mediaHoyPorteros : mediaHoyCampo
+      if (mediaHoyGrupo !== null && registroHoy?.rpe !== null && registroHoy?.rpe !== undefined) {
+        const desviacion = registroHoy.rpe - mediaHoyGrupo
         if (Math.abs(desviacion) >= 2) {
-          respuestaAtipica.push(`${j.nombre} (RPE ${registroHoy.rpe} vs ${mediaHoy.toFixed(1)} del equipo)`)
+          respuestaAtipica.push(`${etiqueta} (RPE ${registroHoy.rpe} vs ${mediaHoyGrupo.toFixed(1)} ${j.es_portero ? 'de los porteros' : 'de los jugadores de campo'})`)
         }
       }
 
       const huecos = sesionesSemana.filter((s) => !suyos.some((r) => r.fecha === s.fecha && r.rpe !== null && r.rpe !== undefined)).length
       if (huecos > 0 && sesionesSemana.length > 0) {
-        huecosDatos.push(`${j.nombre} (${huecos}/${sesionesSemana.length})`)
+        huecosDatos.push(`${etiqueta} (${huecos}/${sesionesSemana.length})`)
       }
 
       const inusual = detectarSesionInusual(suyos, hoy)
       if (inusual) {
-        sesionInusual.push(`${j.nombre} (${inusual.cargaHoy} vs media ${inusual.media}, ${inusual.alta ? '↑' : '↓'})`)
+        sesionInusual.push(`${etiqueta} (${inusual.cargaHoy} vs media ${inusual.media}, ${inusual.alta ? '↑' : '↓'})`)
       }
 
       const deltaHoy = deltaBienestarDiario(suyos, new Date(hoy + 'T00:00:00'))
       if (clasificarDeltaDiario(deltaHoy) === 'alerta') {
-        caidaBienestar.push(`${j.nombre} (${deltaHoy.toFixed(1)})`)
+        caidaBienestar.push(`${etiqueta} (${deltaHoy.toFixed(1)})`)
       }
     })
 
     return { sinRpeAyer, enRiesgo, conMolestiaHoy, respuestaAtipica, huecosDatos, sesionInusual, caidaBienestar }
-  }, [jugadoresFiltrados, registros, sesiones, metodoACWR, fechaEstadoDia])
+  }, [jugadoresFiltrados, gruposPosicion, registros, sesiones, metodoACWR, fechaEstadoDia])
 
   // --- Mapa de calor jugador × día ---
   const diasMapaCalor = useMemo(() => {
@@ -621,7 +663,10 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
         }
         if (variableMapaCalor === 'desviacion') {
           const registro = suyos.find((r) => r.fecha === fechaISO)
-          const mediaEquipo = mediaEquipoRPE(fechaISO, jugadoresFiltrados, registros)
+          // Media de su propio grupo (jugadores de campo o porteros), nunca
+          // de los dos mezclados — igual que en las alertas del día.
+          const companeros = j.es_portero ? gruposPosicion.portero : gruposPosicion.jugador
+          const mediaEquipo = mediaEquipoRPE(fechaISO, companeros, registros)
           if (!registro || registro.rpe === null || registro.rpe === undefined || mediaEquipo === null) {
             return { fechaISO, color: 'var(--line)', valor: 'sin datos' }
           }
@@ -629,7 +674,7 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
           return {
             fechaISO, color: colorDesviacion(Math.abs(desviacion)),
             direccion: desviacion === 0 ? null : desviacion > 0 ? 'alta' : 'baja',
-            valor: `RPE ${registro.rpe} · equipo ${mediaEquipo.toFixed(1)} (${desviacion > 0 ? '+' : ''}${desviacion.toFixed(1)})`,
+            valor: `RPE ${registro.rpe} · ${j.es_portero ? 'porteros' : 'jugadores de campo'} ${mediaEquipo.toFixed(1)} (${desviacion > 0 ? '+' : ''}${desviacion.toFixed(1)})`,
           }
         }
         const registro = suyos.find((r) => r.fecha === fechaISO)
@@ -637,9 +682,9 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
         const nivel = clasificarBienestar(bienestar)
         return { fechaISO, color: colorNivelBienestar[nivel], valor: bienestar !== null ? traducirBienestar(nivel) : 'sin datos' }
       })
-      return { nombre: j.nombre, celdas }
+      return { nombre: j.nombre, esPortero: !!j.es_portero, celdas }
     })
-  }, [jugadoresGrafico, jugadoresFiltrados, registros, diasMapaCalor, variableMapaCalor, metodoACWR])
+  }, [jugadoresGrafico, gruposPosicion, registros, diasMapaCalor, variableMapaCalor, metodoACWR])
 
   // --- Comentario general del informe (uno solo, ligado al contexto actual) ---
   const claveContexto = jugadorActivo === 'equipo' ? `equipo:${equipoActivo}` : `jugador:${jugadorActivo}`
@@ -749,7 +794,10 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
               <div key={j.id} className={`bienestar-hoy-tarjeta bienestar-hoy-${j.nivel}`}>
                 {j.molestia && <span className="bienestar-hoy-molestia" title="Molestia reportada ese día">⚠</span>}
                 <span className="bienestar-hoy-punto" />
-                <strong className="bienestar-hoy-nombre">{j.nombre}</strong>
+                <strong className="bienestar-hoy-nombre">
+                  {j.esPortero && <span title="Portero">🧤 </span>}
+                  {j.nombre}
+                </strong>
                 <span className="bienestar-hoy-etiqueta">{traducirBienestar(j.nivel)}</span>
                 {j.valor !== null && <span className="bienestar-hoy-numero mono">{j.valor.toFixed(1)}</span>}
                 <span className="bienestar-hoy-rpe mono" style={{ color: colorParaValor(j.rpe, 10) }}>
@@ -789,7 +837,7 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
             )}
           </div>
           <div className={`alerta-bloque ${alertasDelDia.respuestaAtipica.length ? 'alerta-activa' : ''}`}>
-            <span className="alerta-titulo" title="RPE de hoy con una diferencia de 2 puntos o más respecto a la media del equipo">
+            <span className="alerta-titulo" title="RPE de hoy con una diferencia de 2 puntos o más respecto a la media de su grupo — jugadores de campo y porteros se comparan siempre por separado">
               Respuesta atípica hoy
             </span>
             {alertasDelDia.respuestaAtipica.length === 0 ? (
@@ -856,7 +904,7 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
               <tbody>
                 {rpeSemana.map((j) => (
                   <tr key={j.id}>
-                    <td className="rpe-semana-nombre">{j.nombre}</td>
+                    <td className="rpe-semana-nombre">{j.esPortero && <span title="Portero">🧤 </span>}{j.nombre}</td>
                     {j.celdas.map((c) => (
                       <td key={c.fecha} className="rpe-semana-celda">
                         {c.rpe !== null ? (
@@ -876,11 +924,24 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
         )}
       </section>
 
-      <section className="tarjetas-resumen no-imprimir">
-        {resumenTarjetas?.tarjetas.map((t, i) => (
-          <TarjetaResumen key={i} etiqueta={t.etiqueta} valor={t.valor} tono={t.tono} />
-        ))}
-      </section>
+      {resumenTarjetas?.modo === 'grupo_dividido' ? (
+        resumenTarjetas.grupos.map((g) => (
+          <div key={g.etiqueta} className="tarjetas-resumen-grupo">
+            <h4 className="tarjetas-resumen-grupo-titulo">{g.etiqueta}</h4>
+            <section className="tarjetas-resumen tarjetas-resumen-grupo-grid no-imprimir">
+              {g.tarjetas.map((t, i) => (
+                <TarjetaResumen key={i} etiqueta={t.etiqueta} valor={t.valor} tono={t.tono} />
+              ))}
+            </section>
+          </div>
+        ))
+      ) : (
+        <section className="tarjetas-resumen no-imprimir">
+          {resumenTarjetas?.tarjetas.map((t, i) => (
+            <TarjetaResumen key={i} etiqueta={t.etiqueta} valor={t.valor} tono={t.tono} />
+          ))}
+        </section>
+      )}
 
       <section className={`mapa-calor-card ${resumenTarjetas?.modo === 'individual' ? 'no-imprimir' : ''}`}>
         <div className="mapa-calor-cabecera">
@@ -910,7 +971,7 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
             <tbody>
               {mapaCalor.map((fila) => (
                 <tr key={fila.nombre}>
-                  <td className="mapa-calor-td-jugador">{fila.nombre}</td>
+                  <td className="mapa-calor-td-jugador">{fila.esPortero && <span title="Portero">🧤 </span>}{fila.nombre}</td>
                   {fila.celdas.map((c) => (
                     <td key={c.fechaISO} className="mapa-calor-celda">
                       <span className="mapa-calor-punto" style={{ background: c.color }} title={`${c.fechaISO}: ${c.valor}`}>
@@ -929,8 +990,8 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
         </div>
         {mapaCalor.length === 0 && <p className="texto-dim">No hay jugadores en este grupo.</p>}
         <p className="grafico-nota texto-dim">
-          Un cuadrado gris en la cabecera de la fecha indica día de partido (MD).
-          {variableMapaCalor === 'desviacion' && ' ▲ = RPE por encima de la media del equipo · ▼ = por debajo.'}
+          Un cuadrado gris en la cabecera de la fecha indica día de partido (MD). 🧤 = portero.
+          {variableMapaCalor === 'desviacion' && ' ▲ = RPE por encima de la media de su grupo (jugadores de campo o porteros, comparados siempre por separado) · ▼ = por debajo.'}
         </p>
       </section>
 
