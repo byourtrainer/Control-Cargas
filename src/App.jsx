@@ -16,6 +16,7 @@ import PizarraTactica from './pages/PizarraTactica'
 import SesionesPizarra from './pages/SesionesPizarra'
 import PanelAdmin from './pages/PanelAdmin'
 import SeleccionarClub from './pages/SeleccionarClub'
+import { clubIdDePerfil } from './lib/alcance'
 import './App.css'
 
 const pestanasEntrenador = [
@@ -104,6 +105,8 @@ export default function App() {
 
   const esStaffCompleto = perfil?.rol === 'entrenador' || perfil?.rol === 'fisio' || perfil?.rol === 'administrador'
   const pestanasVisibles = pestanasEntrenador.filter((p) => p.clave !== 'admin' || perfil?.rol === 'administrador')
+  // Club al que se limita la vista de entrenador/fisio (null = sin límite, administrador).
+  const clubId = clubIdDePerfil(perfil)
 
   useEffect(() => {
     if (perfil?.rol === 'fisio') setPestana('fisio')
@@ -115,12 +118,21 @@ export default function App() {
   }, [perfil])
 
   async function cargarEquipos() {
-    const { data } = await supabase.from('equipos').select('*').order('nombre')
+    let consulta = supabase.from('equipos').select('*').order('nombre')
+    // Entrenador/fisio solo ven los equipos de su propio club.
+    if (clubId) consulta = consulta.eq('club_id', clubId)
+    const { data } = await consulta
     setEquipos(data || [])
   }
 
   async function cargarJugadoresContexto() {
-    const { data } = await supabase.from('perfiles').select('id, nombre, equipo_id, es_portero').eq('rol', 'jugador').order('nombre')
+    let consulta = supabase.from('perfiles').select('id, nombre, equipo_id, es_portero').eq('rol', 'jugador').order('nombre')
+    // Entrenador/fisio solo ven los jugadores de los equipos de su club
+    // (se filtra a través del club del equipo al que pertenece cada jugador).
+    if (clubId) consulta = supabase.from('perfiles')
+      .select('id, nombre, equipo_id, es_portero, equipos!inner(club_id)')
+      .eq('rol', 'jugador').eq('equipos.club_id', clubId).order('nombre')
+    const { data } = await consulta
     setJugadoresContexto(data || [])
   }
 
@@ -227,7 +239,9 @@ export default function App() {
                   <select value={equipoActivo} onChange={(e) => alCambiarEquipoActivo(e.target.value)}>
                     <option value="todos">Todos los equipos</option>
                     {equipos.map((eq) => <option key={eq.id} value={eq.id}>{eq.nombre}</option>)}
-                    <option value="sin_asignar">Sin asignar</option>
+                    {/* "Sin asignar" solo tiene sentido para el administrador: un jugador sin
+                        equipo no pertenece a ningún club, así que entrenador/fisio no lo ven. */}
+                    {!clubId && <option value="sin_asignar">Sin asignar</option>}
                   </select>
                 </label>
                 <label className="contexto-campo">
@@ -276,7 +290,7 @@ export default function App() {
           : pestana === 'referencias' ? <Referencias />
           : pestana === 'calendario' ? (
             <CalendarioClub
-              equipoActivo={equipoActivo} equipos={equipos}
+              perfil={perfil} equipoActivo={equipoActivo} equipos={equipos}
               jugadorActivo={jugadorActivo} fechaDesde={fechaDesde} fechaHasta={fechaHasta}
             />
           )
@@ -284,8 +298,8 @@ export default function App() {
           : pestana === 'gimnasio' ? <Gimnasio perfil={perfil} />
           : pestana === 'pizarra' ? <PizarraTactica />
           : pestana === 'sesiones_pizarra' ? <SesionesPizarra perfil={perfil} />
-          : pestana === 'jugadores' ? <Jugadores equipoActivo={equipoActivo} />
-          : pestana === 'tests' ? <Tests equipoActivo={equipoActivo} />
+          : pestana === 'jugadores' ? <Jugadores perfil={perfil} equipoActivo={equipoActivo} />
+          : pestana === 'tests' ? <Tests perfil={perfil} equipoActivo={equipoActivo} />
           : pestana === 'equipos' ? (
             <Equipos
               equipos={equipos}
@@ -297,6 +311,7 @@ export default function App() {
           )
           : (
             <CoachDashboard
+              perfil={perfil} equipos={equipos}
               equipoActivo={equipoActivo} jugadorActivo={jugadorActivo} posicionActiva={posicionActiva}
               fechaDesde={fechaDesde} fechaHasta={fechaHasta}
             />
