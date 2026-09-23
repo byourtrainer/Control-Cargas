@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { clubIdDePerfil } from '../lib/alcance'
 import './Equipos.css'
 
 const coloresSugeridos = ['#c8ff4d', '#4dc8ff', '#ff4d8f', '#ffb84d', '#a24dff', '#4dffb8', '#ff6b4d', '#4d6bff']
@@ -15,12 +16,31 @@ export default function Equipos({ equipos, equipoActivo, onCambiarEquipoActivo, 
   const [subiendoLogoPersonal, setSubiendoLogoPersonal] = useState(false)
   const [logoPersonal, setLogoPersonal] = useState(perfil?.logo_base64 || null)
 
+  // Club al que se limita entrenador/fisio (null = administrador, sin límite).
+  const clubId = clubIdDePerfil(perfil)
+  const esAdmin = perfil?.rol === 'administrador'
+  const [clubes, setClubes] = useState([])
+  const [clubNuevoEquipo, setClubNuevoEquipo] = useState('')
+
+  // El administrador gestiona varios clubes a la vez, así que al crear un
+  // equipo aquí necesita elegir a qué club pertenece. Entrenador/fisio no
+  // ven este selector: su equipo nuevo se asigna automáticamente a su club.
+  useEffect(() => {
+    if (!esAdmin) return
+    supabase.from('clubes').select('id, nombre').order('nombre').then(({ data }) => setClubes(data || []))
+  }, [esAdmin])
+
   async function anadirEquipo(e) {
     e.preventDefault()
     if (!nuevoEquipo.trim()) return
+    if (esAdmin && !clubNuevoEquipo) {
+      setMensaje({ tipo: 'error', texto: 'Elige a qué club pertenece el equipo.' })
+      return
+    }
     setGuardando(true)
     setMensaje(null)
-    const { error } = await supabase.from('equipos').insert({ nombre: nuevoEquipo.trim(), color: colorNuevo })
+    const club_id = esAdmin ? clubNuevoEquipo : clubId
+    const { error } = await supabase.from('equipos').insert({ nombre: nuevoEquipo.trim(), color: colorNuevo, club_id })
     if (error) {
       setMensaje({ tipo: 'error', texto: 'No se pudo crear el equipo (¿ya existe ese nombre?).' })
     } else {
@@ -182,13 +202,17 @@ export default function Equipos({ equipos, equipoActivo, onCambiarEquipoActivo, 
             </div>
           ))}
 
-          <button
-            className={`equipo-opcion ${equipoActivo === 'sin_asignar' ? 'equipo-opcion-activa' : ''}`}
-            onClick={() => onCambiarEquipoActivo('sin_asignar')}
-          >
-            <span>Jugadores sin asignar</span>
-            {equipoActivo === 'sin_asignar' && <span className="check-activo">✓</span>}
-          </button>
+          {/* Un jugador "sin asignar" no pertenece a ningún club — solo tiene
+              sentido para el administrador, que ve todos los clubes a la vez. */}
+          {esAdmin && (
+            <button
+              className={`equipo-opcion ${equipoActivo === 'sin_asignar' ? 'equipo-opcion-activa' : ''}`}
+              onClick={() => onCambiarEquipoActivo('sin_asignar')}
+            >
+              <span>Jugadores sin asignar</span>
+              {equipoActivo === 'sin_asignar' && <span className="check-activo">✓</span>}
+            </button>
+          )}
         </div>
         {errorLogo && <div className="aviso-error" style={{ marginTop: 12 }}>{errorLogo}</div>}
       </section>
@@ -196,6 +220,15 @@ export default function Equipos({ equipos, equipoActivo, onCambiarEquipoActivo, 
       <section className="equipos-crear-card">
         <h3>Crear un equipo nuevo</h3>
         <form onSubmit={anadirEquipo} className="equipos-crear-form">
+          {esAdmin && (
+            <label className="equipos-color-selector">
+              <span>Club</span>
+              <select value={clubNuevoEquipo} onChange={(e) => setClubNuevoEquipo(e.target.value)} required>
+                <option value="">Selecciona un club</option>
+                {clubes.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+              </select>
+            </label>
+          )}
           <input
             type="text" value={nuevoEquipo}
             onChange={(e) => setNuevoEquipo(e.target.value)}

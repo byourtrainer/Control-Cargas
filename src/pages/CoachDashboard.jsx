@@ -9,6 +9,7 @@ import { calcularMetricas, clasificarRiesgoACWR, clasificarMonotonia, diferencia
 import { calcularBienestar, clasificarBienestar } from '../lib/bienestar'
 import { colorParaValor } from '../lib/colorEscalas'
 import { diferenciaBienestar, deltaBienestarDiario, deltaBienestarSemanal, clasificarDeltaDiario, bienestarAgudo, bienestarBasal } from '../lib/bienestarTendencia'
+import { clubIdDePerfil, idsOimposible } from '../lib/alcance'
 import './CoachDashboard.css'
 
 const diasAtras = (n) => {
@@ -260,7 +261,9 @@ function detectarSesionInusual(suyos, hoyISO) {
   return { cargaHoy: registroHoy.carga, media: Math.round(media), alta: z > 0 }
 }
 
-export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo = 'equipo', posicionActiva = 'todos', fechaDesde, fechaHasta }) {
+export default function CoachDashboard({ perfil, equipos = [], equipoActivo = 'todos', jugadorActivo = 'equipo', posicionActiva = 'todos', fechaDesde, fechaHasta }) {
+  // Club al que se limita entrenador/fisio (null = administrador, sin límite).
+  const clubId = clubIdDePerfil(perfil)
   const [jugadores, setJugadores] = useState([])
   const [registros, setRegistros] = useState([])
   const [sesiones, setSesiones] = useState([])
@@ -288,8 +291,36 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
 
   async function cargarDatos() {
     setCargando(true)
-    const [{ data: perfiles }, { data: regs }, { data: sess }, { data: partidos }] = await Promise.all([
-      supabase.from('perfiles').select('*, equipos(id, nombre, logo_base64)').eq('rol', 'jugador').order('nombre'),
+
+    // Entrenador/fisio solo deben ver los jugadores de los equipos de su
+    // club — se resuelve primero esa lista (y sus ids) para poder acotar
+    // también las consultas de registros/eventos que siguen a continuación.
+    // El administrador no tiene esta restricción (clubId === null).
+    let consultaJugadores = supabase.from('perfiles').select('*, equipos(id, nombre, logo_base64)').eq('rol', 'jugador').order('nombre')
+    if (clubId) consultaJugadores = supabase.from('perfiles')
+      .select('*, equipos!inner(id, nombre, logo_base64)').eq('rol', 'jugador').eq('equipos.club_id', clubId).order('nombre')
+    const { data: perfiles } = await consultaJugadores
+    const idsJugadoresClub = clubId ? idsOimposible((perfiles || []).map((j) => j.id)) : null
+    const idsEquiposClub = clubId ? idsOimposible(equipos.map((e) => e.id)) : null
+
+    let consultaRegistros = supabase.from('registros_diarios').select('*').gte('fecha', diasAtras(400)).order('fecha', { ascending: false }).limit(20000)
+    let consultaEventos = supabase.from('eventos_calendario').select('fecha, equipo_id, jugador_id')
+      .in('tipo', ['Amistoso', 'Liga', 'Europa', 'Copa del Rey', 'Play-Off'])
+      .gte('fecha', diasAtras(400))
+      .order('fecha', { ascending: false })
+      .limit(20000)
+    if (idsJugadoresClub) {
+      consultaRegistros = consultaRegistros.in('jugador_id', idsJugadoresClub)
+      // Un evento de partido puede apuntar a un equipo entero (equipo_id) o
+      // a un jugador suelto (jugador_id) — se acepta cualquiera de los dos
+      // siempre que pertenezca al club activo.
+      consultaEventos = consultaEventos.or(
+        `equipo_id.in.(${idsEquiposClub.join(',')}),jugador_id.in.(${idsJugadoresClub.join(',')})`
+      )
+    }
+
+    const [{ data: regs }, { data: sess }, { data: partidos }] = await Promise.all([
+      consultaRegistros,
       // Ordenado por fecha DESCENDENTE (lo más reciente primero) y con un
       // límite explícito: Supabase/PostgREST solo devuelve un número máximo
       // de filas por defecto (normalmente 1000). Con muchos jugadores
@@ -298,13 +329,8 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
       // justo los días MÁS RECIENTES (los de hoy/ayer), que es lo que estaba
       // pasando. Pidiéndolo descendente, si algo se recorta es lo más viejo,
       // que afecta mucho menos a lo que se ve en el Resumen.
-      supabase.from('registros_diarios').select('*').gte('fecha', diasAtras(400)).order('fecha', { ascending: false }).limit(20000),
       supabase.from('sesiones').select('fecha, mdx').gte('fecha', diasAtras(400)).order('fecha', { ascending: false }).limit(20000),
-      supabase.from('eventos_calendario').select('fecha, equipo_id, jugador_id')
-        .in('tipo', ['Amistoso', 'Liga', 'Europa', 'Copa del Rey', 'Play-Off'])
-        .gte('fecha', diasAtras(400))
-        .order('fecha', { ascending: false })
-        .limit(20000),
+      consultaEventos,
     ])
     setJugadores(perfiles || [])
     setRegistros(regs || [])

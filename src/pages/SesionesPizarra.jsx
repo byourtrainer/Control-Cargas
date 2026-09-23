@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { hoyISOLocal } from '../lib/fechas'
+import { clubIdDePerfil, idsOimposible } from '../lib/alcance'
 import './SesionesPizarra.css'
 
 const itemVacio = {
@@ -18,7 +19,9 @@ function esVideo(ej) {
   return ej.tipo_origen === 'video_grabado'
 }
 
-export default function SesionesPizarra() {
+export default function SesionesPizarra({ perfil }) {
+  // Club al que se limita entrenador/fisio (null = administrador, sin límite).
+  const clubId = clubIdDePerfil(perfil)
   const [sesiones, setSesiones] = useState([])
   const [biblioteca, setBiblioteca] = useState([])
   const [equipos, setEquipos] = useState([])
@@ -176,7 +179,16 @@ export default function SesionesPizarra() {
 
   async function cargarSesiones() {
     setCargando(true)
-    const { data } = await supabase.from('sesiones_pizarra').select('*, sesiones_pizarra_ejercicios(id)').order('creado_en', { ascending: false })
+    let consulta = supabase.from('sesiones_pizarra').select('*, sesiones_pizarra_ejercicios(id)').order('creado_en', { ascending: false })
+    // Entrenador/fisio solo ven las sesiones de pizarra de su club (o sin
+    // equipo asignado, que se consideran de uso general). Se resuelven los
+    // ids de equipos del club aquí mismo, sin depender del estado `equipos`
+    // (que se carga en paralelo y podría no estar listo todavía).
+    if (clubId) {
+      const { data: equiposClub } = await supabase.from('equipos').select('id').eq('club_id', clubId)
+      consulta = consulta.or(`equipo_id.is.null,equipo_id.in.(${idsOimposible((equiposClub || []).map((e) => e.id)).join(',')})`)
+    }
+    const { data } = await consulta
     setSesiones(data || [])
     setCargando(false)
   }
@@ -187,7 +199,9 @@ export default function SesionesPizarra() {
   }
 
   async function cargarEquipos() {
-    const { data } = await supabase.from('equipos').select('id, nombre, logo_base64').order('nombre')
+    let consulta = supabase.from('equipos').select('id, nombre, logo_base64').order('nombre')
+    if (clubId) consulta = consulta.eq('club_id', clubId)
+    const { data } = await consulta
     setEquipos(data || [])
   }
 

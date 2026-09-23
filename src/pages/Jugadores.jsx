@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { calcularEstadoCiclo, infoFase } from '../lib/ciclosMenstruales'
+import { clubIdDePerfil } from '../lib/alcance'
 import './Jugadores.css'
 
 function calcularEdad(fechaNacimiento) {
@@ -16,7 +17,7 @@ function calcularEdad(fechaNacimiento) {
 
 const traducirSexo = (s) => ({ masculino: 'Masculino', femenino: 'Femenino', neutro: 'Neutro' }[s] || '—')
 
-export default function Jugadores({ equipoActivo = 'todos' }) {
+export default function Jugadores({ perfil, equipoActivo = 'todos' }) {
   const [jugadores, setJugadores] = useState([])
   const [cargando, setCargando] = useState(true)
   const [editandoPeso, setEditandoPeso] = useState(null)
@@ -24,15 +25,26 @@ export default function Jugadores({ equipoActivo = 'todos' }) {
   const [ciclosPorJugadora, setCiclosPorJugadora] = useState({})
   const [eliminandoId, setEliminandoId] = useState(null)
 
+  // Club al que se limita entrenador/fisio (null = administrador, sin límite).
+  const clubId = clubIdDePerfil(perfil)
+
   useEffect(() => { cargarJugadores() }, [])
 
   async function cargarJugadores() {
     setCargando(true)
-    const { data } = await supabase
+    let consulta = supabase
       .from('perfiles')
       .select('*, equipos(id, nombre, color)')
       .eq('rol', 'jugador')
       .order('nombre')
+    // Entrenador/fisio solo ven los jugadores de los equipos de su club.
+    if (clubId) consulta = supabase
+      .from('perfiles')
+      .select('*, equipos!inner(id, nombre, color)')
+      .eq('rol', 'jugador')
+      .eq('equipos.club_id', clubId)
+      .order('nombre')
+    const { data } = await consulta
     setJugadores(data || [])
 
     const idsFemenino = (data || []).filter((j) => j.sexo === 'femenino').map((j) => j.id)

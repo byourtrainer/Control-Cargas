@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { clubIdDePerfil } from '../lib/alcance'
 import './CalendarioClub.css'
 
 import { fechaISOLocal, hoyISOLocal as hoyISO } from '../lib/fechas'
@@ -65,9 +66,20 @@ function formatearFechaLarga(fechaISO) {
   return d.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], jugadorActivo = 'equipo', fechaDesde, fechaHasta }) {
+export default function CalendarioClub({ perfil, equipoActivo = 'todos', equipos = [], jugadorActivo = 'equipo', fechaDesde, fechaHasta }) {
   const esSinAsignar = equipoActivo === 'sin_asignar'
   const esEquipoConcreto = equipoActivo !== 'todos' && !esSinAsignar
+  // Club al que se limita entrenador/fisio (null = administrador, sin límite).
+  const clubId = clubIdDePerfil(perfil)
+  // Pequeño helper para no repetir la misma condición de club en cada
+  // consulta de jugadores de este archivo: añade el filtro por club_id del
+  // equipo cuando el perfil es entrenador/fisio, y deja la consulta tal
+  // cual para el administrador.
+  function consultaJugadoresClub(columnas) {
+    let consulta = supabase.from('perfiles').select(columnas).eq('rol', 'jugador')
+    if (clubId) consulta = supabase.from('perfiles').select(`${columnas}, equipos!inner(club_id)`).eq('rol', 'jugador').eq('equipos.club_id', clubId)
+    return consulta
+  }
 
   const [jugadoresSinAsignar, setJugadoresSinAsignar] = useState([])
   const [jugadorSeleccionado, setJugadorSeleccionado] = useState('')
@@ -171,7 +183,7 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], j
       setTextoNombreJugadorDiario(perfil?.nombre || null)
     } else {
       setTextoNombreJugadorDiario(null)
-      const { data: perfiles } = await supabase.from('perfiles').select('id, nombre, equipo_id').eq('rol', 'jugador')
+      const { data: perfiles } = await consultaJugadoresClub('id, nombre, equipo_id')
       const filtrados = (perfiles || []).filter((j) => {
         if (equipoActivo === 'todos') return true
         if (equipoActivo === 'sin_asignar') return !j.equipo_id
@@ -385,7 +397,7 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], j
 
   async function abrirPersonalizacionDuraciones() {
     setCargandoPersonalizacion(true)
-    const { data: perfiles } = await supabase.from('perfiles').select('id, nombre, equipo_id').eq('rol', 'jugador').order('nombre')
+    const { data: perfiles } = await consultaJugadoresClub('id, nombre, equipo_id').order('nombre')
     const delEquipo = (perfiles || []).filter((j) => {
       if (equipoActivo === 'todos') return true
       if (equipoActivo === 'sin_asignar') return !j.equipo_id
@@ -413,7 +425,7 @@ export default function CalendarioClub({ equipoActivo = 'todos', equipos = [], j
 
     let idsJugadores = []
     if (modoDestino === 'equipo') {
-      const { data } = await supabase.from('perfiles').select('id, equipo_id').eq('rol', 'jugador')
+      const { data } = await consultaJugadoresClub('id, equipo_id')
       idsJugadores = (data || [])
         .filter((j) => {
           if (equipoActivo === 'todos') return true

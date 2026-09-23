@@ -5,6 +5,7 @@ import {
 } from 'recharts'
 import { supabase } from '../lib/supabaseClient'
 import { valorRelativo, indiceFatiga, tiposTest, traducirTipoTest, ultimosTestsPorTipo, interpretarCMJ, interpretarSentadilla, interpretarPotencia, interpretarFatigaWingate, estimarRMSentadilla, VELOCIDAD_OBJETIVO_SENTADILLA_100 } from '../lib/testsFisicos'
+import { clubIdDePerfil, idsOimposible } from '../lib/alcance'
 import './Tests.css'
 
 import { hoyISOLocal as hoyISO } from '../lib/fechas'
@@ -182,7 +183,7 @@ export function GraficoCuadrante2({ datos, maxX, maxY, modoImpresion, trayectori
   )
 }
 
-export default function Tests({ equipoActivo = 'todos' }) {
+export default function Tests({ perfil, equipoActivo = 'todos' }) {
   const [jugadores, setJugadores] = useState([])
   const [tests, setTests] = useState([])
   const [borrandoTestId, setBorrandoTestId] = useState(null)
@@ -203,15 +204,23 @@ export default function Tests({ equipoActivo = 'todos' }) {
   const [guardando, setGuardando] = useState(false)
   const [mensaje, setMensaje] = useState(null)
 
+  // Club al que se limita entrenador/fisio (null = administrador, sin límite).
+  const clubId = clubIdDePerfil(perfil)
+
   useEffect(() => { cargarTodo() }, [])
 
   async function cargarTodo() {
     setCargando(true)
-    const [{ data: perfiles }, { data: testsData }] = await Promise.all([
-      supabase.from('perfiles').select('*, equipos(id, nombre, color)').eq('rol', 'jugador').order('nombre'),
-      supabase.from('tests_fisicos').select('*, perfiles(nombre, equipo_id)').order('fecha', { ascending: false }),
-    ])
+    let consultaJugadores = supabase.from('perfiles').select('*, equipos(id, nombre, color)').eq('rol', 'jugador').order('nombre')
+    // Entrenador/fisio solo ven los jugadores (y sus tests) de los equipos de su club.
+    if (clubId) consultaJugadores = supabase.from('perfiles')
+      .select('*, equipos!inner(id, nombre, color)').eq('rol', 'jugador').eq('equipos.club_id', clubId).order('nombre')
+    const { data: perfiles } = await consultaJugadores
     setJugadores(perfiles || [])
+
+    let consultaTests = supabase.from('tests_fisicos').select('*, perfiles(nombre, equipo_id)').order('fecha', { ascending: false })
+    if (clubId) consultaTests = consultaTests.in('jugador_id', idsOimposible((perfiles || []).map((j) => j.id)))
+    const { data: testsData } = await consultaTests
     setTests(testsData || [])
     setCargando(false)
   }

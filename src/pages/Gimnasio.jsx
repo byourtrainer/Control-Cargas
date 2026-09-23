@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { clubIdDePerfil, idsOimposible } from '../lib/alcance'
 import './Gimnasio.css'
 
 const itemVacio = {
@@ -721,19 +722,39 @@ function SeccionAsignar({ perfil }) {
 
   useEffect(() => { cargarTodo() }, [])
 
+  // Club al que se limita entrenador/fisio (null = administrador, sin límite).
+  const clubId = clubIdDePerfil(perfil)
+
   async function cargarTodo() {
     setCargando(true)
-    const [r1, r2, r3, r4, r5, r6] = await Promise.all([
-      supabase.from('gimnasio_asignaciones').select('*').order('fecha_inicio', { ascending: false }),
+    let consultaJugadores = supabase.from('perfiles').select('id, nombre, equipo_id').eq('rol', 'jugador').order('nombre')
+    let consultaEquipos = supabase.from('equipos').select('id, nombre').order('nombre')
+    // Entrenador/fisio solo asignan gimnasio a jugadores/equipos de su club.
+    if (clubId) {
+      consultaJugadores = supabase.from('perfiles')
+        .select('id, nombre, equipo_id, equipos!inner(club_id)').eq('rol', 'jugador').eq('equipos.club_id', clubId).order('nombre')
+      consultaEquipos = consultaEquipos.eq('club_id', clubId)
+    }
+    // Se resuelven antes los jugadores del club para poder acotar también
+    // las asignaciones de gimnasio a los suyos (las de tipo "cliente" — los
+    // clientes de entrenamiento personal de David, no ligados a ningún club
+    // — se dejan siempre visibles, igual que hasta ahora).
+    const { data: jugadoresClub } = await consultaJugadores
+    let consultaAsignaciones = supabase.from('gimnasio_asignaciones').select('*').order('fecha_inicio', { ascending: false })
+    if (clubId) consultaAsignaciones = consultaAsignaciones.or(
+      `destinatario_tipo.eq.cliente,destinatario_id.in.(${idsOimposible((jugadoresClub || []).map((j) => j.id)).join(',')})`
+    )
+
+    const [r1, r2, r4, r5, r6] = await Promise.all([
+      consultaAsignaciones,
       supabase.from('clientes').select('id, nombre').order('nombre'),
-      supabase.from('perfiles').select('id, nombre, equipo_id').eq('rol', 'jugador').order('nombre'),
       supabase.from('gimnasio_plantillas').select('id, nombre').order('nombre'),
       supabase.from('gimnasio_programas').select('id, nombre').order('nombre'),
-      supabase.from('equipos').select('id, nombre').order('nombre'),
+      consultaEquipos,
     ])
     setAsignaciones(r1.data || [])
     setClientes(r2.data || [])
-    setJugadores(r3.data || [])
+    setJugadores(jugadoresClub || [])
     setPlantillas(r4.data || [])
     setProgramas(r5.data || [])
     setEquipos(r6.data || [])

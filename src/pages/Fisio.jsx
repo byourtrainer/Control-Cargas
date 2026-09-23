@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { hoyISOLocal as hoyISO } from '../lib/fechas'
+import { clubIdDePerfil, idsOimposible } from '../lib/alcance'
 import SelectorCuerpo from './SelectorCuerpo'
 import './Fisio.css'
 
@@ -43,6 +44,8 @@ const vacio = {
 }
 
 export default function Fisio({ perfil, equipoActivo = 'todos', equipos = [], jugadorActivo = 'equipo', fechaDesde, fechaHasta }) {
+  // Club al que se limita entrenador/fisio (null = administrador, sin límite).
+  const clubId = clubIdDePerfil(perfil)
   const [jugadores, setJugadores] = useState([])
   const [lesiones, setLesiones] = useState([])
   const [form, setForm] = useState(vacio)
@@ -83,11 +86,16 @@ export default function Fisio({ perfil, equipoActivo = 'todos', equipos = [], ju
 
   async function cargarTodo() {
     setCargando(true)
-    const [{ data: perfiles }, { data: lesionesData, error: errorLesiones }] = await Promise.all([
-      supabase.from('perfiles').select('id, nombre, equipo_id').eq('rol', 'jugador').order('nombre'),
-      supabase.from('lesiones').select('*, perfiles!lesiones_jugador_id_fkey(nombre)').order('fecha_lesion', { ascending: false }),
-    ])
+    let consultaJugadores = supabase.from('perfiles').select('id, nombre, equipo_id').eq('rol', 'jugador').order('nombre')
+    // Entrenador/fisio solo ven los jugadores (y sus lesiones) de los equipos de su club.
+    if (clubId) consultaJugadores = supabase.from('perfiles')
+      .select('id, nombre, equipo_id, equipos!inner(club_id)').eq('rol', 'jugador').eq('equipos.club_id', clubId).order('nombre')
+    const { data: perfiles } = await consultaJugadores
     setJugadores(perfiles || [])
+
+    let consultaLesiones = supabase.from('lesiones').select('*, perfiles!lesiones_jugador_id_fkey(nombre)').order('fecha_lesion', { ascending: false })
+    if (clubId) consultaLesiones = consultaLesiones.in('jugador_id', idsOimposible((perfiles || []).map((j) => j.id)))
+    const { data: lesionesData, error: errorLesiones } = await consultaLesiones
     setLesiones(lesionesData || [])
     if (errorLesiones) {
       console.error('Error cargando lesiones:', errorLesiones)
