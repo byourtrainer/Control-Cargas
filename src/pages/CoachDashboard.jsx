@@ -290,11 +290,21 @@ export default function CoachDashboard({ equipoActivo = 'todos', jugadorActivo =
     setCargando(true)
     const [{ data: perfiles }, { data: regs }, { data: sess }, { data: partidos }] = await Promise.all([
       supabase.from('perfiles').select('*, equipos(id, nombre, logo_base64)').eq('rol', 'jugador').order('nombre'),
-      supabase.from('registros_diarios').select('*').gte('fecha', diasAtras(400)).order('fecha'),
-      supabase.from('sesiones').select('fecha, mdx').gte('fecha', diasAtras(400)),
+      // Ordenado por fecha DESCENDENTE (lo más reciente primero) y con un
+      // límite explícito: Supabase/PostgREST solo devuelve un número máximo
+      // de filas por defecto (normalmente 1000). Con muchos jugadores
+      // registrando cada día, en algún momento la ventana de 400 días supera
+      // ese límite — y si se pide ascendente, lo que se corta en silencio son
+      // justo los días MÁS RECIENTES (los de hoy/ayer), que es lo que estaba
+      // pasando. Pidiéndolo descendente, si algo se recorta es lo más viejo,
+      // que afecta mucho menos a lo que se ve en el Resumen.
+      supabase.from('registros_diarios').select('*').gte('fecha', diasAtras(400)).order('fecha', { ascending: false }).limit(20000),
+      supabase.from('sesiones').select('fecha, mdx').gte('fecha', diasAtras(400)).order('fecha', { ascending: false }).limit(20000),
       supabase.from('eventos_calendario').select('fecha, equipo_id, jugador_id')
         .in('tipo', ['Amistoso', 'Liga', 'Europa', 'Copa del Rey', 'Play-Off'])
-        .gte('fecha', diasAtras(400)),
+        .gte('fecha', diasAtras(400))
+        .order('fecha', { ascending: false })
+        .limit(20000),
     ])
     setJugadores(perfiles || [])
     setRegistros(regs || [])
