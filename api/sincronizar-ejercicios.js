@@ -226,13 +226,25 @@ export default async function handler(req, res) {
     return res.status(422).json({ error: 'No se encontró ninguna fila válida en el Sheet.' })
   }
 
-  const insertados = paraUpsert.filter((f) => !f.id).length
-  const actualizados = paraUpsert.filter((f) => f.id).length
+  // Se separan en dos llamadas porque, si se envían juntas en un mismo
+  // upsert, las filas nuevas (sin "id") terminan con id = null en vez de
+  // generarse automáticamente, y la base de datos lo rechaza.
+  const filasNuevas = paraUpsert.filter((f) => !f.id)
+  const filasExistentes = paraUpsert.filter((f) => f.id)
 
-  const { error: errorUpsert } = await supabase.from('ejercicios').upsert(paraUpsert, { onConflict: 'id' })
-  if (errorUpsert) {
-    return res.status(500).json({ error: 'No se pudo guardar en la base de datos: ' + errorUpsert.message })
+  if (filasNuevas.length > 0) {
+    const { error: errorInsert } = await supabase.from('ejercicios').insert(filasNuevas)
+    if (errorInsert) {
+      return res.status(500).json({ error: 'No se pudo crear los ejercicios nuevos: ' + errorInsert.message })
+    }
   }
 
-  return res.status(200).json({ insertados, actualizados, avisos })
+  if (filasExistentes.length > 0) {
+    const { error: errorUpdate } = await supabase.from('ejercicios').upsert(filasExistentes, { onConflict: 'id' })
+    if (errorUpdate) {
+      return res.status(500).json({ error: 'No se pudo actualizar los ejercicios existentes: ' + errorUpdate.message })
+    }
+  }
+
+  return res.status(200).json({ insertados: filasNuevas.length, actualizados: filasExistentes.length, avisos })
 }
