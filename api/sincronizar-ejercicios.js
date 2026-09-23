@@ -151,55 +151,68 @@ export default async function handler(req, res) {
       avisos.push(`"${nombre}": el enlace de vídeo no parece de YouTube y se ha dejado en blanco.`)
     }
 
+    // La categoría es obligatoria en la App y solo admite una lista fija de
+    // valores (restricción de la base de datos): si no se reconoce la del
+    // Sheet, se usa "Fuerza" por defecto (igual que en el formulario manual)
+    // y se avisa para que se revise a mano.
     const categoriaRaw = idx.categoria >= 0 ? fila[idx.categoria] : ''
     const rCategoria = normalizarValor(categoriaRaw, categorias)
     if (rCategoria.valor && !rCategoria.reconocido) {
-      avisos.push(`"${nombre}": categoría "${rCategoria.valor}" no reconocida — revisar.`)
+      avisos.push(`"${nombre}": categoría "${rCategoria.valor}" no reconocida — se ha guardado como "Fuerza" por defecto, revisar.`)
+    } else if (!rCategoria.valor) {
+      avisos.push(`"${nombre}": sin categoría en el Sheet — se ha guardado como "Fuerza" por defecto, revisar.`)
     }
 
     const miembroRaw = idx.miembro >= 0 ? fila[idx.miembro] : ''
     const rMiembro = normalizarValor(miembroRaw, miembros)
     if (rMiembro.valor && !rMiembro.reconocido) {
-      avisos.push(`"${nombre}": miembro "${rMiembro.valor}" no reconocido — revisar.`)
+      avisos.push(`"${nombre}": miembro "${rMiembro.valor}" no reconocido — se ha dejado en blanco, revisar.`)
     }
 
     const lateralidadRaw = idx.lateralidad >= 0 ? fila[idx.lateralidad] : ''
     const rLateralidad = normalizarValor(lateralidadRaw, lateralidades)
     if (rLateralidad.valor && !rLateralidad.reconocido) {
-      avisos.push(`"${nombre}": lateralidad "${rLateralidad.valor}" no reconocida — revisar.`)
+      avisos.push(`"${nombre}": lateralidad "${rLateralidad.valor}" no reconocida — se ha dejado en blanco, revisar.`)
     }
 
     const contraccionRaw = idx.contraccion >= 0 ? fila[idx.contraccion] : ''
     const rContraccion = normalizarValor(contraccionRaw, contracciones)
     if (rContraccion.valor && !rContraccion.reconocido) {
-      avisos.push(`"${nombre}": contracción "${rContraccion.valor}" no reconocida — revisar.`)
+      avisos.push(`"${nombre}": contracción "${rContraccion.valor}" no reconocida — se ha dejado en blanco, revisar.`)
     }
 
     // "Patrón de movimiento" es un campo de selección única en la App (no
-    // admite varios valores a la vez), así que si la celda del Sheet trae
-    // varios separados por coma (p. ej. "Flexión, Abducción") nos quedamos
-    // solo con el primero reconocido y avisamos del resto para que se revise.
+    // admite varios valores a la vez, y la base de datos solo acepta uno de
+    // la lista fija de patrones). Si la celda del Sheet trae varios
+    // separados por coma (p. ej. "Flexión, Abducción"), o alguno no
+    // reconocido, nos quedamos solo con el primero RECONOCIDO y avisamos
+    // del resto para que se revise a mano.
     const patronRaw = idx.patron >= 0 ? fila[idx.patron] : ''
-    const rPatron = normalizarLista(patronRaw, patrones)
-    if (rPatron.valores.length > 1) {
-      avisos.push(`"${nombre}": el patrón tenía varios valores ("${rPatron.valores.join(', ')}") — solo admite uno, se ha guardado "${rPatron.valores[0]}".`)
+    const partesPatron = (patronRaw || '').split(',').map((p) => p.trim()).filter(Boolean)
+    const patronesNormalizados = partesPatron.map((p) => normalizarValor(p, patrones))
+    const patronReconocido = patronesNormalizados.find((r) => r.reconocido)?.valor || null
+    if (partesPatron.length > 1) {
+      avisos.push(`"${nombre}": el patrón tenía varios valores ("${partesPatron.join(', ')}") — solo admite uno, se ha guardado "${patronReconocido || '(ninguno reconocido)'}".`)
     }
-    rPatron.noReconocidos.forEach((v) => avisos.push(`"${nombre}": patrón "${v}" no reconocido — revisar.`))
+    patronesNormalizados.filter((r) => !r.reconocido && r.valor).forEach((r) => avisos.push(`"${nombre}": patrón "${r.valor}" no reconocido — revisar.`))
 
     const materialRaw = idx.material >= 0 ? fila[idx.material] : ''
     const rMaterial = normalizarLista(materialRaw, materiales)
     rMaterial.noReconocidos.forEach((v) => avisos.push(`"${nombre}": material "${v}" no reconocido — revisar.`))
+    // material es una lista libre de texto (sin restricción de valores fijos
+    // en la base de datos), así que aquí sí se conservan también los valores
+    // no reconocidos (rMaterial.valores ya los incluye) — solo se avisa.
 
     const fila_bd = {
       nombre,
       url_youtube: enlace || null,
       youtube_id: youtubeId || null,
-      categoria: rCategoria.valor || null,
-      miembro: rMiembro.valor || null,
-      lateralidad: rLateralidad.valor || null,
-      patron: rPatron.valores[0] || null,
-      contraccion: rContraccion.valor || null,
-      material: rMaterial.valores,
+      categoria: (rCategoria.reconocido && rCategoria.valor) ? rCategoria.valor : 'Fuerza',
+      miembro: rMiembro.reconocido ? rMiembro.valor : null,
+      lateralidad: rLateralidad.reconocido ? rLateralidad.valor : null,
+      patron: patronReconocido,
+      contraccion: rContraccion.reconocido ? rContraccion.valor : null,
+      material: rMaterial.valores.length > 0 ? rMaterial.valores : null,
     }
 
     const idExistente = idPorNombre.get(clave)
