@@ -175,8 +175,15 @@ export default async function handler(req, res) {
       avisos.push(`"${nombre}": contracción "${rContraccion.valor}" no reconocida — revisar.`)
     }
 
+    // "Patrón de movimiento" es un campo de selección única en la App (no
+    // admite varios valores a la vez), así que si la celda del Sheet trae
+    // varios separados por coma (p. ej. "Flexión, Abducción") nos quedamos
+    // solo con el primero reconocido y avisamos del resto para que se revise.
     const patronRaw = idx.patron >= 0 ? fila[idx.patron] : ''
     const rPatron = normalizarLista(patronRaw, patrones)
+    if (rPatron.valores.length > 1) {
+      avisos.push(`"${nombre}": el patrón tenía varios valores ("${rPatron.valores.join(', ')}") — solo admite uno, se ha guardado "${rPatron.valores[0]}".`)
+    }
     rPatron.noReconocidos.forEach((v) => avisos.push(`"${nombre}": patrón "${v}" no reconocido — revisar.`))
 
     const materialRaw = idx.material >= 0 ? fila[idx.material] : ''
@@ -190,9 +197,7 @@ export default async function handler(req, res) {
       categoria: rCategoria.valor || null,
       miembro: rMiembro.valor || null,
       lateralidad: rLateralidad.valor || null,
-      // guardamos el patrón como texto (posibles varios valores separados por coma),
-      // igual que ya lo gestiona el formulario manual de la App
-      patron: rPatron.valores.join(', ') || null,
+      patron: rPatron.valores[0] || null,
       contraccion: rContraccion.valor || null,
       material: rMaterial.valores,
     }
