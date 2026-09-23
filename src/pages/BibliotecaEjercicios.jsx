@@ -1,47 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { categorias, miembros, lateralidades, patrones, contraccionesPorFamilia, materiales } from '../lib/catalogoEjercicios'
+import { extraerYoutubeId } from '../lib/youtube'
 import './BibliotecaEjercicios.css'
-
-const categorias = [
-  'Fuerza', 'Metabólico', 'Velocidad', 'Aceleración', 'Deceleración', 'Pliometría',
-  'Agilidad', 'Coordinación', 'Movilidad', 'Olímpico',
-]
-const miembros = ['Central', 'Inferior', 'Superior']
-const lateralidades = ['Mixto', 'Unilateral', 'Bilateral']
-const patrones = [
-  'Aducción', 'Abducción', 'Empuje Vertical', 'Tracción Vertical', 'Empuje Horizontal',
-  'Tracción Horizontal', 'Bisagra', 'Sentadilla', 'Flexión', 'Extensión',
-  'Inclinación Lateral', 'Rotación', 'Split', 'Plancha', 'Carrera', 'CoD', 'Cuadrupédia', 'Hip Lock',
-]
-const contraccionesPorFamilia = {
-  'Dinámico': ['Balístico', 'Oscilatorio', 'Excéntrico', 'CEA', 'Dinámico General'],
-  'Isométrico': ['Iso-Hold', 'Iso-Catch', 'Iso-Push', 'Iso-Switch'],
-}
-const materiales = [
-  'Goma', 'Fitball', 'ZeroRM', 'Mancuerna', 'Barra', 'Disco', 'Pelota Tenis', 'Banco',
-  'Pica Madera', 'Cono', 'Comba', 'BattleRope', 'Rack', 'Balón Medicinal', 'Kettlebell',
-  'Saco Arena', 'Aquabag', 'Aquaball', 'Chaleco Lastrado', 'Barra Hexagonal', 'Safety Bar',
-  'SlamBall', 'Anillas', 'TRX', 'Exergenie', 'Inercial', 'Rueda Abdominal', 'Airbike', 'Globo', 'Box Ball',
-]
 
 const vacio = {
   nombre: '', url_youtube: '', categoria: 'Fuerza', miembro: '', lateralidad: '',
   patron: '', contraccion: '', material: [], notas: '',
-}
-
-function extraerYoutubeId(url) {
-  const patronesUrl = [
-    /youtu\.be\/([a-zA-Z0-9_-]{11})/,
-    /youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/,
-    /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/,
-    /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
-    /studio\.youtube\.com\/video\/([a-zA-Z0-9_-]{11})/,
-  ]
-  for (const p of patronesUrl) {
-    const m = url.match(p)
-    if (m) return m[1]
-  }
-  return null
 }
 
 export default function BibliotecaEjercicios() {
@@ -68,6 +33,32 @@ export default function BibliotecaEjercicios() {
     const { data } = await supabase.from('ejercicios').select('*').order('nombre')
     setEjercicios(data || [])
     setCargando(false)
+  }
+
+  // --- Sincronización desde el Google Sheet de la base de datos de ejercicios ---
+  const [sincronizando, setSincronizando] = useState(false)
+  const [resultadoSync, setResultadoSync] = useState(null) // { insertados, actualizados, avisos } | { error }
+
+  async function sincronizarDesdeSheet() {
+    setSincronizando(true)
+    setResultadoSync(null)
+    try {
+      const { data: sesion } = await supabase.auth.getSession()
+      const resp = await fetch('/api/sincronizar-ejercicios', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${sesion?.session?.access_token || ''}` },
+      })
+      const resultado = await resp.json()
+      if (!resp.ok) {
+        setResultadoSync({ error: resultado.error || 'No se pudo sincronizar.' })
+      } else {
+        setResultadoSync(resultado)
+        cargarEjercicios()
+      }
+    } catch {
+      setResultadoSync({ error: 'No se pudo conectar con el servidor.' })
+    }
+    setSincronizando(false)
   }
 
   const youtubeIdPreview = extraerYoutubeId(form.url_youtube)
@@ -194,11 +185,49 @@ export default function BibliotecaEjercicios() {
           </p>
         </div>
         {!formularioAbierto && (
-          <button className="btn-principal biblioteca-boton-nuevo" onClick={() => setFormularioAbierto(true)}>
-            + Añadir ejercicio
-          </button>
+          <div className="biblioteca-acciones-cabecera">
+            <button
+              className="btn-secundario biblioteca-boton-sync"
+              onClick={sincronizarDesdeSheet}
+              disabled={sincronizando}
+              type="button"
+            >
+              {sincronizando ? 'Sincronizando…' : '🔄 Sincronizar desde Google Sheets'}
+            </button>
+            <button className="btn-principal biblioteca-boton-nuevo" onClick={() => setFormularioAbierto(true)}>
+              + Añadir ejercicio
+            </button>
+          </div>
         )}
       </div>
+
+      {resultadoSync && (
+        <div className={`biblioteca-sync-resultado ${resultadoSync.error ? 'biblioteca-sync-error' : ''}`}>
+          {resultadoSync.error ? (
+            <p>⚠️ {resultadoSync.error}</p>
+          ) : (
+            <>
+              <p>
+                ✅ Sincronización completada: {resultadoSync.insertados} ejercicio(s) nuevo(s),{' '}
+                {resultadoSync.actualizados} actualizado(s).
+              </p>
+              {resultadoSync.avisos?.length > 0 && (
+                <details>
+                  <summary>{resultadoSync.avisos.length} aviso(s) — revisar etiquetas no reconocidas</summary>
+                  <ul>
+                    {resultadoSync.avisos.map((a, i) => (
+                      <li key={i}>{a}</li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+            </>
+          )}
+          <button className="biblioteca-sync-cerrar" onClick={() => setResultadoSync(null)} type="button">
+            Cerrar
+          </button>
+        </div>
+      )}
 
       {formularioAbierto && (
         <section className="biblioteca-form-card">
