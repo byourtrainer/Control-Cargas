@@ -64,8 +64,8 @@ export default function Jugadores({ equipoActivo = 'todos' }) {
     cargarJugadores()
   }
 
-  async function alternarPortero(j) {
-    const nuevoValor = !j.es_portero
+  async function cambiarPosicion(j, valor) {
+    const nuevoValor = valor === 'portero'
     setJugadores((prev) => prev.map((p) => (p.id === j.id ? { ...p, es_portero: nuevoValor } : p)))
     await supabase.from('perfiles').update({ es_portero: nuevoValor }).eq('id', j.id)
   }
@@ -141,14 +141,15 @@ export default function Jugadores({ equipoActivo = 'todos' }) {
                   )}
                 </td>
                 <td>
-                  <button
-                    type="button"
-                    className={`posicion-boton ${j.es_portero ? 'posicion-boton-portero' : ''}`}
-                    onClick={() => alternarPortero(j)}
-                    title="Marcar/desmarcar como portero"
+                  <select
+                    className={`posicion-select ${j.es_portero ? 'posicion-select-portero' : ''}`}
+                    value={j.es_portero ? 'portero' : 'jugador'}
+                    onChange={(e) => cambiarPosicion(j, e.target.value)}
+                    title="Posición"
                   >
-                    {j.es_portero ? '🧤 Portero' : 'Jugador de campo'}
-                  </button>
+                    <option value="jugador">Jugador de campo</option>
+                    <option value="portero">🧤 Portero</option>
+                  </select>
                 </td>
                 <td className="mono">
                   {editandoPeso === j.id ? (

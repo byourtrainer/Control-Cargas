@@ -72,24 +72,24 @@
 
 .peso-boton:hover { border-color: var(--accent); color: var(--accent); }
 
-.posicion-boton {
-  background: none;
-  border: 1px dashed var(--line-strong);
+.posicion-select {
+  background: var(--bg-elevated);
+  border: 1px solid var(--line-strong);
   color: var(--text-dim);
   border-radius: 6px;
-  padding: 4px 10px;
+  padding: 5px 8px;
   font-size: 12px;
   white-space: nowrap;
   cursor: pointer;
 }
 
-.posicion-boton:hover { border-color: var(--accent); color: var(--accent); }
+.posicion-select:hover { border-color: var(--accent); }
 
-.posicion-boton-portero {
-  border-style: solid;
+.posicion-select-portero {
   border-color: var(--accent);
   color: var(--accent);
   background: rgba(200, 255, 77, 0.08);
+  font-weight: 600;
 }
 
 .peso-editor {
