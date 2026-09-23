@@ -227,8 +227,19 @@ function SeccionClientes({ perfil }) {
   const [cargando, setCargando] = useState(true)
   const [clienteActivoId, setClienteActivoId] = useState(null)
   const [mesActivo, setMesActivo] = useState(primerDiaDelMes(hoyISO()))
-  const [sesionesMes, setSesionesMes] = useState({}) // clienteId -> Set(fechas)
+  const [sesionesMes, setSesionesMes] = useState({}) // clienteId -> { fecha: contenido|null }
   const [facturas, setFacturas] = useState([])
+
+  // --- Panel del día: marcar sesión y apuntar el contenido trabajado ---
+  const [diaAbierto, setDiaAbierto] = useState(null) // { clienteId, fecha } | null
+  const [contenidoDia, setContenidoDia] = useState('')
+  const [guardandoDia, setGuardandoDia] = useState(false)
+
+  // --- Diario del cliente: historial de contenidos para preparar sesiones ---
+  const [diarioClienteAbierto, setDiarioClienteAbierto] = useState(false)
+  const [cargandoDiarioCliente, setCargandoDiarioCliente] = useState(false)
+  const [entradasDiarioCliente, setEntradasDiarioCliente] = useState([])
+  const [busquedaDiarioCliente, setBusquedaDiarioCliente] = useState('')
   const [facturaImprimir, setFacturaImprimir] = useState(null)
   const [mostrarForm, setMostrarForm] = useState(false)
   const [editando, setEditando] = useState(null)
@@ -244,6 +255,12 @@ function SeccionClientes({ perfil }) {
 
   useEffect(() => { cargarClientes(); cargarFacturas(); cargarConfig() }, [])
   useEffect(() => { cargarSesionesMes() }, [mesActivo, clientes])
+  useEffect(() => {
+    cerrarDia()
+    setDiarioClienteAbierto(false)
+    setEntradasDiarioCliente([])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clienteActivoId])
 
   async function cargarConfig() {
     const { data, error } = await supabase.from('configuracion_facturacion').select('*').eq('id', 1).maybeSingle()
@@ -295,24 +312,78 @@ function SeccionClientes({ perfil }) {
   async function cargarSesionesMes() {
     if (clientes.length === 0) return
     const { data } = await supabase
-      .from('sesiones_cliente').select('cliente_id, fecha')
+      .from('sesiones_cliente').select('cliente_id, fecha, contenido')
       .gte('fecha', primerDiaDelMes(mesActivo)).lte('fecha', ultimoDiaDelMes(mesActivo))
     const mapa = {}
     ;(data || []).forEach((s) => {
-      if (!mapa[s.cliente_id]) mapa[s.cliente_id] = new Set()
-      mapa[s.cliente_id].add(s.fecha)
+      if (!mapa[s.cliente_id]) mapa[s.cliente_id] = {}
+      mapa[s.cliente_id][s.fecha] = s.contenido || null
     })
     setSesionesMes(mapa)
   }
 
-  async function alternarDia(clienteId, fecha) {
-    const yaMarcado = sesionesMes[clienteId]?.has(fecha)
-    if (yaMarcado) {
-      await supabase.from('sesiones_cliente').delete().eq('cliente_id', clienteId).eq('fecha', fecha)
-    } else {
-      await supabase.from('sesiones_cliente').insert({ cliente_id: clienteId, fecha })
+  // Abre el panel del día para marcar sesión y/o apuntar qué se ha trabajado.
+  // Precarga el contenido ya guardado ese día, si lo hubiera.
+  function abrirDia(clienteId, fecha) {
+    setDiaAbierto({ clienteId, fecha })
+    setContenidoDia(sesionesMes[clienteId]?.[fecha] || '')
+  }
+
+  function cerrarDia() {
+    setDiaAbierto(null)
+    setContenidoDia('')
+  }
+
+  // Guarda (crea o actualiza) la sesión de ese día con el contenido escrito.
+  // Si el día ya estaba marcado, actualiza la fila existente; si no, crea una
+  // nueva — así queda marcado como "hubo sesión" tanto si hay contenido como
+  // si se deja en blanco (para marcar rápido y apuntar el contenido después).
+  async function guardarDia() {
+    if (!diaAbierto) return
+    setGuardandoDia(true)
+    const { clienteId, fecha } = diaAbierto
+    const yaExiste = sesionesMes[clienteId]?.[fecha] !== undefined
+    const contenido = contenidoDia.trim() || null
+    const { error } = yaExiste
+      ? await supabase.from('sesiones_cliente').update({ contenido }).eq('cliente_id', clienteId).eq('fecha', fecha)
+      : await supabase.from('sesiones_cliente').insert({ cliente_id: clienteId, fecha, contenido })
+    setGuardandoDia(false)
+    if (!error) {
+      cerrarDia()
+      cargarSesionesMes()
+      if (diarioClienteAbierto) cargarDiarioCliente(clienteId)
     }
+  }
+
+  // Quita la marca de sesión de ese día (borra la fila entera).
+  async function quitarDia() {
+    if (!diaAbierto) return
+    setGuardandoDia(true)
+    const { clienteId, fecha } = diaAbierto
+    await supabase.from('sesiones_cliente').delete().eq('cliente_id', clienteId).eq('fecha', fecha)
+    setGuardandoDia(false)
+    cerrarDia()
     cargarSesionesMes()
+    if (diarioClienteAbierto) cargarDiarioCliente(clienteId)
+  }
+
+  // Diario del cliente: historial de todas las sesiones con contenido
+  // apuntado, más reciente primero — para repasar antes de programar la
+  // siguiente sesión.
+  async function cargarDiarioCliente(clienteId) {
+    setCargandoDiarioCliente(true)
+    const { data } = await supabase
+      .from('sesiones_cliente').select('fecha, contenido')
+      .eq('cliente_id', clienteId).not('contenido', 'is', null)
+      .order('fecha', { ascending: false })
+    setEntradasDiarioCliente(data || [])
+    setCargandoDiarioCliente(false)
+  }
+
+  function alAlternarDiario(clienteId) {
+    const abrir = !diarioClienteAbierto
+    setDiarioClienteAbierto(abrir)
+    if (abrir) cargarDiarioCliente(clienteId)
   }
 
   function empezarEdicion(cliente) {
@@ -351,7 +422,7 @@ function SeccionClientes({ perfil }) {
   }
 
   function calcularResumen(cliente) {
-    const num = sesionesMes[cliente.id]?.size || 0
+    const num = sesionesMes[cliente.id] ? Object.keys(sesionesMes[cliente.id]).length : 0
     const total = cliente.tipo_facturacion === 'mensual' ? Number(cliente.precio) : num * Number(cliente.precio)
     return { num, total }
   }
@@ -654,23 +725,88 @@ function SeccionClientes({ perfil }) {
             const { num, total } = calcularResumen(cliente)
             return (
               <>
-                <h3>{cliente.nombre}</h3>
+                <div className="panel-admin-cabecera-flex">
+                  <h3>{cliente.nombre}</h3>
+                  <button type="button" className="equipo-cambiar-link" onClick={() => alAlternarDiario(cliente.id)}>
+                    {diarioClienteAbierto ? '▲ Cerrar diario' : '📔 Ver diario de sesiones'}
+                  </button>
+                </div>
+                <p className="texto-dim" style={{ marginTop: -6, marginBottom: 10 }}>
+                  Toca un día para marcar la sesión y apuntar qué has trabajado.
+                </p>
                 <div className="panel-admin-calendario-cliente">
                   {diasDelMes(mesActivo).map((d) => {
-                    const marcado = sesionesMes[cliente.id]?.has(d.fecha)
+                    const contenido = sesionesMes[cliente.id]?.[d.fecha]
+                    const marcado = sesionesMes[cliente.id]?.[d.fecha] !== undefined
                     return (
                       <button
                         key={d.fecha} type="button"
                         className={`panel-admin-dia ${marcado ? 'panel-admin-dia-marcado' : ''}`}
-                        onClick={() => alternarDia(cliente.id, d.fecha)}
-                        title={d.fecha}
+                        onClick={() => abrirDia(cliente.id, d.fecha)}
+                        title={contenido || d.fecha}
                       >
                         <span className="panel-admin-dia-letra">{d.etiqueta}</span>
                         <span>{Number(d.fecha.slice(-2))}</span>
+                        {contenido && <span className="panel-admin-dia-punto" title="Con contenido apuntado" />}
                       </button>
                     )
                   })}
                 </div>
+
+                {diaAbierto && diaAbierto.clienteId === cliente.id && (
+                  <div className="panel-admin-dia-panel">
+                    <div className="panel-admin-cabecera-flex">
+                      <strong>{diaAbierto.fecha}</strong>
+                      <button type="button" className="equipo-cambiar-link" onClick={cerrarDia}>✕ Cerrar</button>
+                    </div>
+                    <label className="campo-sesion">
+                      <span>Contenido trabajado (opcional — puedes dejarlo en blanco y apuntarlo luego)</span>
+                      <textarea
+                        rows={3} value={contenidoDia}
+                        onChange={(e) => setContenidoDia(e.target.value)}
+                        placeholder="Ej. Fuerza tren superior: press banca 4x8, remo 4x10, core…"
+                      />
+                    </label>
+                    <div className="panel-admin-dia-panel-acciones">
+                      <button type="button" className="btn-principal" onClick={guardarDia} disabled={guardandoDia}>
+                        {guardandoDia ? 'Guardando…' : '✓ Guardar sesión'}
+                      </button>
+                      {sesionesMes[cliente.id]?.[diaAbierto.fecha] !== undefined && (
+                        <button type="button" className="btn-eliminar-fila" onClick={quitarDia} disabled={guardandoDia}>
+                          🗑 Quitar sesión de este día
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {diarioClienteAbierto && (
+                  <div className="panel-admin-diario-cliente">
+                    <input
+                      type="text" value={busquedaDiarioCliente}
+                      onChange={(e) => setBusquedaDiarioCliente(e.target.value)}
+                      placeholder="Buscar en el contenido de las sesiones…"
+                      className="panel-admin-diario-buscador"
+                    />
+                    {cargandoDiarioCliente ? (
+                      <p className="mono texto-dim">Cargando…</p>
+                    ) : entradasDiarioCliente.length === 0 ? (
+                      <p className="texto-dim">Todavía no hay contenido apuntado en ninguna sesión de este cliente.</p>
+                    ) : (
+                      <ul className="panel-admin-diario-lista">
+                        {entradasDiarioCliente
+                          .filter((s) => !busquedaDiarioCliente.trim() || s.contenido.toLowerCase().includes(busquedaDiarioCliente.trim().toLowerCase()))
+                          .map((s) => (
+                            <li key={s.fecha}>
+                              <span className="mono panel-admin-diario-fecha">{s.fecha}</span>
+                              <span className="panel-admin-diario-contenido">{s.contenido}</span>
+                            </li>
+                          ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+
                 <div className="panel-admin-resumen-cliente">
                   <span>Sesiones: <strong>{num}</strong></span>
                   <span>Base: <strong>{total.toFixed(2)}€</strong></span>
