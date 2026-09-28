@@ -1,4 +1,4 @@
-   import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   ResponsiveContainer, LineChart, Line, ReferenceArea,
   XAxis, YAxis, CartesianGrid, Tooltip,
@@ -8,7 +8,7 @@ import { fechaISOLocal } from '../lib/fechas'
 import { calcularMetricas, clasificarRiesgoACWR, clasificarMonotonia, diferenciaCarga } from '../lib/cargaMetrics'
 import { calcularBienestar, clasificarBienestar } from '../lib/bienestar'
 import { colorParaValor } from '../lib/colorEscalas'
-import { diferenciaBienestar, deltaBienestarDiario, deltaBienestarSemanal, clasificarDeltaDiario, bienestarAgudo, bienestarBasal } from '../lib/bienestarTendencia'
+import { diferenciaBienestar, deltaBienestarDiario, deltaBienestarSemanal, bienestarAgudo, bienestarBasal } from '../lib/bienestarTendencia'
 import { clubIdDePerfil, idsOimposible } from '../lib/alcance'
 import './CoachDashboard.css'
 
@@ -218,48 +218,6 @@ function colorDesviacion(abs) {
   return 'var(--risk-high)'
 }
 
-/**
- * Detecta si la carga de hoy es una sesión "inusual" comparada con las
- * últimas sesiones REALES de entrenamiento del jugador (se ignoran los
- * días sin carga, para no contaminar la media con descansos).
- * Umbral: 1.5 desviaciones estándar — convención estadística práctica,
- * no una cifra fijada por un estudio concreto (a diferencia del ACWR o
- * la Monotonía, que sí tienen umbrales publicados).
- */
-/**
- * Detecta si la carga de hoy es una sesión "inusual" comparada con las
- * sesiones REALES de entrenamiento del jugador en las últimas 3 semanas
- * (se ignoran los días sin carga, para no contaminar la media con
- * descansos). Se usa una ventana de tiempo, no un número fijo de sesiones,
- * para que se adapte sola a equipos que entrenan 3 o 4 días por semana sin
- * penalizar a los que entrenan menos días.
- * Umbral: 1.5 desviaciones estándar — convención estadística práctica,
- * no una cifra fijada por un estudio concreto (a diferencia del ACWR o
- * la Monotonía, que sí tienen umbrales publicados).
- */
-function detectarSesionInusual(suyos, hoyISO) {
-  const registroHoy = suyos.find((r) => r.fecha === hoyISO)
-  if (!registroHoy || !registroHoy.carga) return null
-
-  const inicioVentana = new Date(hoyISO + 'T00:00:00')
-  inicioVentana.setDate(inicioVentana.getDate() - 21) // últimas 3 semanas
-  const inicioVentanaISO = fechaISOLocal(inicioVentana)
-
-  const recientes = suyos
-    .filter((r) => r.fecha < hoyISO && r.fecha >= inicioVentanaISO && r.carga && r.carga > 0)
-    .map((r) => r.carga)
-
-  if (recientes.length < 4) return null // histórico insuficiente para ser fiable
-
-  const media = recientes.reduce((a, b) => a + b, 0) / recientes.length
-  const varianza = recientes.reduce((a, b) => a + (b - media) ** 2, 0) / recientes.length
-  const sd = Math.sqrt(varianza)
-  if (sd === 0) return null
-
-  const z = (registroHoy.carga - media) / sd
-  if (Math.abs(z) < 1.5) return null
-  return { cargaHoy: registroHoy.carga, media: Math.round(media), alta: z > 0 }
-}
 
 export default function CoachDashboard({ perfil, equipos = [], equipoActivo = 'todos', jugadorActivo = 'equipo', posicionActiva = 'todos', fechaDesde, fechaHasta }) {
   // Club al que se limita entrenador/fisio (null = administrador, sin límite).
@@ -557,6 +515,51 @@ export default function CoachDashboard({ perfil, equipos = [], equipoActivo = 't
     return { modo: 'grupo', tarjetas: tarjetasDeGrupo(jugadoresGrafico) }
   }, [jugadorActivo, jugadoresGrafico, registros, metodoACWR, buckets, posicionActiva])
 
+  // --- Dos indicadores grandes (ACWR y Bienestar del grupo) para un vistazo
+  // rápido de cómo está el equipo ahora mismo, sin tener que leer una tabla
+  // de números. Solo tiene sentido en vista de grupo (no de un jugador
+  // suelto, que ya tiene sus propias tarjetas arriba). Si el grupo activo
+  // mezcla jugadores de campo y porteros, se separan en dos bloques — igual
+  // que ya se hacía con las tarjetas de resumen — para no mezclar sus medias.
+  const indicadoresGrupo = useMemo(() => {
+    if (jugadorActivo !== 'equipo' || buckets.length === 0) return null
+    const periodoInicio = fechaISOLocal(buckets[0].inicio)
+    const periodoFinDate = buckets[buckets.length - 1].fin
+    const periodoFin = fechaISOLocal(periodoFinDate)
+
+    function calcularIndicador(lista) {
+      if (lista.length === 0) return null
+      const registrosPeriodo = registros.filter((r) =>
+        lista.some((j) => j.id === r.jugador_id) && r.fecha >= periodoInicio && r.fecha <= periodoFin
+      )
+      const bienestares = registrosPeriodo.map((r) => calcularBienestar(r)).filter((v) => v !== null && v !== undefined)
+      const bienestarMedio = bienestares.length ? bienestares.reduce((a, b) => a + b, 0) / bienestares.length : null
+
+      const acwrValores = lista
+        .map((j) => calcularMetricas(registros.filter((r) => r.jugador_id === j.id), metodoACWR, periodoFinDate).acwrPost)
+        .filter((v) => v !== null && v !== undefined)
+      const acwrMedio = acwrValores.length ? acwrValores.reduce((a, b) => a + b, 0) / acwrValores.length : null
+
+      return {
+        bienestarMedio, nivelBienestar: clasificarBienestar(bienestarMedio),
+        acwrMedio, riesgoACWR: clasificarRiesgoACWR(acwrMedio),
+      }
+    }
+
+    const hayPorteros = jugadoresGrafico.some((j) => j.es_portero)
+    const hayCampo = jugadoresGrafico.some((j) => !j.es_portero)
+    if (posicionActiva === 'todos' && hayPorteros && hayCampo) {
+      return {
+        dividido: true,
+        grupos: [
+          { etiqueta: 'Jugadores de campo', datos: calcularIndicador(jugadoresGrafico.filter((j) => !j.es_portero)) },
+          { etiqueta: '🧤 Porteros', datos: calcularIndicador(jugadoresGrafico.filter((j) => j.es_portero)) },
+        ],
+      }
+    }
+    return { dividido: false, datos: calcularIndicador(jugadoresGrafico) }
+  }, [jugadorActivo, jugadoresGrafico, registros, metodoACWR, buckets, posicionActiva])
+
   // --- Bienestar de hoy: vistazo rápido antes de empezar la sesión, independiente del rango elegido ---
   // --- Bienestar y RPE del día: vistazo por jugador, para una fecha elegible (por defecto hoy) ---
   const [fechaEstadoDia, setFechaEstadoDia] = useState(() => diasAtras(0))
@@ -593,77 +596,14 @@ export default function CoachDashboard({ perfil, equipos = [], equipoActivo = 't
         const suyos = registros.filter((r) => r.jugador_id === j.id)
         const celdas = diasRpeSemana.map((fecha) => {
           const registro = suyos.find((r) => r.fecha === fecha)
-          return { fecha, rpe: registro?.rpe ?? null }
+          const bienestar = registro ? calcularBienestar(registro) : null
+          return { fecha, rpe: registro?.rpe ?? null, bienestar, nivelBienestar: clasificarBienestar(bienestar) }
         })
         const diasConRpe = celdas.filter((c) => c.rpe !== null).length
         return { id: j.id, nombre: j.nombre, esPortero: !!j.es_portero, celdas, diasConRpe }
       })
       .sort((a, b) => a.diasConRpe - b.diasConRpe || a.nombre.localeCompare(b.nombre))
   }, [jugadoresFiltrados, registros, diasRpeSemana])
-
-  // --- Alertas del día seleccionado: control diario, independiente del rango/vista de los gráficos ---
-  const alertasDelDia = useMemo(() => {
-    const hoy = fechaEstadoDia
-    const ayer = (() => { const d = new Date(hoy + 'T00:00:00'); d.setDate(d.getDate() - 1); return fechaISOLocal(d) })()
-    const sinRpeAyer = []
-    const enRiesgo = []
-    const conMolestiaHoy = []
-    const respuestaAtipica = []
-    const huecosDatos = []
-    const sesionInusual = []
-    const caidaBienestar = []
-
-    // Sesiones de los 7 días anteriores a la fecha seleccionada (para saber qué días hubo entreno/partido de verdad)
-    const inicioSemana = (() => { const d = new Date(hoy + 'T00:00:00'); d.setDate(d.getDate() - 6); return fechaISOLocal(d) })()
-    const sesionesSemana = sesiones.filter((s) => s.fecha >= inicioSemana && s.fecha <= hoy)
-
-    // Media de RPE de hoy, calculada por separado para jugadores de campo y
-    // para porteros — nunca mezclados, aunque el selector esté en "Todos".
-    const mediaHoyCampo = mediaEquipoRPE(hoy, gruposPosicion.jugador, registros)
-    const mediaHoyPorteros = mediaEquipoRPE(hoy, gruposPosicion.portero, registros)
-
-    jugadoresFiltrados.forEach((j) => {
-      const suyos = registros.filter((r) => r.jugador_id === j.id)
-      const etiqueta = `${j.es_portero ? '🧤 ' : ''}${j.nombre}`
-
-      const registroAyer = suyos.find((r) => r.fecha === ayer)
-      if (!registroAyer || registroAyer.rpe === null || registroAyer.rpe === undefined) {
-        sinRpeAyer.push(etiqueta)
-      }
-
-      const metricas = calcularMetricas(suyos, metodoACWR, new Date(hoy + 'T00:00:00'))
-      const riesgo = clasificarRiesgoACWR(metricas.acwrPost)
-      if (riesgo === 'alta' || riesgo === 'muy_alta') enRiesgo.push(etiqueta)
-
-      const registroHoy = suyos.find((r) => r.fecha === hoy)
-      if (registroHoy?.tiene_molestia) conMolestiaHoy.push(`${etiqueta} (${(registroHoy.zonas_molestia || []).join(', ') || 'sin zona'})`)
-
-      const mediaHoyGrupo = j.es_portero ? mediaHoyPorteros : mediaHoyCampo
-      if (mediaHoyGrupo !== null && registroHoy?.rpe !== null && registroHoy?.rpe !== undefined) {
-        const desviacion = registroHoy.rpe - mediaHoyGrupo
-        if (Math.abs(desviacion) >= 2) {
-          respuestaAtipica.push(`${etiqueta} (RPE ${registroHoy.rpe} vs ${mediaHoyGrupo.toFixed(1)} ${j.es_portero ? 'de los porteros' : 'de los jugadores de campo'})`)
-        }
-      }
-
-      const huecos = sesionesSemana.filter((s) => !suyos.some((r) => r.fecha === s.fecha && r.rpe !== null && r.rpe !== undefined)).length
-      if (huecos > 0 && sesionesSemana.length > 0) {
-        huecosDatos.push(`${etiqueta} (${huecos}/${sesionesSemana.length})`)
-      }
-
-      const inusual = detectarSesionInusual(suyos, hoy)
-      if (inusual) {
-        sesionInusual.push(`${etiqueta} (${inusual.cargaHoy} vs media ${inusual.media}, ${inusual.alta ? '↑' : '↓'})`)
-      }
-
-      const deltaHoy = deltaBienestarDiario(suyos, new Date(hoy + 'T00:00:00'))
-      if (clasificarDeltaDiario(deltaHoy) === 'alerta') {
-        caidaBienestar.push(`${etiqueta} (${deltaHoy.toFixed(1)})`)
-      }
-    })
-
-    return { sinRpeAyer, enRiesgo, conMolestiaHoy, respuestaAtipica, huecosDatos, sesionInusual, caidaBienestar }
-  }, [jugadoresFiltrados, gruposPosicion, registros, sesiones, metodoACWR, fechaEstadoDia])
 
   // --- Mapa de calor jugador × día ---
   const diasMapaCalor = useMemo(() => {
@@ -800,6 +740,22 @@ export default function CoachDashboard({ perfil, equipos = [], equipoActivo = 't
         </p>
       </div>
 
+      {indicadoresGrupo && (
+        <section className="indicadores-grandes-card no-imprimir">
+          <h3>Estado del grupo ahora mismo</h3>
+          {indicadoresGrupo.dividido ? (
+            indicadoresGrupo.grupos.map((g) => (
+              <div key={g.etiqueta} className="indicadores-grandes-grupo">
+                <h4 className="indicadores-grandes-grupo-titulo">{g.etiqueta}</h4>
+                <BloqueIndicadoresGrandes datos={g.datos} />
+              </div>
+            ))
+          ) : (
+            <BloqueIndicadoresGrandes datos={indicadoresGrupo.datos} />
+          )}
+        </section>
+      )}
+
       <section className="bienestar-hoy-card no-imprimir">
         <div className="bienestar-hoy-cabecera">
           <div>
@@ -835,80 +791,11 @@ export default function CoachDashboard({ perfil, equipos = [], equipoActivo = 't
         )}
       </section>
 
-      <section className="alertas-card no-imprimir">
-        <h3>Alertas {fechaEstadoDia === diasAtras(0) ? 'de hoy' : `del ${new Date(fechaEstadoDia + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}`}</h3>
-        <div className="alertas-grid">
-          <div className={`alerta-bloque ${alertasDelDia.sinRpeAyer.length ? 'alerta-activa' : ''}`}>
-            <span className="alerta-titulo">Sin RPE de ayer</span>
-            {alertasDelDia.sinRpeAyer.length === 0 ? (
-              <span className="alerta-ok">✓ Todos registraron</span>
-            ) : (
-              <span className="alerta-lista">{alertasDelDia.sinRpeAyer.join(', ')}</span>
-            )}
-          </div>
-          <div className={`alerta-bloque ${alertasDelDia.enRiesgo.length ? 'alerta-activa' : ''}`}>
-            <span className="alerta-titulo">En riesgo (ACWR alto/muy alto)</span>
-            {alertasDelDia.enRiesgo.length === 0 ? (
-              <span className="alerta-ok">✓ Nadie en riesgo</span>
-            ) : (
-              <span className="alerta-lista">{alertasDelDia.enRiesgo.join(', ')}</span>
-            )}
-          </div>
-          <div className={`alerta-bloque ${alertasDelDia.conMolestiaHoy.length ? 'alerta-activa' : ''}`}>
-            <span className="alerta-titulo">Molestia reportada hoy</span>
-            {alertasDelDia.conMolestiaHoy.length === 0 ? (
-              <span className="alerta-ok">✓ Sin molestias nuevas</span>
-            ) : (
-              <span className="alerta-lista">{alertasDelDia.conMolestiaHoy.join(', ')}</span>
-            )}
-          </div>
-          <div className={`alerta-bloque ${alertasDelDia.respuestaAtipica.length ? 'alerta-activa' : ''}`}>
-            <span className="alerta-titulo" title="RPE de hoy con una diferencia de 2 puntos o más respecto a la media de su grupo — jugadores de campo y porteros se comparan siempre por separado">
-              Respuesta atípica hoy
-            </span>
-            {alertasDelDia.respuestaAtipica.length === 0 ? (
-              <span className="alerta-ok">✓ Respuestas homogéneas</span>
-            ) : (
-              <span className="alerta-lista">{alertasDelDia.respuestaAtipica.join(', ')}</span>
-            )}
-          </div>
-          <div className={`alerta-bloque ${alertasDelDia.huecosDatos.length ? 'alerta-activa' : ''}`}>
-            <span className="alerta-titulo" title="Sesiones de los últimos 7 días sin RPE registrado">
-              Huecos de RPE (últimos 7 días)
-            </span>
-            {alertasDelDia.huecosDatos.length === 0 ? (
-              <span className="alerta-ok">✓ Sin huecos</span>
-            ) : (
-              <span className="alerta-lista">{alertasDelDia.huecosDatos.join(', ')}</span>
-            )}
-          </div>
-          <div className={`alerta-bloque ${alertasDelDia.sesionInusual.length ? 'alerta-activa' : ''}`}>
-            <span className="alerta-titulo" title="Carga de hoy con una diferencia de 1.5 desviaciones estándar o más respecto a sus sesiones reales de las últimas 3 semanas">
-              Sesión inusual hoy (vs su propio histórico)
-            </span>
-            {alertasDelDia.sesionInusual.length === 0 ? (
-              <span className="alerta-ok">✓ Cargas dentro de lo habitual</span>
-            ) : (
-              <span className="alerta-lista">{alertasDelDia.sesionInusual.join(', ')}</span>
-            )}
-          </div>
-          <div className={`alerta-bloque ${alertasDelDia.caidaBienestar.length ? 'alerta-activa' : ''}`}>
-            <span className="alerta-titulo" title="Caída de -0.5 o más en el delta diario de Bienestar (modelo de Manu Sola Arjona: diferencia Agudo-Basal de hoy vs. la de ayer)">
-              Caída de Bienestar hoy
-            </span>
-            {alertasDelDia.caidaBienestar.length === 0 ? (
-              <span className="alerta-ok">✓ Sin caídas notables</span>
-            ) : (
-              <span className="alerta-lista">{alertasDelDia.caidaBienestar.join(', ')}</span>
-            )}
-          </div>
-        </div>
-      </section>
-
       <section className="rpe-semana-card no-imprimir">
         <h3>RPE de la semana</h3>
         <p className="texto-dim bienestar-hoy-sub">
-          Qué ha aportado cada jugador, día a día, en los últimos 7 días. <span className="rpe-semana-leyenda-partido">⚽</span> partido · <span className="rpe-semana-leyenda-sesion">●</span> sesión.
+          Qué ha aportado cada jugador, día a día, en los últimos 7 días — esfuerzo (RPE) y, debajo, cómo llegó ese día (bienestar).
+          <span className="rpe-semana-leyenda-partido">⚽</span> partido · <span className="rpe-semana-leyenda-sesion">●</span> sesión.
         </p>
         {rpeSemana.length === 0 ? (
           <p className="texto-dim">No hay jugadores en el grupo activo.</p>
@@ -940,6 +827,15 @@ export default function CoachDashboard({ perfil, equipos = [], equipoActivo = 't
                         ) : (
                           <span className="rpe-semana-vacio">—</span>
                         )}
+                        {c.bienestar !== null && (
+                          <span
+                            className="rpe-semana-bienestar mono"
+                            style={{ color: colorNivelBienestar[c.nivelBienestar] }}
+                            title={`Bienestar: ${traducirBienestar(c.nivelBienestar)}`}
+                          >
+                            {c.bienestar.toFixed(1)}
+                          </span>
+                        )}
                       </td>
                     ))}
                   </tr>
@@ -950,20 +846,12 @@ export default function CoachDashboard({ perfil, equipos = [], equipoActivo = 't
         )}
       </section>
 
-      {resumenTarjetas?.modo === 'grupo_dividido' ? (
-        resumenTarjetas.grupos.map((g) => (
-          <div key={g.etiqueta} className="tarjetas-resumen-grupo">
-            <h4 className="tarjetas-resumen-grupo-titulo">{g.etiqueta}</h4>
-            <section className="tarjetas-resumen tarjetas-resumen-grupo-grid no-imprimir">
-              {g.tarjetas.map((t, i) => (
-                <TarjetaResumen key={i} etiqueta={t.etiqueta} valor={t.valor} tono={t.tono} />
-              ))}
-            </section>
-          </div>
-        ))
-      ) : (
+      {/* En vista de grupo, esto ya lo cubren los indicadores grandes de arriba
+          y el resto de secciones — solo se muestra este desglose numérico
+          cuando se está mirando a UN jugador en concreto. */}
+      {resumenTarjetas?.modo === 'individual' && (
         <section className="tarjetas-resumen no-imprimir">
-          {resumenTarjetas?.tarjetas.map((t, i) => (
+          {resumenTarjetas.tarjetas.map((t, i) => (
             <TarjetaResumen key={i} etiqueta={t.etiqueta} valor={t.valor} tono={t.tono} />
           ))}
         </section>
@@ -1176,6 +1064,38 @@ function TarjetaResumen({ etiqueta, valor, tono }) {
     <div className={`tarjeta-resumen ${tono ? 'tarjeta-' + tono : ''}`}>
       <span className="tarjeta-valor mono">{valor}</span>
       <span className="tarjeta-etiqueta">{etiqueta}</span>
+    </div>
+  )
+}
+
+// Los dos indicadores grandes (ACWR y Bienestar) de "Estado del grupo ahora
+// mismo" — mismos colores que ya usa el mapa de calor (colorRiesgoAcwr /
+// colorNivelBienestar), para que hablen el mismo idioma en toda la pantalla.
+function IndicadorGrande({ titulo, valor, etiqueta, color }) {
+  return (
+    <div className="indicador-grande" style={{ '--color-indicador': color }}>
+      <span className="indicador-grande-titulo">{titulo}</span>
+      <span className="indicador-grande-valor mono">{valor}</span>
+      <span className="indicador-grande-etiqueta">{etiqueta}</span>
+    </div>
+  )
+}
+
+function BloqueIndicadoresGrandes({ datos }) {
+  return (
+    <div className="indicadores-grandes-grid">
+      <IndicadorGrande
+        titulo="ACWR medio"
+        valor={datos?.acwrMedio !== null && datos?.acwrMedio !== undefined ? datos.acwrMedio.toFixed(2) : '—'}
+        etiqueta={traducirRiesgo(datos?.riesgoACWR || 'sin_datos')}
+        color={colorRiesgoAcwr[datos?.riesgoACWR || 'sin_datos']}
+      />
+      <IndicadorGrande
+        titulo="Bienestar medio"
+        valor={datos?.bienestarMedio !== null && datos?.bienestarMedio !== undefined ? datos.bienestarMedio.toFixed(1) : '—'}
+        etiqueta={traducirBienestar(datos?.nivelBienestar || 'sin_datos')}
+        color={colorNivelBienestar[datos?.nivelBienestar || 'sin_datos']}
+      />
     </div>
   )
 }
