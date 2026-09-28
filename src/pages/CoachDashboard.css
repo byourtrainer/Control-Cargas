@@ -251,14 +251,66 @@
 .informe-toggle:hover { border-color: var(--accent); color: var(--accent); }
 
 /* --- Alertas de hoy --- */
-.alertas-card {
+/* --- Indicadores grandes: ACWR y Bienestar del grupo, de un vistazo --- */
+.indicadores-grandes-card {
   background: var(--bg-card);
   border: 1px solid var(--line);
   border-radius: 14px;
   padding: 20px 24px;
+  margin-bottom: 16px;
 }
 
-.alertas-card h3 { font-size: 14px; color: var(--text-dim); font-weight: 500; margin-bottom: 14px; }
+.indicadores-grandes-card h3 { font-size: 14px; color: var(--text-dim); font-weight: 500; margin-bottom: 14px; }
+
+.indicadores-grandes-grupo { margin-bottom: 18px; }
+.indicadores-grandes-grupo:last-child { margin-bottom: 0; }
+
+.indicadores-grandes-grupo-titulo {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin: 0 0 10px;
+}
+
+.indicadores-grandes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+}
+
+.indicador-grande {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+  padding: 22px 16px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--color-indicador) 45%, var(--line));
+  background: color-mix(in srgb, var(--color-indicador) 12%, var(--bg-elevated));
+}
+
+.indicador-grande-titulo {
+  font-size: 12px;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.indicador-grande-valor {
+  font-size: 40px;
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--color-indicador);
+}
+
+.indicador-grande-etiqueta {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-indicador);
+}
 
 .bienestar-hoy-card {
   background: var(--bg-card);
@@ -420,6 +472,10 @@
 }
 
 .rpe-semana-celda {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
   text-align: center;
   padding: 8px;
   border-bottom: 1px solid var(--line);
@@ -435,36 +491,11 @@
   opacity: 0.4;
 }
 
-.alertas-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 14px;
+.rpe-semana-bienestar {
+  font-size: 10px;
+  font-weight: 600;
+  opacity: 0.85;
 }
-
-.alerta-bloque {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 12px 14px;
-}
-
-.alerta-bloque.alerta-activa {
-  border-color: rgba(234,92,74,0.4);
-  background: rgba(234,92,74,0.06);
-}
-
-.alerta-titulo {
-  font-size: 12px;
-  color: var(--text-faint);
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-
-.alerta-ok { font-size: 13px; color: var(--risk-low); }
-.alerta-lista { font-size: 13px; color: var(--risk-high); line-height: 1.5; }
 
 /* --- Mapa de calor --- */
 .mapa-calor-card {
