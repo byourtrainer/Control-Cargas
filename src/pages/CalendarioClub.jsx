@@ -69,6 +69,14 @@ function formatearFechaLarga(fechaISO) {
 export default function CalendarioClub({ perfil, equipoActivo = 'todos', equipos = [], jugadorActivo = 'equipo', fechaDesde, fechaHasta }) {
   const esSinAsignar = equipoActivo === 'sin_asignar'
   const esEquipoConcreto = equipoActivo !== 'todos' && !esSinAsignar
+  // Algunos equipos (p. ej. grupos de deportistas a distancia, cada uno con
+  // su propio calendario de partidos/entrenos) se marcan con
+  // equipos.calendario_individual — ahí el calendario se lleva por jugador,
+  // igual que para los "sin asignar", en vez de compartido para todo el
+  // equipo. El resto de equipos no se ve afectado (el campo es false/null).
+  const equipoActivoInfo = equipos.find((e) => e.id === equipoActivo)
+  const esIndividualPorEquipo = esEquipoConcreto && !!equipoActivoInfo?.calendario_individual
+  const necesitaSeleccionJugador = esSinAsignar || esIndividualPorEquipo
   // Club al que se limita entrenador/fisio (null = administrador, sin límite).
   const clubId = clubIdDePerfil(perfil)
   // Pequeño helper para no repetir la misma condición de club en cada
@@ -88,8 +96,8 @@ export default function CalendarioClub({ perfil, equipoActivo = 'todos', equipos
   const [jugadoresPersonalizacion, setJugadoresPersonalizacion] = useState([])
   const [cargandoPersonalizacion, setCargandoPersonalizacion] = useState(false)
 
-  const modoDestino = esEquipoConcreto ? 'equipo' : (esSinAsignar && jugadorSeleccionado ? 'jugador' : null)
-  const nombreDestino = esEquipoConcreto
+  const modoDestino = (esEquipoConcreto && !esIndividualPorEquipo) ? 'equipo' : (necesitaSeleccionJugador && jugadorSeleccionado ? 'jugador' : null)
+  const nombreDestino = (esEquipoConcreto && !esIndividualPorEquipo)
     ? equipos.find((e) => e.id === equipoActivo)?.nombre
     : jugadoresSinAsignar.find((j) => j.id === jugadorSeleccionado)?.nombre
 
@@ -246,9 +254,10 @@ export default function CalendarioClub({ perfil, equipoActivo = 'todos', equipos
   })
 
   useEffect(() => {
-    if (esSinAsignar) cargarJugadoresSinAsignar()
-    else setJugadorSeleccionado('')
-  }, [esSinAsignar])
+    setJugadorSeleccionado('')
+    if (necesitaSeleccionJugador) cargarJugadoresParaSeleccion()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [equipoActivo])
 
   useEffect(() => { if (modoDestino) { cargarMes(); cargarNotaMes() } }, [mesVisible, modoDestino, equipoActivo, jugadorSeleccionado])
 
@@ -319,10 +328,10 @@ export default function CalendarioClub({ perfil, equipoActivo = 'todos', equipos
     setGuardandoIntensidadDia(false)
   }
 
-  async function cargarJugadoresSinAsignar() {
-    const { data } = await supabase
-      .from('perfiles').select('id, nombre')
-      .eq('rol', 'jugador').is('equipo_id', null).order('nombre')
+  async function cargarJugadoresParaSeleccion() {
+    let consulta = supabase.from('perfiles').select('id, nombre').eq('rol', 'jugador').order('nombre')
+    consulta = esSinAsignar ? consulta.is('equipo_id', null) : consulta.eq('equipo_id', equipoActivo)
+    const { data } = await consulta
     setJugadoresSinAsignar(data || [])
   }
 
@@ -569,17 +578,20 @@ export default function CalendarioClub({ perfil, equipoActivo = 'todos', equipos
     )
   }
 
-  if (esSinAsignar && !jugadorSeleccionado) {
+  if (necesitaSeleccionJugador && !jugadorSeleccionado) {
     return (
       <div className="calendario-club-layout">
         <section className="calendario-club-sin-equipo">
           <h2>Elige un deportista</h2>
           <p className="texto-dim">
-            Los deportistas sin equipo tienen su calendario individual — elige a quién le quieres
-            llevar la agenda.
+            {esIndividualPorEquipo
+              ? 'Este equipo lleva un calendario individual por deportista — elige a quién le quieres llevar la agenda.'
+              : 'Los deportistas sin equipo tienen su calendario individual — elige a quién le quieres llevar la agenda.'}
           </p>
           {jugadoresSinAsignar.length === 0 ? (
-            <p className="texto-dim">No hay ningún jugador marcado como "Sin asignar" ahora mismo.</p>
+            <p className="texto-dim">
+              {esIndividualPorEquipo ? 'Este equipo todavía no tiene ningún jugador.' : 'No hay ningún jugador marcado como "Sin asignar" ahora mismo.'}
+            </p>
           ) : (
             <select value={jugadorSeleccionado} onChange={(e) => setJugadorSeleccionado(e.target.value)} className="calendario-club-selector-jugador">
               <option value="">Elige un jugador…</option>
@@ -625,7 +637,7 @@ export default function CalendarioClub({ perfil, equipoActivo = 'todos', equipos
           <button className="btn-exportar no-imprimir" onClick={() => window.print()}>Imprimir / Guardar PDF</button>
         </div>
 
-        {esSinAsignar && (
+        {necesitaSeleccionJugador && (
           <div className="calendario-club-cambiar-jugador no-imprimir">
             <span className="texto-dim">Deportista:</span>
             <select value={jugadorSeleccionado} onChange={(e) => setJugadorSeleccionado(e.target.value)}>
