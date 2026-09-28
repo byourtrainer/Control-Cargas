@@ -1,0 +1,1138 @@
+   import { Fragment, useEffect, useMemo, useState } from 'react'
+import {
+  ResponsiveContainer, LineChart, Line, ReferenceArea,
+  XAxis, YAxis, CartesianGrid, Tooltip,
+} from 'recharts'
+import { supabase } from '../lib/supabaseClient'
+import { fechaISOLocal } from '../lib/fechas'
+import { calcularMetricas, clasificarRiesgoACWR, clasificarMonotonia, diferenciaCarga } from '../lib/cargaMetrics'
+import { calcularBienestar, clasificarBienestar } from '../lib/bienestar'
+import { colorParaValor } from '../lib/colorEscalas'
+import { diferenciaBienestar, deltaBienestarDiario, deltaBienestarSemanal, bienestarAgudo, bienestarBasal } from '../lib/bienestarTendencia'
+import { clubIdDePerfil, idsOimposible } from '../lib/alcance'
+import './CoachDashboard.css'
+
+const diasAtras = (n) => {
+  const d = new Date()
+  d.setDate(d.getDate() - n)
+  return fechaISOLocal(d)
+}
+
+const tiposVistaGrafico = [
+  { valor: 'diario', etiqueta: 'Diaria' },
+  { valor: 'semanal', etiqueta: 'Semanal' },
+  { valor: 'mensual', etiqueta: 'Mensual' },
+]
+
+/** Construye los "cubos" (rangos de fechas) que cubren exactamente el rango elegido (desde/hasta). */
+function construirBuckets(tipoVista, fechaDesde, fechaHasta) {
+  const inicio = new Date(fechaDesde + 'T00:00:00')
+  const fin = new Date(fechaHasta + 'T00:00:00')
+  const buckets = []
+
+  if (fin < inicio) return buckets
+
+  if (tipoVista === 'diario') {
+    const cursor = new Date(inicio)
+    while (cursor <= fin) {
+      buckets.push({ inicio: new Date(cursor), fin: new Date(cursor), etiqueta: fechaISOLocal(cursor).slice(5, 10) })
+      cursor.setDate(cursor.getDate() + 1)
+    }
+  } else if (tipoVista === 'semanal') {
+    const cursor = new Date(inicio)
+    while (cursor <= fin) {
+      const finBucket = new Date(cursor); finBucket.setDate(finBucket.getDate() + 6)
+      const finReal = finBucket > fin ? new Date(fin) : finBucket
+      buckets.push({ inicio: new Date(cursor), fin: finReal, etiqueta: fechaISOLocal(cursor).slice(5, 10) })
+      cursor.setDate(cursor.getDate() + 7)
+    }
+  } else {
+    let cursor = new Date(inicio.getFullYear(), inicio.getMonth(), 1)
+    while (cursor <= fin) {
+      const finMes = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0)
+      const inicioReal = cursor < inicio ? inicio : cursor
+      const finReal = finMes > fin ? fin : finMes
+      buckets.push({
+        inicio: inicioReal, fin: finReal,
+        etiqueta: finMes.toLocaleDateString('es-ES', { month: 'short', year: '2-digit' }),
+      })
+      cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1)
+    }
+  }
+  return buckets.slice(-60)
+}
+
+/** Calcula el valor de la variable seleccionada para un cubo de fechas concreto. */
+/** Para el gráfico combinado de Bienestar: percibido (del propio periodo del bucket),
+ * agudo y basal (calculados a fecha del final del bucket) — media del grupo en los tres casos. */
+function calcularBienestarCombinadoBucket(bucket, jugadoresGrafico, registros) {
+  const inicioISO = fechaISOLocal(bucket.inicio)
+  const finISO = fechaISOLocal(bucket.fin)
+
+  const percibidos = []
+  const agudos = []
+  const basales = []
+  jugadoresGrafico.forEach((j) => {
+    const suyos = registros.filter((r) => r.jugador_id === j.id)
+    suyos
+      .filter((r) => r.fecha >= inicioISO && r.fecha <= finISO)
+      .forEach((r) => {
+        const b = calcularBienestar(r)
+        if (b !== null && b !== undefined) percibidos.push(b)
+      })
+    const a = bienestarAgudo(suyos, bucket.fin)
+    const bs = bienestarBasal(suyos, bucket.fin)
+    if (a !== null && a !== undefined) agudos.push(a)
+    if (bs !== null && bs !== undefined) basales.push(bs)
+  })
+
+  const mediaDe = (arr) => (arr.length === 0 ? null : arr.reduce((a, b) => a + b, 0) / arr.length)
+  return { percibido: mediaDe(percibidos), agudo: mediaDe(agudos), basal: mediaDe(basales) }
+}
+
+function calcularValorBucket(bucket, jugadoresGrafico, registros, variableGrafico, metodoACWR) {
+  const inicioISO = fechaISOLocal(bucket.inicio)
+  const finISO = fechaISOLocal(bucket.fin)
+
+  if (variableGrafico === 'carga') {
+    let suma = 0
+    jugadoresGrafico.forEach((j) => {
+      registros
+        .filter((r) => r.jugador_id === j.id && r.fecha >= inicioISO && r.fecha <= finISO)
+        .forEach((r) => { suma += r.carga || 0 })
+    })
+    return suma
+  }
+
+  if (variableGrafico === 'bienestar') {
+    const valores = []
+    jugadoresGrafico.forEach((j) => {
+      registros
+        .filter((r) => r.jugador_id === j.id && r.fecha >= inicioISO && r.fecha <= finISO)
+        .forEach((r) => {
+          const m = calcularBienestar(r)
+          if (m !== null && m !== undefined) valores.push(m)
+        })
+    })
+    if (valores.length === 0) return null
+    return valores.reduce((a, b) => a + b, 0) / valores.length
+  }
+
+  const valores = jugadoresGrafico.map((j) => {
+    const suyos = registros.filter((r) => r.jugador_id === j.id)
+    const metricas = calcularMetricas(suyos, metodoACWR, bucket.fin)
+    if (variableGrafico === 'acwr') return metricas.acwrPost
+    if (variableGrafico === 'monotonia') return metricas.monotonia
+    if (variableGrafico === 'fatiga') return metricas.fatiga
+    if (variableGrafico === 'diferencia_bienestar') return diferenciaBienestar(suyos, bucket.fin)
+    if (variableGrafico === 'diferencia_carga') return diferenciaCarga(suyos, bucket.fin)
+    if (variableGrafico === 'delta_bienestar_diario') return deltaBienestarDiario(suyos, bucket.fin)
+    if (variableGrafico === 'delta_bienestar_semanal') return deltaBienestarSemanal(suyos, bucket.fin)
+    return null
+  }).filter((v) => v !== null && v !== undefined)
+  if (valores.length === 0) return null
+  return valores.reduce((a, b) => a + b, 0) / valores.length
+}
+
+const metodosACWR = [
+  { valor: 'clasico', etiqueta: 'ACWR Clásico (28 días)' },
+  { valor: 'ewma', etiqueta: 'ACWR EWMA' },
+]
+
+const variablesGrafico = [
+  { valor: 'carga', etiqueta: 'Carga' },
+  { valor: 'acwr', etiqueta: 'ACWR Post' },
+  { valor: 'monotonia', etiqueta: 'Monotonía' },
+  { valor: 'fatiga', etiqueta: 'Fatiga (Strain)' },
+  { valor: 'bienestar', etiqueta: 'Bienestar' },
+]
+
+const bandasPorVariable = {
+  acwr: [
+    { y1: 0, y2: 0.5, color: 'var(--risk-mid)' },
+    { y1: 0.5, y2: 0.8, color: 'var(--risk-low)' },
+    { y1: 0.8, y2: 1.1, color: 'var(--accent)' },
+    { y1: 1.1, y2: 1.5, color: 'var(--risk-mid)' },
+    { y1: 1.5, y2: 2.0, color: 'var(--risk-high-mid)' },
+    { y1: 2.0, y2: 3.5, color: 'var(--risk-high)' },
+  ],
+  monotonia: [
+    { y1: 0, y2: 1, color: 'var(--text-faint)' },
+    { y1: 1, y2: 2, color: 'var(--risk-low)' },
+    { y1: 2, y2: 2.5, color: 'var(--risk-high-mid)' },
+    { y1: 2.5, y2: 5, color: 'var(--risk-high)' },
+  ],
+  bienestar: [
+    { y1: 0, y2: 3, color: 'var(--risk-high)' },
+    { y1: 3, y2: 4, color: 'var(--risk-mid)' },
+    { y1: 4, y2: 5, color: 'var(--risk-low)' },
+  ],
+  diferencia_bienestar: [
+    { y1: -4, y2: -0.5, color: 'var(--risk-high)' },
+    { y1: -0.5, y2: 0.5, color: 'var(--accent)' },
+    { y1: 0.5, y2: 4, color: 'var(--risk-low)' },
+  ],
+  delta_bienestar_diario: [
+    { y1: -4, y2: -0.5, color: 'var(--risk-high)' },
+    { y1: -0.5, y2: 0.5, color: 'var(--text-faint)' },
+    { y1: 0.5, y2: 4, color: 'var(--risk-low)' },
+  ],
+}
+
+const colorRiesgoAcwr = {
+  sin_datos: 'var(--line)',
+  muy_baja: 'rgba(111,207,125,0.5)',
+  baja: 'var(--risk-low)',
+  optima: 'var(--accent)',
+  moderada_alta: 'var(--risk-mid)',
+  alta: 'var(--risk-high-mid)',
+  muy_alta: 'var(--risk-high)',
+}
+
+const colorNivelBienestar = {
+  sin_datos: 'var(--line)',
+  optimo: 'var(--risk-low)',
+  bueno: 'var(--risk-mid)',
+  malo: 'var(--risk-high)',
+}
+
+function PuntoPartido({ cx, cy, payload }) {
+  if (!payload?.esPartido) return null
+  return <circle cx={cx} cy={cy} r={5} fill="var(--risk-mid)" stroke="var(--bg-card)" strokeWidth={1.5} />
+}
+
+/** Media de RPE del equipo (grupo filtrado) en una fecha concreta. Necesita al menos 2 jugadores con dato. */
+function mediaEquipoRPE(fechaISO, jugadoresFiltrados, registros) {
+  const valores = jugadoresFiltrados
+    .map((j) => registros.find((r) => r.jugador_id === j.id && r.fecha === fechaISO && r.rpe !== null && r.rpe !== undefined))
+    .filter(Boolean)
+    .map((r) => r.rpe)
+  if (valores.length < 2) return null
+  return valores.reduce((a, b) => a + b, 0) / valores.length
+}
+
+function colorDesviacion(abs) {
+  if (abs < 1) return 'var(--risk-low)'
+  if (abs < 2) return 'var(--risk-mid)'
+  if (abs < 3) return 'var(--risk-high-mid)'
+  return 'var(--risk-high)'
+}
+
+
+export default function CoachDashboard({ perfil, equipos = [], equipoActivo = 'todos', jugadorActivo = 'equipo', posicionActiva = 'todos', fechaDesde, fechaHasta }) {
+  // Club al que se limita entrenador/fisio (null = administrador, sin límite).
+  const clubId = clubIdDePerfil(perfil)
+  const [jugadores, setJugadores] = useState([])
+  const [registros, setRegistros] = useState([])
+  const [sesiones, setSesiones] = useState([])
+  const [eventosPartido, setEventosPartido] = useState([])
+  const [variableGrafico, setVariableGrafico] = useState('carga')
+  const [tipoVistaGrafico, setTipoVistaGrafico] = useState('diario')
+  const [metodoACWR, setMetodoACWR] = useState('clasico')
+  const [informeAbierto, setInformeAbierto] = useState(false)
+  const [variableMapaCalor, setVariableMapaCalor] = useState('acwr')
+  const [cargando, setCargando] = useState(true)
+  const [modoImpresion, setModoImpresion] = useState(false)
+
+  useEffect(() => {
+    const antesDeImprimir = () => setModoImpresion(true)
+    const despuesDeImprimir = () => setModoImpresion(false)
+    window.addEventListener('beforeprint', antesDeImprimir)
+    window.addEventListener('afterprint', despuesDeImprimir)
+    return () => {
+      window.removeEventListener('beforeprint', antesDeImprimir)
+      window.removeEventListener('afterprint', despuesDeImprimir)
+    }
+  }, [])
+
+  useEffect(() => { cargarDatos() }, [])
+
+  async function cargarDatos() {
+    setCargando(true)
+
+    // Entrenador/fisio solo deben ver los jugadores de los equipos de su
+    // club — se resuelve primero esa lista (y sus ids) para poder acotar
+    // también las consultas de registros/eventos que siguen a continuación.
+    // El administrador no tiene esta restricción (clubId === null).
+    let consultaJugadores = supabase.from('perfiles').select('*, equipos(id, nombre, logo_base64)').eq('rol', 'jugador').order('nombre')
+    if (clubId) consultaJugadores = supabase.from('perfiles')
+      .select('*, equipos!inner(id, nombre, logo_base64)').eq('rol', 'jugador').eq('equipos.club_id', clubId).order('nombre')
+    const { data: perfiles } = await consultaJugadores
+    const idsJugadoresClub = clubId ? idsOimposible((perfiles || []).map((j) => j.id)) : null
+    const idsEquiposClub = clubId ? idsOimposible(equipos.map((e) => e.id)) : null
+
+    let consultaRegistros = supabase.from('registros_diarios').select('*').gte('fecha', diasAtras(400)).order('fecha', { ascending: false }).limit(20000)
+    let consultaEventos = supabase.from('eventos_calendario').select('fecha, equipo_id, jugador_id')
+      .in('tipo', ['Amistoso', 'Liga', 'Europa', 'Copa del Rey', 'Play-Off'])
+      .gte('fecha', diasAtras(400))
+      .order('fecha', { ascending: false })
+      .limit(20000)
+    if (idsJugadoresClub) {
+      consultaRegistros = consultaRegistros.in('jugador_id', idsJugadoresClub)
+      // Un evento de partido puede apuntar a un equipo entero (equipo_id) o
+      // a un jugador suelto (jugador_id) — se acepta cualquiera de los dos
+      // siempre que pertenezca al club activo.
+      consultaEventos = consultaEventos.or(
+        `equipo_id.in.(${idsEquiposClub.join(',')}),jugador_id.in.(${idsJugadoresClub.join(',')})`
+      )
+    }
+
+    const [{ data: regs }, { data: sess }, { data: partidos }] = await Promise.all([
+      consultaRegistros,
+      // Ordenado por fecha DESCENDENTE (lo más reciente primero) y con un
+      // límite explícito: Supabase/PostgREST solo devuelve un número máximo
+      // de filas por defecto (normalmente 1000). Con muchos jugadores
+      // registrando cada día, en algún momento la ventana de 400 días supera
+      // ese límite — y si se pide ascendente, lo que se corta en silencio son
+      // justo los días MÁS RECIENTES (los de hoy/ayer), que es lo que estaba
+      // pasando. Pidiéndolo descendente, si algo se recorta es lo más viejo,
+      // que afecta mucho menos a lo que se ve en el Resumen.
+      supabase.from('sesiones').select('fecha, mdx').gte('fecha', diasAtras(400)).order('fecha', { ascending: false }).limit(20000),
+      consultaEventos,
+    ])
+    setJugadores(perfiles || [])
+    setRegistros(regs || [])
+    setSesiones(sess || [])
+    setEventosPartido(partidos || [])
+    setCargando(false)
+  }
+
+  // Grupo del equipo activo SIN filtrar por posición — se usa como base para
+  // las comparaciones "vs. su grupo", que siempre deben quedarse dentro de
+  // jugadores de campo o porteros por separado (más abajo, gruposPosicion),
+  // sin importar qué tenga elegido el selector de Posición.
+  const jugadoresEquipo = useMemo(() => {
+    if (equipoActivo === 'sin_asignar') return jugadores.filter((j) => !j.equipo_id)
+    if (equipoActivo !== 'todos') return jugadores.filter((j) => j.equipo_id === equipoActivo)
+    return jugadores
+  }, [jugadores, equipoActivo])
+
+  const jugadoresFiltrados = useMemo(() => {
+    if (posicionActiva === 'porteros') return jugadoresEquipo.filter((j) => j.es_portero)
+    if (posicionActiva === 'jugadores') return jugadoresEquipo.filter((j) => !j.es_portero)
+    return jugadoresEquipo
+  }, [jugadoresEquipo, posicionActiva])
+
+  // Jugadores de campo y porteros del equipo activo, siempre separados —
+  // independientemente del selector de Posición. Una sesión dura para un
+  // jugador puede ser floja para un portero (y viceversa), así que cualquier
+  // "media del equipo" para comparar a alguien debe salir de su propio
+  // grupo, nunca de los dos mezclados.
+  const gruposPosicion = useMemo(() => ({
+    jugador: jugadoresEquipo.filter((j) => !j.es_portero),
+    portero: jugadoresEquipo.filter((j) => j.es_portero),
+  }), [jugadoresEquipo])
+
+  // "Día de partido" se basa en el TIPO real del evento del Calendario
+  // (Amistoso/Liga/Europa/Copa del Rey/Play-Off) — no en la etiqueta de
+  // ciclo "MD" de Planificación, que el entrenador puede poner en
+  // cualquier sesión de entrenamiento normal para marcar su periodización,
+  // sin que eso signifique que ese día haya un partido de verdad.
+  // Se limita a los equipos/jugadores realmente visibles en el grupo activo:
+  // un evento de partido de OTRO equipo no debe marcar ese día como partido
+  // aquí, aunque caiga en la misma fecha.
+  const equiposRelevantes = useMemo(
+    () => new Set(jugadoresFiltrados.map((j) => j.equipo_id).filter(Boolean)),
+    [jugadoresFiltrados]
+  )
+  const idsJugadoresRelevantes = useMemo(
+    () => new Set(jugadoresFiltrados.map((j) => j.id)),
+    [jugadoresFiltrados]
+  )
+  const diasPartido = useMemo(() => {
+    const fechas = eventosPartido
+      .filter((e) =>
+        (e.equipo_id && equiposRelevantes.has(e.equipo_id)) ||
+        (e.jugador_id && idsJugadoresRelevantes.has(e.jugador_id))
+      )
+      .map((e) => e.fecha)
+    return new Set(fechas)
+  }, [eventosPartido, equiposRelevantes, idsJugadoresRelevantes])
+  const diasEntrenamiento = useMemo(
+    () => new Set(sesiones.filter((s) => !diasPartido.has(s.fecha)).map((s) => s.fecha)),
+    [sesiones, diasPartido]
+  )
+
+  const jugadoresGrafico = useMemo(() => (
+    jugadorActivo === 'equipo'
+      ? jugadoresFiltrados
+      : jugadoresFiltrados.filter((j) => j.id === jugadorActivo)
+  ), [jugadorActivo, jugadoresFiltrados])
+
+  const buckets = useMemo(
+    () => construirBuckets(tipoVistaGrafico, fechaDesde, fechaHasta),
+    [tipoVistaGrafico, fechaDesde, fechaHasta]
+  )
+
+  function construirDatosVariable(variable) {
+    return buckets.map((b) => {
+      const fechaISO = fechaISOLocal(b.fin)
+      const esPartido = tipoVistaGrafico === 'diario' && diasPartido.has(fechaISO)
+      if (variable === 'bienestar') {
+        const { percibido, agudo, basal } = calcularBienestarCombinadoBucket(b, jugadoresGrafico, registros)
+        return {
+          fecha: b.etiqueta,
+          percibido: percibido !== null ? Number(percibido.toFixed(2)) : null,
+          agudo: agudo !== null ? Number(agudo.toFixed(2)) : null,
+          basal: basal !== null ? Number(basal.toFixed(2)) : null,
+          esPartido,
+        }
+      }
+      const valor = calcularValorBucket(b, jugadoresGrafico, registros, variable, metodoACWR)
+      return {
+        fecha: b.etiqueta,
+        valor: valor !== null ? Number(valor.toFixed(2)) : null,
+        esPartido,
+      }
+    })
+  }
+
+  const datosGrafico = useMemo(
+    () => construirDatosVariable(variableGrafico),
+    [registros, jugadoresGrafico, variableGrafico, metodoACWR, buckets, tipoVistaGrafico, diasPartido]
+  )
+
+  // Los 5 gráficos del informe completo: se calculan UNA vez cuando cambian
+  // los datos reales, no en cada render — si no, escribir en el comentario
+  // (que también vive en este componente) dispararía este cálculo pesado
+  // en cada letra que se teclea.
+  const datosInformeCompleto = useMemo(() => {
+    const resultado = {}
+    variablesGrafico.forEach((v) => { resultado[v.valor] = construirDatosVariable(v.valor) })
+    return resultado
+  }, [registros, jugadoresGrafico, metodoACWR, buckets, tipoVistaGrafico, diasPartido])
+
+  const resumenTarjetas = useMemo(() => {
+    if (buckets.length === 0) return null
+    const periodoInicio = fechaISOLocal(buckets[0].inicio)
+    const periodoFinDate = buckets[buckets.length - 1].fin
+    const periodoFin = fechaISOLocal(periodoFinDate)
+
+    if (jugadorActivo !== 'equipo') {
+      const jugador = jugadoresGrafico[0]
+      if (!jugador) return null
+      const suyos = registros.filter((r) => r.jugador_id === jugador.id)
+      const registrosPeriodo = suyos.filter((r) => r.fecha >= periodoInicio && r.fecha <= periodoFin)
+      const cargaTotal = registrosPeriodo.reduce((acc, r) => acc + (r.carga || 0), 0)
+      const diasConRpe = registrosPeriodo.filter((r) => r.rpe !== null && r.rpe !== undefined).length
+      const diasPeriodo = Math.round((periodoFinDate - buckets[0].inicio) / 86400000) + 1
+      const bienestares = registrosPeriodo.map((r) => calcularBienestar(r)).filter((v) => v !== null && v !== undefined)
+      const bienestarMedio = bienestares.length ? bienestares.reduce((a, b) => a + b, 0) / bienestares.length : null
+      const nivelBienestar = clasificarBienestar(bienestarMedio)
+      const metricasFin = calcularMetricas(suyos, metodoACWR, periodoFinDate)
+      const riesgo = clasificarRiesgoACWR(metricasFin.acwrPost)
+      const nivelMonot = clasificarMonotonia(metricasFin.monotonia)
+
+      return {
+        modo: 'individual',
+        tarjetas: [
+          { etiqueta: 'Carga total del periodo', valor: cargaTotal },
+          { etiqueta: 'Días con RPE registrado', valor: `${diasConRpe} / ${diasPeriodo}` },
+          {
+            etiqueta: 'Bienestar medio', valor: traducirBienestar(nivelBienestar),
+            tono: nivelBienestar === 'malo' ? 'alto' : null,
+          },
+          {
+            etiqueta: 'ACWR al final del periodo',
+            valor: metricasFin.acwrPost !== null ? `${metricasFin.acwrPost.toFixed(2)} · ${traducirRiesgo(riesgo)}` : '—',
+            tono: (riesgo === 'alta' || riesgo === 'muy_alta') ? 'alto' : null,
+          },
+          {
+            etiqueta: 'Monotonía al final del periodo',
+            valor: metricasFin.monotonia !== null ? `${metricasFin.monotonia.toFixed(2)} · ${traducirMonotonia(nivelMonot)}` : '—',
+            tono: nivelMonot === 'riesgo_elevado' ? 'alto' : null,
+          },
+          {
+            etiqueta: 'Fatiga (Strain) al final del periodo',
+            valor: metricasFin.fatiga !== null && metricasFin.fatiga !== undefined ? Math.round(metricasFin.fatiga) : '—',
+          },
+        ],
+      }
+    }
+
+    // Tarjetas de grupo para una lista de jugadores dada — se reutiliza tal
+    // cual, o una vez por posición cuando el grupo mezcla jugadores de campo
+    // y porteros, para que ninguna media salga contaminada por el otro perfil.
+    function tarjetasDeGrupo(lista) {
+      const registrosPeriodo = registros.filter((r) =>
+        lista.some((j) => j.id === r.jugador_id) && r.fecha >= periodoInicio && r.fecha <= periodoFin
+      )
+      const jugadoresConRegistro = lista.filter((j) =>
+        registrosPeriodo.some((r) => r.jugador_id === j.id && r.rpe !== null && r.rpe !== undefined)
+      ).length
+      const bienestares = registrosPeriodo.map((r) => calcularBienestar(r)).filter((v) => v !== null && v !== undefined)
+      const bienestarMedio = bienestares.length ? bienestares.reduce((a, b) => a + b, 0) / bienestares.length : null
+      const nivelBienestar = clasificarBienestar(bienestarMedio)
+
+      const metricasPorJugador = lista.map((j) => {
+        const suyos = registros.filter((r) => r.jugador_id === j.id)
+        return calcularMetricas(suyos, metodoACWR, periodoFinDate)
+      })
+      const enRiesgo = metricasPorJugador.filter((m) => {
+        const r = clasificarRiesgoACWR(m.acwrPost)
+        return r === 'alta' || r === 'muy_alta'
+      }).length
+
+      const media = (arr) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : null)
+      const cargaTotalGrupo = lista.reduce((acc, j) => (
+        acc + registrosPeriodo.filter((r) => r.jugador_id === j.id).reduce((a, r) => a + (r.carga || 0), 0)
+      ), 0)
+      const cargaMediaJugador = lista.length ? cargaTotalGrupo / lista.length : null
+      const acwrMedio = media(metricasPorJugador.map((m) => m.acwrPost).filter((v) => v !== null && v !== undefined))
+      const monotoniaMedia = media(metricasPorJugador.map((m) => m.monotonia).filter((v) => v !== null && v !== undefined))
+      const fatigaMedia = media(metricasPorJugador.map((m) => m.fatiga).filter((v) => v !== null && v !== undefined))
+
+      return [
+        { etiqueta: 'Jugadores en el grupo', valor: lista.length },
+        { etiqueta: 'Registraron en el periodo', valor: `${jugadoresConRegistro} / ${lista.length}` },
+        { etiqueta: 'Carga media por jugador', valor: cargaMediaJugador !== null ? Math.round(cargaMediaJugador) : '—' },
+        {
+          etiqueta: 'Bienestar medio del grupo', valor: traducirBienestar(nivelBienestar),
+          tono: nivelBienestar === 'malo' ? 'alto' : null,
+        },
+        { etiqueta: 'ACWR medio del grupo', valor: acwrMedio !== null ? acwrMedio.toFixed(2) : '—' },
+        { etiqueta: 'Monotonía media del grupo', valor: monotoniaMedia !== null ? monotoniaMedia.toFixed(2) : '—' },
+        { etiqueta: 'Fatiga (Strain) media del grupo', valor: fatigaMedia !== null ? Math.round(fatigaMedia) : '—' },
+        { etiqueta: 'En riesgo (ACWR alto/muy alto)', valor: enRiesgo, tono: enRiesgo > 0 ? 'alto' : null },
+      ]
+    }
+
+    // Si el filtro de Posición está en "Todos" y el grupo activo tiene a la
+    // vez jugadores de campo y porteros, se desdobla en dos bloques de
+    // tarjetas en vez de dar una única media mezclada.
+    const hayPorteros = jugadoresGrafico.some((j) => j.es_portero)
+    const hayCampo = jugadoresGrafico.some((j) => !j.es_portero)
+    if (posicionActiva === 'todos' && hayPorteros && hayCampo) {
+      return {
+        modo: 'grupo_dividido',
+        grupos: [
+          { etiqueta: 'Jugadores de campo', tarjetas: tarjetasDeGrupo(jugadoresGrafico.filter((j) => !j.es_portero)) },
+          { etiqueta: '🧤 Porteros', tarjetas: tarjetasDeGrupo(jugadoresGrafico.filter((j) => j.es_portero)) },
+        ],
+      }
+    }
+
+    return { modo: 'grupo', tarjetas: tarjetasDeGrupo(jugadoresGrafico) }
+  }, [jugadorActivo, jugadoresGrafico, registros, metodoACWR, buckets, posicionActiva])
+
+  // --- Dos indicadores grandes (ACWR y Bienestar del grupo) para un vistazo
+  // rápido de cómo está el equipo ahora mismo, sin tener que leer una tabla
+  // de números. Solo tiene sentido en vista de grupo (no de un jugador
+  // suelto, que ya tiene sus propias tarjetas arriba). Si el grupo activo
+  // mezcla jugadores de campo y porteros, se separan en dos bloques — igual
+  // que ya se hacía con las tarjetas de resumen — para no mezclar sus medias.
+  const indicadoresGrupo = useMemo(() => {
+    if (jugadorActivo !== 'equipo' || buckets.length === 0) return null
+    const periodoInicio = fechaISOLocal(buckets[0].inicio)
+    const periodoFinDate = buckets[buckets.length - 1].fin
+    const periodoFin = fechaISOLocal(periodoFinDate)
+
+    function calcularIndicador(lista) {
+      if (lista.length === 0) return null
+      const registrosPeriodo = registros.filter((r) =>
+        lista.some((j) => j.id === r.jugador_id) && r.fecha >= periodoInicio && r.fecha <= periodoFin
+      )
+      const bienestares = registrosPeriodo.map((r) => calcularBienestar(r)).filter((v) => v !== null && v !== undefined)
+      const bienestarMedio = bienestares.length ? bienestares.reduce((a, b) => a + b, 0) / bienestares.length : null
+
+      const acwrValores = lista
+        .map((j) => calcularMetricas(registros.filter((r) => r.jugador_id === j.id), metodoACWR, periodoFinDate).acwrPost)
+        .filter((v) => v !== null && v !== undefined)
+      const acwrMedio = acwrValores.length ? acwrValores.reduce((a, b) => a + b, 0) / acwrValores.length : null
+
+      return {
+        bienestarMedio, nivelBienestar: clasificarBienestar(bienestarMedio),
+        acwrMedio, riesgoACWR: clasificarRiesgoACWR(acwrMedio),
+      }
+    }
+
+    const hayPorteros = jugadoresGrafico.some((j) => j.es_portero)
+    const hayCampo = jugadoresGrafico.some((j) => !j.es_portero)
+    if (posicionActiva === 'todos' && hayPorteros && hayCampo) {
+      return {
+        dividido: true,
+        grupos: [
+          { etiqueta: 'Jugadores de campo', datos: calcularIndicador(jugadoresGrafico.filter((j) => !j.es_portero)) },
+          { etiqueta: '🧤 Porteros', datos: calcularIndicador(jugadoresGrafico.filter((j) => j.es_portero)) },
+        ],
+      }
+    }
+    return { dividido: false, datos: calcularIndicador(jugadoresGrafico) }
+  }, [jugadorActivo, jugadoresGrafico, registros, metodoACWR, buckets, posicionActiva])
+
+  // --- Bienestar de hoy: vistazo rápido antes de empezar la sesión, independiente del rango elegido ---
+  // --- Bienestar y RPE del día: vistazo por jugador, para una fecha elegible (por defecto hoy) ---
+  const [fechaEstadoDia, setFechaEstadoDia] = useState(() => diasAtras(0))
+
+  const estadoDelDia = useMemo(() => {
+    const orden = { malo: 0, bueno: 1, optimo: 2, sin_datos: 3 }
+    return jugadoresFiltrados
+      .map((j) => {
+        const registro = registros.find((r) => r.jugador_id === j.id && r.fecha === fechaEstadoDia)
+        const valor = registro ? calcularBienestar(registro) : null
+        return {
+          id: j.id,
+          nombre: j.nombre,
+          esPortero: !!j.es_portero,
+          valor,
+          nivel: clasificarBienestar(valor),
+          molestia: !!registro?.tiene_molestia,
+          rpe: registro?.rpe ?? null,
+        }
+      })
+      .sort((a, b) => orden[a.nivel] - orden[b.nivel])
+  }, [jugadoresFiltrados, registros, fechaEstadoDia])
+
+  // --- RPE de la semana: qué ha aportado cada jugador día a día, últimos 7 días ---
+  const diasRpeSemana = useMemo(() => {
+    const dias = []
+    for (let i = 6; i >= 0; i--) dias.push(diasAtras(i))
+    return dias
+  }, [])
+
+  const rpeSemana = useMemo(() => {
+    return jugadoresFiltrados
+      .map((j) => {
+        const suyos = registros.filter((r) => r.jugador_id === j.id)
+        const celdas = diasRpeSemana.map((fecha) => {
+          const registro = suyos.find((r) => r.fecha === fecha)
+          const bienestar = registro ? calcularBienestar(registro) : null
+          return { fecha, rpe: registro?.rpe ?? null, bienestar, nivelBienestar: clasificarBienestar(bienestar) }
+        })
+        const diasConRpe = celdas.filter((c) => c.rpe !== null).length
+        return { id: j.id, nombre: j.nombre, esPortero: !!j.es_portero, celdas, diasConRpe }
+      })
+      .sort((a, b) => a.diasConRpe - b.diasConRpe || a.nombre.localeCompare(b.nombre))
+  }, [jugadoresFiltrados, registros, diasRpeSemana])
+
+  // --- Mapa de calor jugador × día ---
+  const diasMapaCalor = useMemo(() => {
+    const dias = []
+    const finRef = new Date(fechaHasta + 'T00:00:00')
+    const totalDias = Math.min(21, Math.round((finRef - new Date(fechaDesde + 'T00:00:00')) / 86400000) + 1)
+    for (let i = totalDias - 1; i >= 0; i--) {
+      const d = new Date(finRef); d.setDate(d.getDate() - i)
+      dias.push(d)
+    }
+    return dias
+  }, [fechaDesde, fechaHasta])
+
+  const mapaCalor = useMemo(() => {
+    return jugadoresGrafico.map((j) => {
+      const suyos = registros.filter((r) => r.jugador_id === j.id)
+      const celdas = diasMapaCalor.map((fecha) => {
+        const fechaISO = fechaISOLocal(fecha)
+        if (variableMapaCalor === 'acwr') {
+          const metricas = calcularMetricas(suyos, metodoACWR, fecha)
+          const nivel = clasificarRiesgoACWR(metricas.acwrPost)
+          return { fechaISO, color: colorRiesgoAcwr[nivel], valor: metricas.acwrPost !== null ? metricas.acwrPost.toFixed(2) : 'sin datos' }
+        }
+        if (variableMapaCalor === 'desviacion') {
+          const registro = suyos.find((r) => r.fecha === fechaISO)
+          // Media de su propio grupo (jugadores de campo o porteros), nunca
+          // de los dos mezclados — igual que en las alertas del día.
+          const companeros = j.es_portero ? gruposPosicion.portero : gruposPosicion.jugador
+          const mediaEquipo = mediaEquipoRPE(fechaISO, companeros, registros)
+          if (!registro || registro.rpe === null || registro.rpe === undefined || mediaEquipo === null) {
+            return { fechaISO, color: 'var(--line)', valor: 'sin datos' }
+          }
+          const desviacion = registro.rpe - mediaEquipo
+          return {
+            fechaISO, color: colorDesviacion(Math.abs(desviacion)),
+            direccion: desviacion === 0 ? null : desviacion > 0 ? 'alta' : 'baja',
+            valor: `RPE ${registro.rpe} · ${j.es_portero ? 'porteros' : 'jugadores de campo'} ${mediaEquipo.toFixed(1)} (${desviacion > 0 ? '+' : ''}${desviacion.toFixed(1)})`,
+          }
+        }
+        const registro = suyos.find((r) => r.fecha === fechaISO)
+        const bienestar = registro ? calcularBienestar(registro) : null
+        const nivel = clasificarBienestar(bienestar)
+        return { fechaISO, color: colorNivelBienestar[nivel], valor: bienestar !== null ? traducirBienestar(nivel) : 'sin datos' }
+      })
+      return { nombre: j.nombre, esPortero: !!j.es_portero, celdas }
+    })
+  }, [jugadoresGrafico, gruposPosicion, registros, diasMapaCalor, variableMapaCalor, metodoACWR])
+
+  // --- Comentario general del informe (uno solo, ligado al contexto actual) ---
+  const claveContexto = jugadorActivo === 'equipo' ? `equipo:${equipoActivo}` : `jugador:${jugadorActivo}`
+  const clave = `general|${claveContexto}|${fechaDesde}|${fechaHasta}`
+  const [comentarioInforme, setComentarioInforme] = useState('')
+  const [guardandoComentario, setGuardandoComentario] = useState(false)
+
+  useEffect(() => { cargarComentarioInforme() }, [clave])
+
+  async function cargarComentarioInforme() {
+    const { data } = await supabase.from('comentarios_informe').select('texto').eq('clave', clave).maybeSingle()
+    setComentarioInforme(data?.texto || '')
+  }
+
+  async function guardarComentarioInforme() {
+    setGuardandoComentario(true)
+    await supabase.from('comentarios_informe').upsert(
+      { clave, texto: comentarioInforme || '' },
+      { onConflict: 'clave' }
+    )
+    setGuardandoComentario(false)
+  }
+
+  function exportarInformeCSV() {
+    const cabeceras = ['Periodo', ...variablesGrafico.map((v) => v.etiqueta)]
+    const columnas = variablesGrafico.map((v) => datosInformeCompleto[v.valor])
+    const filas = buckets.map((b, i) => [
+      b.etiqueta, ...columnas.map((col) => (col[i].valor ?? col[i].agudo ?? '')),
+    ])
+    const csv = [cabeceras, ...filas]
+      .map((fila) => fila.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(','))
+      .join('\n')
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `resumen_${tipoVistaGrafico}_${fechaDesde}_a_${fechaHasta}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  if (cargando) return <p className="mono texto-dim">Cargando datos del equipo…</p>
+
+  return (
+    <div className="coach-layout">
+      <div className="coach-header no-imprimir">
+        <h2>Panel del entrenador</h2>
+        <div className="coach-header-derecha">
+          <span className="mono texto-dim">{jugadoresFiltrados.length} jugadores</span>
+          <select
+            value={metodoACWR}
+            onChange={(e) => setMetodoACWR(e.target.value)}
+            className="selector-jugador"
+          >
+            {metodosACWR.map((m) => (
+              <option key={m.valor} value={m.valor}>{m.etiqueta}</option>
+            ))}
+          </select>
+          <button className="btn-exportar" onClick={exportarInformeCSV}>Exportar CSV</button>
+          <button className="btn-exportar" onClick={() => window.print()}>Imprimir / Guardar PDF</button>
+        </div>
+      </div>
+
+      <p className="coach-contexto-nota texto-dim no-imprimir">
+        Usa el selector <strong>◎</strong> de arriba para cambiar el equipo, jugador o rango de fechas.
+      </p>
+
+      <div className="informe-titulo-impresion-resumen">
+        {(() => {
+          const logo = resumenTarjetas?.modo === 'individual'
+            ? jugadoresGrafico[0]?.equipos?.logo_base64
+            : (equipoActivo !== 'todos' && equipoActivo !== 'sin_asignar' ? jugadoresFiltrados[0]?.equipos?.logo_base64 : null)
+          return logo ? <img src={logo} alt="Escudo del equipo" className="informe-logo-impresion" /> : null
+        })()}
+        <h2>
+          {resumenTarjetas?.modo === 'individual'
+            ? `Informe de ${jugadoresGrafico[0]?.nombre || 'jugador'}`
+            : 'Informe de equipo'}
+        </h2>
+        <p className="texto-dim">
+          {resumenTarjetas?.modo === 'individual' ? '' : (
+            <>Equipo: {equipoActivo === 'todos' ? 'Todos los equipos' : equipoActivo === 'sin_asignar' ? 'Sin asignar' : jugadoresFiltrados[0]?.equipos?.nombre || 'Grupo seleccionado'} · </>
+          )}
+          Del {new Date(fechaDesde + 'T00:00:00').toLocaleDateString('es-ES')} al{' '}
+          {new Date(fechaHasta + 'T00:00:00').toLocaleDateString('es-ES')}
+          {' '}· Generado el {new Date().toLocaleDateString('es-ES')}
+        </p>
+      </div>
+
+      {indicadoresGrupo && (
+        <section className="indicadores-grandes-card no-imprimir">
+          <h3>Estado del grupo ahora mismo</h3>
+          {indicadoresGrupo.dividido ? (
+            indicadoresGrupo.grupos.map((g) => (
+              <div key={g.etiqueta} className="indicadores-grandes-grupo">
+                <h4 className="indicadores-grandes-grupo-titulo">{g.etiqueta}</h4>
+                <BloqueIndicadoresGrandes datos={g.datos} />
+              </div>
+            ))
+          ) : (
+            <BloqueIndicadoresGrandes datos={indicadoresGrupo.datos} />
+          )}
+        </section>
+      )}
+
+      <section className="bienestar-hoy-card no-imprimir">
+        <div className="bienestar-hoy-cabecera">
+          <div>
+            <h3>Bienestar y RPE del día</h3>
+            <p className="texto-dim bienestar-hoy-sub">Cómo llegó (o llega) cada jugador ese día — bienestar y esfuerzo reportado juntos.</p>
+          </div>
+          <div className="bienestar-hoy-selector-fecha">
+            <button type="button" className="pizarra-boton" onClick={() => setFechaEstadoDia(diasAtras(1))}>Ayer</button>
+            <input type="date" value={fechaEstadoDia} max={diasAtras(0)} onChange={(e) => setFechaEstadoDia(e.target.value)} />
+            <button type="button" className="pizarra-boton" onClick={() => setFechaEstadoDia(diasAtras(0))}>Hoy</button>
+          </div>
+        </div>
+        {estadoDelDia.length === 0 ? (
+          <p className="texto-dim">No hay jugadores en el grupo activo.</p>
+        ) : (
+          <div className="bienestar-hoy-grid">
+            {estadoDelDia.map((j) => (
+              <div key={j.id} className={`bienestar-hoy-tarjeta bienestar-hoy-${j.nivel}`}>
+                {j.molestia && <span className="bienestar-hoy-molestia" title="Molestia reportada ese día">⚠</span>}
+                <span className="bienestar-hoy-punto" />
+                <strong className="bienestar-hoy-nombre">
+                  {j.esPortero && <span title="Portero">🧤 </span>}
+                  {j.nombre}
+                </strong>
+                <span className="bienestar-hoy-etiqueta">{traducirBienestar(j.nivel)}</span>
+                {j.valor !== null && <span className="bienestar-hoy-numero mono">{j.valor.toFixed(1)}</span>}
+                <span className="bienestar-hoy-rpe mono" style={{ color: colorParaValor(j.rpe, 10) }}>
+                  RPE {j.rpe !== null ? j.rpe : '—'}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="rpe-semana-card no-imprimir">
+        <h3>RPE de la semana</h3>
+        <p className="texto-dim bienestar-hoy-sub">
+          Qué ha aportado cada jugador, día a día, en los últimos 7 días — esfuerzo (RPE) y, debajo, cómo llegó ese día (bienestar).
+          <span className="rpe-semana-leyenda-partido">⚽</span> partido · <span className="rpe-semana-leyenda-sesion">●</span> sesión.
+        </p>
+        {rpeSemana.length === 0 ? (
+          <p className="texto-dim">No hay jugadores en el grupo activo.</p>
+        ) : (
+          <div className="rpe-semana-tabla-wrap">
+            {/* Antes era una <table>, pero el layout automático de columnas
+                de una tabla HTML con celdas de altura variable (RPE +
+                bienestar apilados) se renderizaba mal en varios
+                dispositivos — todo el contenido de una fila se apilaba en
+                la primera columna. Con una rejilla (CSS grid) de ancho de
+                columna fijo, cada valor va siempre a su columna exacta. */}
+            <div className="rpe-semana-grid">
+              <div className="rpe-semana-grid-cab rpe-semana-grid-cab-nombre">Jugador</div>
+              {diasRpeSemana.map((fecha) => (
+                <div key={fecha} className="rpe-semana-grid-cab">
+                  {new Date(fecha + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' })}
+                  {diasPartido.has(fecha) && <span className="rpe-semana-marcador" title="Partido">⚽</span>}
+                  {!diasPartido.has(fecha) && diasEntrenamiento.has(fecha) && <span className="rpe-semana-marcador" title="Sesión de entrenamiento">●</span>}
+                </div>
+              ))}
+
+              {rpeSemana.map((j) => (
+                // Fragment, NO un div envolvente: todas las celdas de esta
+                // fila deben ser hijas DIRECTAS de .rpe-semana-grid para que
+                // caigan en sus columnas correctas — un div contenedor por
+                // fila rompería la rejilla (sería un único hijo que ocupa
+                // solo la primera columna, con todo lo demás dentro).
+                <Fragment key={j.id}>
+                  <div className="rpe-semana-grid-nombre">{j.esPortero && <span title="Portero">🧤 </span>}{j.nombre}</div>
+                  {j.celdas.map((c) => (
+                    <div key={c.fecha} className="rpe-semana-grid-celda">
+                      {c.rpe !== null ? (
+                        <span className="rpe-semana-valor mono" style={{ color: colorParaValor(c.rpe, 10) }}>
+                          {c.rpe}
+                        </span>
+                      ) : (
+                        <span className="rpe-semana-vacio">—</span>
+                      )}
+                      {c.bienestar !== null && (
+                        <span
+                          className="rpe-semana-bienestar mono"
+                          style={{ color: colorNivelBienestar[c.nivelBienestar] }}
+                          title={`Bienestar: ${traducirBienestar(c.nivelBienestar)}`}
+                        >
+                          {c.bienestar.toFixed(1)}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </Fragment>
+              ))}
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* En vista de grupo, esto ya lo cubren los indicadores grandes de arriba
+          y el resto de secciones — solo se muestra este desglose numérico
+          cuando se está mirando a UN jugador en concreto. */}
+      {resumenTarjetas?.modo === 'individual' && (
+        <section className="tarjetas-resumen no-imprimir">
+          {resumenTarjetas.tarjetas.map((t, i) => (
+            <TarjetaResumen key={i} etiqueta={t.etiqueta} valor={t.valor} tono={t.tono} />
+          ))}
+        </section>
+      )}
+
+      <section className={`mapa-calor-card ${resumenTarjetas?.modo === 'individual' ? 'no-imprimir' : ''}`}>
+        <div className="mapa-calor-cabecera">
+          <h3>Mapa de calor — jugador × día</h3>
+          <select
+            value={variableMapaCalor}
+            onChange={(e) => setVariableMapaCalor(e.target.value)}
+            className="selector-jugador"
+          >
+            <option value="acwr">ACWR</option>
+            <option value="bienestar">Bienestar</option>
+            <option value="desviacion">Desviación RPE vs equipo</option>
+          </select>
+        </div>
+        <div className="mapa-calor-scroll">
+          <table className="mapa-calor-tabla">
+            <thead>
+              <tr>
+                <th className="mapa-calor-th-jugador">Jugador</th>
+                {diasMapaCalor.map((d) => (
+                  <th key={fechaISOLocal(d)} className={diasPartido.has(fechaISOLocal(d)) ? 'mapa-calor-th-partido' : ''}>
+                    {d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' })}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {mapaCalor.map((fila) => (
+                <tr key={fila.nombre}>
+                  <td className="mapa-calor-td-jugador">{fila.esPortero && <span title="Portero">🧤 </span>}{fila.nombre}</td>
+                  {fila.celdas.map((c) => (
+                    <td key={c.fechaISO} className="mapa-calor-celda">
+                      <span className="mapa-calor-punto" style={{ background: c.color }} title={`${c.fechaISO}: ${c.valor}`}>
+                        {variableMapaCalor === 'desviacion' && c.direccion && (
+                          <span className={`mapa-calor-flecha mapa-calor-flecha-${c.direccion}`}>
+                            {c.direccion === 'alta' ? '▲' : '▼'}
+                          </span>
+                        )}
+                      </span>
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {mapaCalor.length === 0 && <p className="texto-dim">No hay jugadores en este grupo.</p>}
+        <p className="grafico-nota texto-dim">
+          Un cuadrado gris en la cabecera de la fecha indica día de partido (MD). 🧤 = portero.
+          {variableMapaCalor === 'desviacion' && ' ▲ = RPE por encima de la media de su grupo (jugadores de campo o porteros, comparados siempre por separado) · ▼ = por debajo.'}
+        </p>
+      </section>
+
+      <section className="grafico-card no-imprimir">
+        <div className="grafico-cabecera">
+          <h3>
+            {variablesGrafico.find((v) => v.valor === variableGrafico).etiqueta}
+            {' '}({tiposVistaGrafico.find((t) => t.valor === tipoVistaGrafico).etiqueta.toLowerCase()})
+          </h3>
+          <div className="grafico-selectores">
+            <select
+              value={tipoVistaGrafico}
+              onChange={(e) => setTipoVistaGrafico(e.target.value)}
+              className="selector-jugador"
+            >
+              {tiposVistaGrafico.map((t) => (
+                <option key={t.valor} value={t.valor}>{t.etiqueta}</option>
+              ))}
+            </select>
+            <select
+              value={variableGrafico}
+              onChange={(e) => setVariableGrafico(e.target.value)}
+              className="selector-jugador"
+            >
+              {variablesGrafico.map((v) => (
+                <option key={v.valor} value={v.valor}>{v.etiqueta}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        {variableGrafico === 'bienestar' && (
+          <div className="grafico-leyenda-principal">
+            <span><span className="mini-grafico-leyenda-linea mini-grafico-leyenda-percibido" />Percibido (del día)</span>
+            <span><span className="mini-grafico-leyenda-linea mini-grafico-leyenda-agudo" />Agudo (7 días)</span>
+            <span><span className="mini-grafico-leyenda-linea mini-grafico-leyenda-basal" />Basal (90 días)</span>
+          </div>
+        )}
+        <ResponsiveContainer width="100%" height={variableGrafico === 'bienestar' ? 240 : 260}>
+          <LineChart data={datosGrafico}>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
+            <XAxis dataKey="fecha" stroke="var(--text-faint)" fontSize={12} />
+            <YAxis stroke="var(--text-faint)" fontSize={12} domain={variableGrafico === 'bienestar' ? [1, 5] : undefined} />
+            <Tooltip
+              contentStyle={{ background: 'var(--bg-elevated)', border: '1px solid var(--line-strong)', borderRadius: 8 }}
+              labelStyle={{ color: 'var(--text)' }}
+            />
+            {(bandasPorVariable[variableGrafico] || []).map((b, i) => (
+              <ReferenceArea
+                key={i} y1={b.y1} y2={b.y2} fill={b.color} fillOpacity={0.12}
+                strokeOpacity={0} ifOverflow="extendDomain"
+              />
+            ))}
+            {variableGrafico === 'bienestar' ? (
+              <>
+                <Line type="monotone" dataKey="percibido" stroke="var(--text-faint)" strokeWidth={1.5} strokeDasharray="3 3" dot={false} connectNulls />
+                <Line type="monotone" dataKey="agudo" stroke="var(--accent)" strokeWidth={2} dot={<PuntoPartido />} connectNulls />
+                <Line type="monotone" dataKey="basal" stroke="var(--risk-mid)" strokeWidth={2} strokeDasharray="6 3" dot={false} connectNulls />
+              </>
+            ) : (
+              <Line type="monotone" dataKey="valor" stroke="var(--accent)" strokeWidth={2} dot={<PuntoPartido />} connectNulls />
+            )}
+          </LineChart>
+        </ResponsiveContainer>
+        {variableGrafico === 'bienestar' && (
+          <p className="grafico-nota texto-dim">
+            <strong>Percibido</strong>: su bienestar de ese día en concreto (por eso salta más) ·{' '}
+            <strong>Agudo</strong>: su media de los últimos 7 días (tendencia reciente) ·{' '}
+            <strong>Basal</strong>: su media de los últimos 90 días (su normalidad de fondo). Cuando el Agudo se aleja
+            claramente por debajo del Basal durante varios días seguidos, suele merecer la pena prestar atención.
+          </p>
+        )}
+        <p className="grafico-nota texto-dim">
+          Del {new Date(fechaDesde + 'T00:00:00').toLocaleDateString('es-ES')} al{' '}
+          {new Date(fechaHasta + 'T00:00:00').toLocaleDateString('es-ES')}
+          {' '}({buckets.length} {tipoVistaGrafico === 'diario' ? 'días' : tipoVistaGrafico === 'semanal' ? 'semanas' : 'meses'}).
+          {tipoVistaGrafico === 'diario' && <> <span className="punto-leyenda-partido" /> = día de partido.</>}
+        </p>
+        {bandasPorVariable[variableGrafico] && (
+          <p className="grafico-nota texto-dim">
+            Bandas de color según umbrales de riesgo de la literatura (Gabbett/Hulin para ACWR, Foster para
+            Monotonía y Bienestar) — no se aplican a Carga ni Fatiga por no tener un umbral absoluto universal.
+          </p>
+        )}
+      </section>
+
+      <button className="informe-toggle no-imprimir" onClick={() => setInformeAbierto(!informeAbierto)}>
+        {informeAbierto ? '▾' : '▸'} {informeAbierto ? 'Ocultar' : 'Ver'} informe completo (las 5 variables)
+      </button>
+
+      <section className={`informe-resumen-card ${informeAbierto ? '' : 'informe-colapsado'}`}>
+        <h2 className="informe-resumen-titulo no-imprimir">
+          {resumenTarjetas?.modo === 'individual'
+            ? `Informe de ${jugadoresGrafico[0]?.nombre || 'jugador'}`
+            : 'Informe de equipo'}
+        </h2>
+        <p className="texto-dim no-imprimir">
+          Vista {tiposVistaGrafico.find((t) => t.valor === tipoVistaGrafico).etiqueta.toLowerCase()},
+          {' '}del {new Date(fechaDesde + 'T00:00:00').toLocaleDateString('es-ES')} al{' '}
+          {new Date(fechaHasta + 'T00:00:00').toLocaleDateString('es-ES')}
+        </p>
+
+          <div className="informe-graficos-grid">
+            {variablesGrafico.map((v) => (
+              <div className="mini-grafico-card" key={v.valor}>
+                <h4>{v.etiqueta}</h4>
+                {v.valor === 'bienestar' && (
+                  <div className="mini-grafico-leyenda">
+                    <span><span className="mini-grafico-leyenda-linea mini-grafico-leyenda-percibido" />Percibido</span>
+                    <span><span className="mini-grafico-leyenda-linea mini-grafico-leyenda-agudo" />Agudo</span>
+                    <span><span className="mini-grafico-leyenda-linea mini-grafico-leyenda-basal" />Basal</span>
+                  </div>
+                )}
+                <ResponsiveContainer width={modoImpresion ? 300 : '100%'} height={v.valor === 'bienestar' ? 112 : 130}>
+                  <LineChart data={datosInformeCompleto[v.valor]} margin={{ top: 5, right: 10, bottom: 0, left: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" />
+                    <XAxis dataKey="fecha" stroke="var(--text-faint)" fontSize={11} />
+                    <YAxis stroke="var(--text-faint)" fontSize={11} width={32} domain={v.valor === 'bienestar' ? [1, 5] : undefined} />
+                    <Tooltip contentStyle={{ background: 'var(--bg-elevated)', border: '1px solid var(--line-strong)', borderRadius: 8, fontSize: 12 }} />
+                    {(bandasPorVariable[v.valor] || []).map((b, i) => (
+                      <ReferenceArea key={i} y1={b.y1} y2={b.y2} fill={b.color} fillOpacity={0.1} strokeOpacity={0} ifOverflow="extendDomain" />
+                    ))}
+                    {v.valor === 'bienestar' ? (
+                      <>
+                        <Line type="monotone" dataKey="percibido" stroke="var(--text-faint)" strokeWidth={1} strokeDasharray="3 3" dot={false} connectNulls />
+                        <Line type="monotone" dataKey="agudo" stroke="var(--accent)" strokeWidth={2} dot={false} connectNulls />
+                        <Line type="monotone" dataKey="basal" stroke="var(--risk-mid)" strokeWidth={1.5} strokeDasharray="6 3" dot={false} connectNulls />
+                      </>
+                    ) : (
+                      <Line type="monotone" dataKey="valor" stroke="var(--accent)" strokeWidth={2} dot={false} connectNulls />
+                    )}
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            ))}
+          </div>
+
+          <div className="comentario-informe-card">
+            <h4>Comentario general del informe</h4>
+            <textarea
+              className="comentario-grafico"
+              placeholder="Explica aquí lo que muestra el informe en conjunto…"
+              value={comentarioInforme}
+              onChange={(e) => setComentarioInforme(e.target.value)}
+              onBlur={guardarComentarioInforme}
+              rows={5}
+            />
+            {guardandoComentario && <span className="comentario-guardando no-imprimir">Guardando…</span>}
+          </div>
+      </section>
+    </div>
+  )
+}
+
+function TarjetaResumen({ etiqueta, valor, tono }) {
+  return (
+    <div className={`tarjeta-resumen ${tono ? 'tarjeta-' + tono : ''}`}>
+      <span className="tarjeta-valor mono">{valor}</span>
+      <span className="tarjeta-etiqueta">{etiqueta}</span>
+    </div>
+  )
+}
+
+// Los dos indicadores grandes (ACWR y Bienestar) de "Estado del grupo ahora
+// mismo" — mismos colores que ya usa el mapa de calor (colorRiesgoAcwr /
+// colorNivelBienestar), para que hablen el mismo idioma en toda la pantalla.
+function IndicadorGrande({ titulo, valor, etiqueta, color }) {
+  return (
+    <div className="indicador-grande" style={{ '--color-indicador': color }}>
+      <span className="indicador-grande-titulo">{titulo}</span>
+      <span className="indicador-grande-valor mono">{valor}</span>
+      <span className="indicador-grande-etiqueta">{etiqueta}</span>
+    </div>
+  )
+}
+
+function BloqueIndicadoresGrandes({ datos }) {
+  return (
+    <div className="indicadores-grandes-grid">
+      <IndicadorGrande
+        titulo="ACWR medio"
+        valor={datos?.acwrMedio !== null && datos?.acwrMedio !== undefined ? datos.acwrMedio.toFixed(2) : '—'}
+        etiqueta={traducirRiesgo(datos?.riesgoACWR || 'sin_datos')}
+        color={colorRiesgoAcwr[datos?.riesgoACWR || 'sin_datos']}
+      />
+      <IndicadorGrande
+        titulo="Bienestar medio"
+        valor={datos?.bienestarMedio !== null && datos?.bienestarMedio !== undefined ? datos.bienestarMedio.toFixed(1) : '—'}
+        etiqueta={traducirBienestar(datos?.nivelBienestar || 'sin_datos')}
+        color={colorNivelBienestar[datos?.nivelBienestar || 'sin_datos']}
+      />
+    </div>
+  )
+}
+
+function traducirRiesgo(r) {
+  return {
+    sin_datos: 'Sin datos',
+    muy_baja: 'Muy baja',
+    baja: 'Baja',
+    optima: 'Óptima',
+    moderada_alta: 'Mod. alta',
+    alta: 'Alta',
+    muy_alta: 'Muy alta',
+  }[r]
+}
+
+function traducirMonotonia(m) {
+  return {
+    sin_datos: 'Sin datos',
+    muy_variable: 'Muy variable',
+    correcta: 'Correcta',
+    elevada: 'Elevada',
+    riesgo_elevado: 'Riesgo elevado',
+  }[m]
+}
+
+function traducirBienestar(b) {
+  return {
+    sin_datos: 'Sin datos',
+    optimo: 'Óptimo',
+    bueno: 'Bueno',
+    malo: 'Malo',
+  }[b]
+}
