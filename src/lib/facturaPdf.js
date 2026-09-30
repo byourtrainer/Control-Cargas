@@ -1,4 +1,5 @@
 import { jsPDF } from 'jspdf'
+import { desglosarFactura } from './dinero'
 
 // Genera el PDF de una factura con el mismo contenido que la vista de
 // impresión (factura-imprimir en PanelAdmin), pero dibujado directamente con
@@ -11,9 +12,8 @@ export function generarFacturaPdfBlob(factura, config) {
   let y = 22
 
   const base = Number(factura.base_imponible) || 0
-  const iva = base * (Number(factura.iva_porcentaje) / 100)
-  const irpf = factura.aplica_irpf ? base * (Number(factura.irpf_porcentaje) / 100) : 0
-  const total = Number(factura.total) || (base + iva - irpf)
+  const { iva, irpf, total: totalCalculado } = desglosarFactura(base, factura.iva_porcentaje, factura.aplica_irpf, factura.irpf_porcentaje)
+  const total = Number(factura.total) || totalCalculado
 
   // Logo (si existe) arriba a la derecha
   if (config?.logo_base64) {
