@@ -577,6 +577,7 @@ export default function CoachDashboard({ perfil, equipos = [], equipoActivo = 't
           valor,
           nivel: clasificarBienestar(valor),
           molestia: !!registro?.tiene_molestia,
+          zonasMolestia: registro?.zonas_molestia || [],
           rpe: registro?.rpe ?? null,
         }
       })
@@ -774,7 +775,14 @@ export default function CoachDashboard({ perfil, equipos = [], equipoActivo = 't
           <div className="bienestar-hoy-grid">
             {estadoDelDia.map((j) => (
               <div key={j.id} className={`bienestar-hoy-tarjeta bienestar-hoy-${j.nivel}`}>
-                {j.molestia && <span className="bienestar-hoy-molestia" title="Molestia reportada ese día">⚠</span>}
+                {j.molestia && (
+                  <span
+                    className="bienestar-hoy-molestia"
+                    title={j.zonasMolestia.length > 0 ? `Molestia: ${j.zonasMolestia.join(', ')}` : 'Molestia reportada ese día'}
+                  >
+                    ⚠
+                  </span>
+                )}
                 <span className="bienestar-hoy-punto" />
                 <strong className="bienestar-hoy-nombre">
                   {j.esPortero && <span title="Portero">🧤 </span>}
@@ -785,6 +793,9 @@ export default function CoachDashboard({ perfil, equipos = [], equipoActivo = 't
                 <span className="bienestar-hoy-rpe mono" style={{ color: colorParaValor(j.rpe, 10) }}>
                   RPE {j.rpe !== null ? j.rpe : '—'}
                 </span>
+                {j.molestia && j.zonasMolestia.length > 0 && (
+                  <span className="bienestar-hoy-molestia-zonas">{j.zonasMolestia.join(', ')}</span>
+                )}
               </div>
             ))}
           </div>

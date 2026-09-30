@@ -423,6 +423,13 @@
   font-size: 13px;
 }
 
+.bienestar-hoy-molestia-zonas {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--risk-high);
+  line-height: 1.25;
+}
+
 .rpe-semana-card {
   background: var(--bg-card);
   border: 1px solid var(--line);
