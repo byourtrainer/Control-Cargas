@@ -34,6 +34,8 @@ const pestanasEntrenador = [
   { clave: 'sesiones_pizarra', etiqueta: '📋 Sesiones Pista' },
 ]
 
+const PESTANAS_PERMITIDAS_FISIO = ['resumen', 'calendario', 'jugadores', 'tests', 'fisio']
+
 const diasAtras = (n) => {
   const d = new Date()
   d.setDate(d.getDate() - n)
@@ -104,7 +106,13 @@ export default function App() {
   }, [session])
 
   const esStaffCompleto = perfil?.rol === 'entrenador' || perfil?.rol === 'fisio' || perfil?.rol === 'administrador'
-  const pestanasVisibles = pestanasEntrenador.filter((p) => p.clave !== 'admin' || perfil?.rol === 'administrador')
+  // El rol fisio solo tiene acceso a estas pestañas (más abajo, cada una ya
+  // limita los datos que muestra al club del perfil vía clubIdDePerfil/RLS).
+  const pestanasVisibles = pestanasEntrenador.filter((p) => {
+    if (p.clave === 'admin') return perfil?.rol === 'administrador'
+    if (perfil?.rol === 'fisio') return PESTANAS_PERMITIDAS_FISIO.includes(p.clave)
+    return true
+  })
   // Club al que se limita la vista de entrenador/fisio (null = sin límite, administrador).
   const clubId = clubIdDePerfil(perfil)
 
@@ -297,7 +305,7 @@ export default function App() {
           : pestana === 'entrenamiento' ? <BibliotecaEjercicios />
           : pestana === 'gimnasio' ? <Gimnasio perfil={perfil} />
           : pestana === 'pizarra' ? <PizarraTactica />
-          : pestana === 'sesiones_pizarra' ? <SesionesPizarra perfil={perfil} />
+          : pestana === 'sesiones_pizarra' ? <SesionesPizarra perfil={perfil} equipoActivo={equipoActivo} />
           : pestana === 'jugadores' ? <Jugadores perfil={perfil} equipoActivo={equipoActivo} />
           : pestana === 'tests' ? <Tests perfil={perfil} equipoActivo={equipoActivo} />
           : pestana === 'equipos' ? (
