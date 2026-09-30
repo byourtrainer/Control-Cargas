@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { hoyISOLocal as hoyISO } from '../lib/fechas'
 import { descargarFacturaPdf, normalizarTelefonoWhatsapp, mensajeWhatsappFactura } from '../lib/facturaPdf'
+import { desglosarFactura, baseAjustadaParaTotal } from '../lib/dinero'
 import './PanelAdmin.css'
 
 const diasSemana = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
@@ -483,7 +484,7 @@ function SeccionClientes({ perfil }) {
     // no la base imponible. Se calcula la base "hacia atrás" para que, con
     // el IVA por defecto, el total de la factura coincida con ese acumulado.
     const ivaInicial = 21
-    const baseInicial = total / (1 + ivaInicial / 100)
+    const baseInicial = baseAjustadaParaTotal(total, ivaInicial)
     setModalFactura({
       modo: 'nueva',
       cliente,
@@ -495,6 +496,11 @@ function SeccionClientes({ perfil }) {
       aplica_irpf: false,
       irpf_porcentaje: '15',
       num_sesiones: num,
+      // Importe exacto que debe pagar el cliente (p. ej. 80€, 100€): el
+      // total de la factura se fija a este valor y es el IVA quien absorbe
+      // el céntimo de redondeo, en vez de que el total "flote" a 79,99€ o
+      // 80,01€. Se suelta en cuanto se edita la base a mano (ver el input).
+      total_objetivo: total,
     })
   }
 
@@ -518,6 +524,9 @@ function SeccionClientes({ perfil }) {
       aplica_irpf: factura.aplica_irpf,
       irpf_porcentaje: String(factura.irpf_porcentaje || 15),
       num_sesiones: factura.num_sesiones,
+      // Igual que al generar: mientras no se toque la base a mano, el total
+      // se mantiene fijo en el que ya tenía la factura.
+      total_objetivo: Number(factura.total),
     })
   }
 
@@ -535,9 +544,7 @@ function SeccionClientes({ perfil }) {
     e.preventDefault()
     const m = modalFactura
     const base = Number(m.base_imponible) || 0
-    const iva = base * (Number(m.iva_porcentaje) / 100)
-    const irpf = m.aplica_irpf ? base * (Number(m.irpf_porcentaje) / 100) : 0
-    const total = base + iva - irpf
+    const { iva, irpf, total } = desglosarFactura(base, m.iva_porcentaje, m.aplica_irpf, m.irpf_porcentaje, m.total_objetivo)
 
     if (m.modo === 'editar') {
       const cambios = {
@@ -621,7 +628,15 @@ function SeccionClientes({ perfil }) {
       return
     }
     const mensaje = encodeURIComponent(mensajeWhatsappFactura(factura))
-    window.open(`https://wa.me/${telefono}?text=${mensaje}`, '_blank')
+    // whatsapp://send abre directamente la App de WhatsApp Escritorio (si
+    // está instalada) en vez de pasar por la web. Se navega con un enlace
+    // en vez de window.open porque los navegadores bloquean window.open
+    // hacia protocolos "no web" como si fuera un pop-up.
+    const enlace = document.createElement('a')
+    enlace.href = `whatsapp://send?phone=${telefono}&text=${mensaje}`
+    document.body.appendChild(enlace)
+    enlace.click()
+    enlace.remove()
   }
 
   return (
@@ -977,7 +992,11 @@ function SeccionClientes({ perfil }) {
               </label>
               <label className="campo-sesion">
                 <span>Base imponible (€)</span>
-                <input type="number" step="0.01" value={modalFactura.base_imponible} onChange={(e) => setModalFactura({ ...modalFactura, base_imponible: e.target.value })} required />
+                <input
+                  type="number" step="0.01" value={modalFactura.base_imponible}
+                  onChange={(e) => setModalFactura({ ...modalFactura, base_imponible: e.target.value, total_objetivo: null })}
+                  required
+                />
               </label>
               <div className="fila-doble">
                 <label className="campo-sesion">
@@ -997,9 +1016,7 @@ function SeccionClientes({ perfil }) {
               )}
               {(() => {
                 const base = Number(modalFactura.base_imponible) || 0
-                const iva = base * (Number(modalFactura.iva_porcentaje) / 100)
-                const irpf = modalFactura.aplica_irpf ? base * (Number(modalFactura.irpf_porcentaje) / 100) : 0
-                const total = base + iva - irpf
+                const { iva, irpf, total } = desglosarFactura(base, modalFactura.iva_porcentaje, modalFactura.aplica_irpf, modalFactura.irpf_porcentaje, modalFactura.total_objetivo)
                 return (
                   <p className="panel-admin-total-preview mono">
                     Base {base.toFixed(2)}€ + IVA {iva.toFixed(2)}€ {modalFactura.aplica_irpf ? `− IRPF ${irpf.toFixed(2)}€` : ''} = <strong>{total.toFixed(2)}€</strong>
@@ -1016,8 +1033,7 @@ function SeccionClientes({ perfil }) {
 
       {facturaImprimir && config && (() => {
         const f = facturaImprimir
-        const iva = f.base_imponible * (f.iva_porcentaje / 100)
-        const irpf = f.aplica_irpf ? f.base_imponible * (f.irpf_porcentaje / 100) : 0
+        const { iva, irpf } = desglosarFactura(f.base_imponible, f.iva_porcentaje, f.aplica_irpf, f.irpf_porcentaje)
         return (
           <div className="factura-imprimir">
             <div className="factura-cabecera-imprimir">
