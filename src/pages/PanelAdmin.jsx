@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { hoyISOLocal as hoyISO } from '../lib/fechas'
+import { descargarFacturaPdf, normalizarTelefonoWhatsapp, mensajeWhatsappFactura } from '../lib/facturaPdf'
 import './PanelAdmin.css'
 
 const diasSemana = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
@@ -248,7 +249,7 @@ function SeccionClientes({ perfil }) {
   const [errorLogoConfig, setErrorLogoConfig] = useState(null)
   const [modalFactura, setModalFactura] = useState(null) // { cliente, ...campos editables } | null
 
-  const vacio = { nombre: '', dias_entreno: '', programa: '', tipo_facturacion: 'sesion', precio: '', activo: true, notas: '', es_empresa: false, nif: '', direccion: '', ciudad_cp: '' }
+  const vacio = { nombre: '', telefono: '', dias_entreno: '', programa: '', tipo_facturacion: 'sesion', precio: '', activo: true, notas: '', es_empresa: false, nif: '', direccion: '', ciudad_cp: '' }
   const [form, setForm] = useState(vacio)
   const [guardando, setGuardando] = useState(false)
   const [mensaje, setMensaje] = useState(null)
@@ -572,6 +573,27 @@ function SeccionClientes({ perfil }) {
     setTimeout(() => window.print(), 100)
   }
 
+  // Descarga el PDF de la factura y abre WhatsApp con el chat del cliente ya
+  // listo (número + mensaje). WhatsApp no permite adjuntar un archivo desde
+  // un enlace, así que el último paso — adjuntar el PDF descargado — lo hace
+  // el usuario con un toque dentro de WhatsApp.
+  function enviarFacturaPorWhatsapp(factura) {
+    if (!config) return
+    const cliente = clientes.find((c) => c.id === factura.cliente_id)
+    const telefono = normalizarTelefonoWhatsapp(cliente?.telefono)
+    descargarFacturaPdf(factura, config)
+    if (!telefono) {
+      alert(
+        cliente
+          ? `He descargado el PDF de la factura. "${cliente.nombre}" no tiene teléfono guardado, así que no puedo abrirte WhatsApp directamente: añádelo en la ficha del cliente (✎) y podrás hacerlo en un paso la próxima vez.\n\nMientras tanto, abre WhatsApp y adjunta el PDF descargado a mano.`
+          : 'He descargado el PDF de la factura. No he encontrado el cliente para abrir WhatsApp automáticamente — ábrelo y adjunta el PDF a mano.'
+      )
+      return
+    }
+    const mensaje = encodeURIComponent(mensajeWhatsappFactura(factura))
+    window.open(`https://wa.me/${telefono}?text=${mensaje}`, '_blank')
+  }
+
   return (
     <div className="panel-admin-seccion">
       <section className="panel-admin-card no-imprimir">
@@ -628,15 +650,21 @@ function SeccionClientes({ perfil }) {
                 <input type="text" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} required />
               </label>
               <label className="campo-sesion">
-                <span>Días de entreno (opcional)</span>
-                <input type="text" value={form.dias_entreno || ''} onChange={(e) => setForm({ ...form, dias_entreno: e.target.value })} placeholder="Ej. M/J" />
+                <span>Teléfono (para enviar factura por WhatsApp)</span>
+                <input type="tel" value={form.telefono || ''} onChange={(e) => setForm({ ...form, telefono: e.target.value })} placeholder="Ej. 612 345 678" />
               </label>
             </div>
             <div className="fila-doble">
               <label className="campo-sesion">
+                <span>Días de entreno (opcional)</span>
+                <input type="text" value={form.dias_entreno || ''} onChange={(e) => setForm({ ...form, dias_entreno: e.target.value })} placeholder="Ej. M/J" />
+              </label>
+              <label className="campo-sesion">
                 <span>Programa</span>
                 <input type="text" value={form.programa || ''} onChange={(e) => setForm({ ...form, programa: e.target.value })} placeholder="Ej. Individ. Sesión" />
               </label>
+            </div>
+            <div className="fila-doble">
               <label className="campo-sesion">
                 <span>Facturación</span>
                 <select value={form.tipo_facturacion} onChange={(e) => setForm({ ...form, tipo_facturacion: e.target.value })}>
@@ -850,6 +878,7 @@ function SeccionClientes({ perfil }) {
                   <td className="texto-faint">{f.tipo === 'completa' ? 'Completa' : 'Simplificada'}</td>
                   <td className="mono">{Number(f.total).toFixed(2)}€</td>
                   <td className="panel-admin-factura-acciones">
+                    <button type="button" className="equipo-cambiar-link" onClick={() => enviarFacturaPorWhatsapp(f)}>📱 WhatsApp</button>
                     <button type="button" className="equipo-cambiar-link" onClick={() => reimprimirFactura(f)}>🖶 Reimprimir</button>
                     <button type="button" className="equipo-cambiar-link" onClick={() => editarFactura(f)}>✎ Editar</button>
                     <button type="button" className="btn-eliminar-fila" onClick={() => eliminarFactura(f)}>✕ Eliminar</button>
