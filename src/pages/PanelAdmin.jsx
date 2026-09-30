@@ -230,6 +230,7 @@ function SeccionClientes({ perfil }) {
   const [mesActivo, setMesActivo] = useState(primerDiaDelMes(hoyISO()))
   const [sesionesMes, setSesionesMes] = useState({}) // clienteId -> { fecha: contenido|null }
   const [facturas, setFacturas] = useState([])
+  const [pagosMes, setPagosMes] = useState({}) // clienteId -> { pagado, metodo_pago }
 
   // --- Panel del día: marcar sesión y apuntar el contenido trabajado ---
   const [diaAbierto, setDiaAbierto] = useState(null) // { clienteId, fecha } | null
@@ -256,6 +257,7 @@ function SeccionClientes({ perfil }) {
 
   useEffect(() => { cargarClientes(); cargarFacturas(); cargarConfig() }, [])
   useEffect(() => { cargarSesionesMes() }, [mesActivo, clientes])
+  useEffect(() => { cargarPagosMes() }, [mesActivo, clientes])
   useEffect(() => {
     cerrarDia()
     setDiarioClienteAbierto(false)
@@ -321,6 +323,34 @@ function SeccionClientes({ perfil }) {
       mapa[s.cliente_id][s.fecha] = s.contenido || null
     })
     setSesionesMes(mapa)
+  }
+
+  // Estado de pago (pagado o no, y con qué método) por cliente para el mes
+  // activo. Es independiente de que se haya generado o no la factura —
+  // sirve para llevar el control de cobros mes a mes.
+  async function cargarPagosMes() {
+    if (clientes.length === 0) { setPagosMes({}); return }
+    const { data } = await supabase
+      .from('pagos_clientes').select('cliente_id, pagado, metodo_pago')
+      .eq('periodo', primerDiaDelMes(mesActivo))
+    const mapa = {}
+    ;(data || []).forEach((p) => { mapa[p.cliente_id] = { pagado: p.pagado, metodo_pago: p.metodo_pago } })
+    setPagosMes(mapa)
+  }
+
+  // Crea o actualiza la marca de pago de un cliente para el mes activo.
+  async function actualizarPago(clienteId, cambios) {
+    const actual = pagosMes[clienteId] || { pagado: false, metodo_pago: null }
+    const nuevo = { ...actual, ...cambios }
+    setPagosMes((prev) => ({ ...prev, [clienteId]: nuevo })) // optimista, se revierte si falla
+    const { error } = await supabase.from('pagos_clientes').upsert(
+      { cliente_id: clienteId, periodo: primerDiaDelMes(mesActivo), ...nuevo },
+      { onConflict: 'cliente_id,periodo' }
+    )
+    if (error) {
+      setPagosMes((prev) => ({ ...prev, [clienteId]: actual }))
+      alert('No se pudo guardar el estado de pago: ' + error.message)
+    }
   }
 
   // Abre el panel del día para marcar sesión y/o apuntar qué se ha trabajado.
@@ -849,15 +879,42 @@ function SeccionClientes({ perfil }) {
       <section className="panel-admin-card no-imprimir">
         <h2>Resumen del mes — todos los clientes</h2>
         <table className="panel-admin-tabla-clientes">
-          <thead><tr><th>Cliente</th><th>Sesiones</th><th>Base</th></tr></thead>
+          <thead><tr><th>Cliente</th><th>Sesiones</th><th>Base</th><th>Pagado</th><th>Método</th></tr></thead>
           <tbody>
             {clientes.map((c) => {
               const { num, total } = calcularResumen(c)
-              return <tr key={c.id}><td>{c.nombre}</td><td className="mono">{num}</td><td className="mono">{total.toFixed(2)}€</td></tr>
+              const pago = pagosMes[c.id] || { pagado: false, metodo_pago: null }
+              return (
+                <tr key={c.id} className={!pago.pagado ? 'panel-admin-fila-pago-pendiente' : ''}>
+                  <td>{c.nombre}</td>
+                  <td className="mono">{num}</td>
+                  <td className="mono">{total.toFixed(2)}€</td>
+                  <td>
+                    <label className="panel-admin-check-pagado">
+                      <input
+                        type="checkbox" checked={pago.pagado}
+                        onChange={(e) => actualizarPago(c.id, { pagado: e.target.checked })}
+                      />
+                      <span>{pago.pagado ? '✓ Pagado' : 'Pendiente'}</span>
+                    </label>
+                  </td>
+                  <td>
+                    <select
+                      value={pago.metodo_pago || ''} disabled={!pago.pagado}
+                      onChange={(e) => actualizarPago(c.id, { metodo_pago: e.target.value || null })}
+                    >
+                      <option value="">—</option>
+                      <option value="efectivo">Efectivo</option>
+                      <option value="transferencia">Transferencia</option>
+                      <option value="tarjeta">Tarjeta</option>
+                    </select>
+                  </td>
+                </tr>
+              )
             })}
           </tbody>
           <tfoot>
-            <tr><td><strong>Total (sin impuestos)</strong></td><td></td><td className="mono"><strong>{totalDelMes.toFixed(2)}€</strong></td></tr>
+            <tr><td><strong>Total (sin impuestos)</strong></td><td></td><td className="mono"><strong>{totalDelMes.toFixed(2)}€</strong></td><td></td><td></td></tr>
           </tfoot>
         </table>
       </section>

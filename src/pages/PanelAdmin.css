@@ -147,6 +147,21 @@
 
 .panel-admin-tabla-acciones { display: flex; gap: 8px; white-space: nowrap; }
 
+/* --- Control de pagos mensual --- */
+.panel-admin-fila-pago-pendiente { background: rgba(255, 99, 71, 0.07); }
+.panel-admin-fila-pago-pendiente:hover { background: rgba(255, 99, 71, 0.12); }
+
+.panel-admin-check-pagado {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  font-size: 12px;
+}
+.panel-admin-check-pagado input { cursor: pointer; }
+.panel-admin-fila-pago-pendiente .panel-admin-check-pagado span { color: #ff6347; }
+
 .panel-admin-factura-acciones { display: flex; gap: 10px; align-items: center; white-space: nowrap; }
 
 .panel-admin-tabla-clientes tfoot td {
