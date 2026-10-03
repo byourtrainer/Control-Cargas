@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabaseClient'
 import { hoyISOLocal as hoyISO } from '../lib/fechas'
 import { descargarFacturaPdf, normalizarTelefonoWhatsapp, mensajeWhatsappFactura } from '../lib/facturaPdf'
 import { desglosarFactura, baseAjustadaParaTotal } from '../lib/dinero'
+import { calcularResumenTrimestral, exportarResumenTrimestral, rangoTrimestre } from '../lib/resumenTrimestral'
 import './PanelAdmin.css'
 
 const diasSemana = ['L', 'M', 'X', 'J', 'V', 'S', 'D']
@@ -1138,7 +1139,32 @@ function SeccionGastos() {
   const [mensaje, setMensaje] = useState(null)
   const [errorArchivo, setErrorArchivo] = useState(null)
 
+  // --- Resumen trimestral (para la gestoría): cruza facturas emitidas y
+  // gastos del trimestre, calcula el IVA a liquidar y exporta a Excel. ---
+  const [mostrarTrimestre, setMostrarTrimestre] = useState(false)
+  const [anioTrim, setAnioTrim] = useState(new Date().getFullYear())
+  const [trimActivo, setTrimActivo] = useState(Math.floor(new Date().getMonth() / 3) + 1)
+  const [cargandoTrim, setCargandoTrim] = useState(false)
+  const [facturasTrim, setFacturasTrim] = useState([])
+  const [gastosTrim, setGastosTrim] = useState([])
+  const [nombreNegocioTrim, setNombreNegocioTrim] = useState(null)
+
   useEffect(() => { cargarGastos() }, [mesActivo])
+  useEffect(() => { if (mostrarTrimestre) cargarTrimestre() }, [mostrarTrimestre, anioTrim, trimActivo])
+
+  async function cargarTrimestre() {
+    setCargandoTrim(true)
+    const { desde, hasta } = rangoTrimestre(anioTrim, trimActivo)
+    const [{ data: facturas }, { data: gastosData }, { data: config }] = await Promise.all([
+      supabase.from('facturas').select('*').gte('fecha_emision', desde).lte('fecha_emision', hasta).order('fecha_emision'),
+      supabase.from('gastos').select('*').gte('fecha', desde).lte('fecha', hasta).order('fecha'),
+      supabase.from('configuracion_facturacion').select('nombre').eq('id', 1).maybeSingle(),
+    ])
+    setFacturasTrim(facturas || [])
+    setGastosTrim(gastosData || [])
+    setNombreNegocioTrim(config?.nombre || null)
+    setCargandoTrim(false)
+  }
 
   async function cargarGastos() {
     setCargando(true)
@@ -1221,8 +1247,64 @@ function SeccionGastos() {
     return acc
   }, { importe: 0, baseDeducible: 0, ivaDeducible: 0 })
 
+  const resumenTrim = calcularResumenTrimestral(facturasTrim, gastosTrim, baseAjustadaParaTotal)
+
   return (
     <div className="panel-admin-seccion">
+      <section className="panel-admin-card">
+        <div className="panel-admin-cabecera-flex">
+          <h2>📊 Resumen trimestral (para tu gestoría)</h2>
+          <button className="equipo-cambiar-link" onClick={() => setMostrarTrimestre((v) => !v)}>
+            {mostrarTrimestre ? 'Cerrar' : '✎ Ver / exportar'}
+          </button>
+        </div>
+
+        {mostrarTrimestre && (
+          <>
+            <div className="panel-admin-form-linea" style={{ marginBottom: 12 }}>
+              <select value={trimActivo} onChange={(e) => setTrimActivo(Number(e.target.value))}>
+                <option value={1}>1T (ene-mar)</option>
+                <option value={2}>2T (abr-jun)</option>
+                <option value={3}>3T (jul-sep)</option>
+                <option value={4}>4T (oct-dic)</option>
+              </select>
+              <input type="number" value={anioTrim} onChange={(e) => setAnioTrim(Number(e.target.value) || anioTrim)} style={{ width: 90 }} />
+              <button
+                type="button" className="btn-principal"
+                disabled={cargandoTrim || (facturasTrim.length === 0 && gastosTrim.length === 0)}
+                onClick={() => exportarResumenTrimestral({ anio: anioTrim, trimestre: trimActivo, facturas: facturasTrim, gastos: gastosTrim, baseAjustadaParaTotal, nombreNegocio: nombreNegocioTrim })}
+              >
+                📥 Exportar a Excel
+              </button>
+            </div>
+
+            {cargandoTrim ? (
+              <p className="mono texto-dim">Cargando…</p>
+            ) : facturasTrim.length === 0 && gastosTrim.length === 0 ? (
+              <p className="texto-dim">No hay facturas ni gastos en este trimestre.</p>
+            ) : (
+              <>
+                <div className="panel-admin-resumen-cliente">
+                  <span>IVA repercutido: <strong>{resumenTrim.totalesFacturas.ivaRepercutido.toFixed(2)}€</strong></span>
+                  <span>IVA soportado deducible: <strong>{resumenTrim.totalesGastos.ivaSoportadoDeducible.toFixed(2)}€</strong></span>
+                  <span>
+                    IVA a liquidar: <strong>{resumenTrim.ivaALiquidar.toFixed(2)}€</strong>{' '}
+                    <span className="texto-faint">({resumenTrim.ivaALiquidar >= 0 ? 'a ingresar' : 'a compensar'})</span>
+                  </span>
+                </div>
+                <p className="texto-dim mono" style={{ marginTop: 6 }}>
+                  Base facturada {resumenTrim.totalesFacturas.baseImponible.toFixed(2)}€ − base deducible de gastos {resumenTrim.totalesGastos.baseDeducible.toFixed(2)}€
+                  = beneficio estimado {resumenTrim.beneficioEstimado.toFixed(2)}€ (referencia para el pago fraccionado de IRPF)
+                </p>
+                <p className="texto-dim" style={{ marginTop: 10 }}>
+                  {facturasTrim.length} factura{facturasTrim.length !== 1 ? 's' : ''} emitida{facturasTrim.length !== 1 ? 's' : ''} · {gastosTrim.length} gasto{gastosTrim.length !== 1 ? 's' : ''} registrado{gastosTrim.length !== 1 ? 's' : ''} este trimestre. El Excel incluye el desglose completo de ambos, listo para enviar.
+                </p>
+              </>
+            )}
+          </>
+        )}
+      </section>
+
       <section className="panel-admin-card">
         <div className="panel-admin-cabecera-flex">
           <h2 className="capitalizada">{nombreMes(mesActivo)}</h2>
