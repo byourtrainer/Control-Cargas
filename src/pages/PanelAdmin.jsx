@@ -32,7 +32,7 @@ function nombreMes(fecha) {
 }
 
 export default function PanelAdmin({ perfil }) {
-  const [seccion, setSeccion] = useState('clubes') // 'clubes' | 'clientes'
+  const [seccion, setSeccion] = useState('clubes') // 'clubes' | 'clientes' | 'gastos'
 
   return (
     <div className="panel-admin">
@@ -43,9 +43,14 @@ export default function PanelAdmin({ perfil }) {
         <button className={`periodo-btn ${seccion === 'clientes' ? 'periodo-activo' : ''}`} onClick={() => setSeccion('clientes')}>
           💶 Clientes y facturación
         </button>
+        <button className={`periodo-btn ${seccion === 'gastos' ? 'periodo-activo' : ''}`} onClick={() => setSeccion('gastos')}>
+          🧾 Gastos
+        </button>
       </div>
 
-      {seccion === 'clubes' ? <SeccionClubes /> : <SeccionClientes perfil={perfil} />}
+      {seccion === 'clubes' && <SeccionClubes />}
+      {seccion === 'clientes' && <SeccionClientes perfil={perfil} />}
+      {seccion === 'gastos' && <SeccionGastos />}
     </div>
   )
 }
@@ -1083,6 +1088,265 @@ function SeccionClientes({ perfil }) {
           </div>
         )
       })()}
+    </div>
+  )
+}
+
+// =========================================================================
+// SECCIÓN GASTOS (deducibles como autónomo)
+// =========================================================================
+const categoriasGasto = [
+  'Suscripciones y software',
+  'Material deportivo',
+  'Formación',
+  'Desplazamiento / gasolina',
+  'Dietas y manutención',
+  'Alquiler / instalaciones',
+  'Seguros',
+  'Gestoría / asesoría',
+  'Marketing y publicidad',
+  'Otros',
+]
+
+const vacioGasto = {
+  fecha: '', proveedor: '', concepto: '', categoria: categoriasGasto[0],
+  importe: '', iva_porcentaje: '21', deducible_porcentaje: '100',
+  archivo_base64: null, archivo_nombre: null, notas: '',
+}
+
+// Base imponible, IVA y parte deducible de cada gasto (el importe guardado
+// es el TOTAL pagado, con IVA incluido — igual que un ticket real).
+function calcularDesgloseGasto(g) {
+  const importe = Number(g.importe) || 0
+  const ivaPorcentaje = Number(g.iva_porcentaje) || 0
+  const deduciblePorcentaje = Number(g.deducible_porcentaje ?? 100)
+  const base = baseAjustadaParaTotal(importe, ivaPorcentaje)
+  const { iva } = desglosarFactura(base, ivaPorcentaje, false, 0, importe)
+  const baseDeducible = Math.round(base * (deduciblePorcentaje / 100) * 100) / 100
+  const ivaDeducible = Math.round(iva * (deduciblePorcentaje / 100) * 100) / 100
+  return { base, iva, baseDeducible, ivaDeducible }
+}
+
+function SeccionGastos() {
+  const [gastos, setGastos] = useState([])
+  const [cargando, setCargando] = useState(true)
+  const [mesActivo, setMesActivo] = useState(primerDiaDelMes(hoyISO()))
+  const [mostrarForm, setMostrarForm] = useState(false)
+  const [editando, setEditando] = useState(null)
+  const [form, setForm] = useState({ ...vacioGasto, fecha: hoyISO() })
+  const [guardando, setGuardando] = useState(false)
+  const [mensaje, setMensaje] = useState(null)
+  const [errorArchivo, setErrorArchivo] = useState(null)
+
+  useEffect(() => { cargarGastos() }, [mesActivo])
+
+  async function cargarGastos() {
+    setCargando(true)
+    const { data } = await supabase
+      .from('gastos').select('*')
+      .gte('fecha', primerDiaDelMes(mesActivo)).lte('fecha', ultimoDiaDelMes(mesActivo))
+      .order('fecha', { ascending: false })
+    setGastos(data || [])
+    setCargando(false)
+  }
+
+  function subirArchivoGasto(archivo) {
+    if (!archivo) return
+    setErrorArchivo(null)
+    const esImagen = archivo.type.startsWith('image/')
+    const esPdf = archivo.type === 'application/pdf'
+    if (!esImagen && !esPdf) {
+      setErrorArchivo('El archivo debe ser una imagen o un PDF.')
+      return
+    }
+    if (archivo.size > 5 * 1024 * 1024) {
+      setErrorArchivo('El archivo es demasiado grande (máximo 5 MB).')
+      return
+    }
+    const lector = new FileReader()
+    lector.onload = () => setForm((f) => ({ ...f, archivo_base64: lector.result, archivo_nombre: archivo.name }))
+    lector.onerror = () => setErrorArchivo('No se pudo leer el archivo.')
+    lector.readAsDataURL(archivo)
+  }
+
+  function empezarEdicion(g) {
+    setForm({
+      fecha: g.fecha, proveedor: g.proveedor || '', concepto: g.concepto, categoria: g.categoria,
+      importe: String(g.importe), iva_porcentaje: String(g.iva_porcentaje), deducible_porcentaje: String(g.deducible_porcentaje),
+      archivo_base64: g.archivo_base64, archivo_nombre: g.archivo_nombre, notas: g.notas || '',
+    })
+    setEditando(g.id)
+    setMostrarForm(true)
+  }
+
+  function nuevoGasto() {
+    setForm({ ...vacioGasto, fecha: hoyISO() })
+    setEditando(null)
+    setMostrarForm((v) => !v)
+  }
+
+  async function guardarGasto(e) {
+    e.preventDefault()
+    setGuardando(true)
+    setMensaje(null)
+    const datos = {
+      fecha: form.fecha, proveedor: form.proveedor.trim() || null, concepto: form.concepto.trim(),
+      categoria: form.categoria, importe: Number(form.importe) || 0,
+      iva_porcentaje: Number(form.iva_porcentaje) || 0, deducible_porcentaje: Number(form.deducible_porcentaje) || 0,
+      archivo_base64: form.archivo_base64, archivo_nombre: form.archivo_nombre, notas: form.notas.trim() || null,
+    }
+    const { error } = editando
+      ? await supabase.from('gastos').update(datos).eq('id', editando)
+      : await supabase.from('gastos').insert(datos)
+    if (error) {
+      setMensaje({ tipo: 'error', texto: 'No se pudo guardar el gasto: ' + error.message })
+    } else {
+      setForm({ ...vacioGasto, fecha: hoyISO() }); setEditando(null); setMostrarForm(false)
+      cargarGastos()
+    }
+    setGuardando(false)
+  }
+
+  async function eliminarGasto(id) {
+    if (!window.confirm('¿Eliminar este gasto?')) return
+    await supabase.from('gastos').delete().eq('id', id)
+    cargarGastos()
+  }
+
+  const totales = gastos.reduce((acc, g) => {
+    const d = calcularDesgloseGasto(g)
+    acc.importe += Number(g.importe) || 0
+    acc.baseDeducible += d.baseDeducible
+    acc.ivaDeducible += d.ivaDeducible
+    return acc
+  }, { importe: 0, baseDeducible: 0, ivaDeducible: 0 })
+
+  return (
+    <div className="panel-admin-seccion">
+      <section className="panel-admin-card">
+        <div className="panel-admin-cabecera-flex">
+          <h2 className="capitalizada">{nombreMes(mesActivo)}</h2>
+          <div className="panel-admin-selector-mes">
+            <button type="button" className="pizarra-boton" onClick={() => setMesActivo((m) => { const d = new Date(m + 'T00:00:00'); d.setMonth(d.getMonth() - 1); return primerDiaDelMes(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`) })}>◀</button>
+            <button type="button" className="pizarra-boton" onClick={() => setMesActivo((m) => { const d = new Date(m + 'T00:00:00'); d.setMonth(d.getMonth() + 1); return primerDiaDelMes(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`) })}>▶</button>
+          </div>
+        </div>
+
+        <div className="panel-admin-resumen-cliente">
+          <span>Gastado: <strong>{totales.importe.toFixed(2)}€</strong></span>
+          <span>Base deducible: <strong>{totales.baseDeducible.toFixed(2)}€</strong></span>
+          <span>IVA soportado deducible: <strong>{totales.ivaDeducible.toFixed(2)}€</strong></span>
+        </div>
+      </section>
+
+      <section className="panel-admin-card">
+        <div className="panel-admin-cabecera-flex">
+          <h2>Gastos del mes</h2>
+          <button className="pizarra-boton" onClick={nuevoGasto}>
+            {mostrarForm ? 'Cancelar' : '+ Nuevo gasto'}
+          </button>
+        </div>
+
+        {mostrarForm && (
+          <form onSubmit={guardarGasto} className="panel-admin-form-cliente">
+            <div className="fila-doble">
+              <label className="campo-sesion">
+                <span>Fecha</span>
+                <input type="date" value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })} required />
+              </label>
+              <label className="campo-sesion">
+                <span>Proveedor (opcional)</span>
+                <input type="text" value={form.proveedor} onChange={(e) => setForm({ ...form, proveedor: e.target.value })} placeholder="Ej. Decathlon, Google…" />
+              </label>
+            </div>
+            <label className="campo-sesion">
+              <span>Concepto</span>
+              <input type="text" value={form.concepto} onChange={(e) => setForm({ ...form, concepto: e.target.value })} placeholder="Ej. Suscripción app de entrenamientos" required />
+            </label>
+            <div className="fila-doble">
+              <label className="campo-sesion">
+                <span>Categoría</span>
+                <select value={form.categoria} onChange={(e) => setForm({ ...form, categoria: e.target.value })}>
+                  {categoriasGasto.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </label>
+              <label className="campo-sesion">
+                <span>Importe pagado, con IVA (€)</span>
+                <input type="number" step="0.01" min="0" value={form.importe} onChange={(e) => setForm({ ...form, importe: e.target.value })} required />
+              </label>
+            </div>
+            <div className="fila-doble">
+              <label className="campo-sesion">
+                <span>IVA (%)</span>
+                <input type="number" step="0.01" min="0" value={form.iva_porcentaje} onChange={(e) => setForm({ ...form, iva_porcentaje: e.target.value })} required />
+              </label>
+              <label className="campo-sesion">
+                <span>% Deducible</span>
+                <input type="number" step="1" min="0" max="100" value={form.deducible_porcentaje} onChange={(e) => setForm({ ...form, deducible_porcentaje: e.target.value })} required />
+              </label>
+            </div>
+            <label className="campo-sesion">
+              <span>Ticket o factura (foto o PDF, opcional)</span>
+              <input type="file" accept="image/*,application/pdf" onChange={(e) => subirArchivoGasto(e.target.files[0])} />
+            </label>
+            {errorArchivo && <div className="aviso-error">{errorArchivo}</div>}
+            {form.archivo_base64 && (
+              <div className="panel-admin-logo-preview">
+                {form.archivo_base64.startsWith('data:application/pdf') ? (
+                  <a href={form.archivo_base64} target="_blank" rel="noreferrer">📄 {form.archivo_nombre || 'Ver PDF'}</a>
+                ) : (
+                  <img src={form.archivo_base64} alt="Ticket" style={{ maxWidth: 120, maxHeight: 120, borderRadius: 6 }} />
+                )}
+                <button type="button" className="equipo-cambiar-link" onClick={() => setForm({ ...form, archivo_base64: null, archivo_nombre: null })}>
+                  ✕ Quitar
+                </button>
+              </div>
+            )}
+            <label className="campo-sesion">
+              <span>Notas (opcional)</span>
+              <textarea rows={2} value={form.notas} onChange={(e) => setForm({ ...form, notas: e.target.value })} />
+            </label>
+            {mensaje && <div className={mensaje.tipo === 'ok' ? 'aviso-ok' : 'aviso-error'}>{mensaje.texto}</div>}
+            <button type="submit" className="btn-principal" disabled={guardando}>{guardando ? 'Guardando…' : 'Guardar gasto'}</button>
+          </form>
+        )}
+
+        {cargando ? (
+          <p className="mono texto-dim">Cargando…</p>
+        ) : gastos.length === 0 ? (
+          <p className="texto-dim">Ningún gasto registrado este mes.</p>
+        ) : (
+          <div className="panel-admin-tabla-clientes-wrap">
+            <table className="panel-admin-tabla-clientes">
+              <thead>
+                <tr><th>Fecha</th><th>Concepto</th><th>Categoría</th><th>Importe</th><th>Ded.</th><th>Ticket</th><th></th></tr>
+              </thead>
+              <tbody>
+                {gastos.map((g) => (
+                  <tr key={g.id}>
+                    <td className="mono">{g.fecha?.split('-').reverse().join('/')}</td>
+                    <td>{g.concepto}{g.proveedor && <span className="texto-faint"> · {g.proveedor}</span>}</td>
+                    <td className="texto-faint">{g.categoria}</td>
+                    <td className="mono">{Number(g.importe).toFixed(2)}€</td>
+                    <td className="texto-faint">{g.deducible_porcentaje}%</td>
+                    <td>
+                      {g.archivo_base64 ? (
+                        <a href={g.archivo_base64} target="_blank" rel="noreferrer" download={g.archivo_nombre || true}>
+                          {g.archivo_base64.startsWith('data:application/pdf') ? '📄' : '🖼'}
+                        </a>
+                      ) : <span className="texto-faint">—</span>}
+                    </td>
+                    <td className="panel-admin-tabla-acciones">
+                      <button type="button" className="equipo-cambiar-link" onClick={() => empezarEdicion(g)}>✎</button>
+                      <button type="button" className="btn-eliminar-fila" onClick={() => eliminarGasto(g.id)}>✕</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
     </div>
   )
 }
