@@ -213,3 +213,13 @@
 @media (max-width: 800px) {
   .gimnasio-programa-fila { grid-template-columns: 50px repeat(7, minmax(90px, 1fr)); }
 }
+
+/* Acciones de cada tarjeta de sesión (duplicar / eliminar) */
+.tarjeta-acciones { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.btn-duplicar-fila {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.btn-duplicar-fila:hover { color: var(--accent); }

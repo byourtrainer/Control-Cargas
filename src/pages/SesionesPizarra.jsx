@@ -19,7 +19,7 @@ function esVideo(ej) {
   return ej.tipo_origen === 'video_grabado'
 }
 
-export default function SesionesPizarra({ perfil }) {
+export default function SesionesPizarra({ perfil, equipoActivo = 'todos' }) {
   // Club al que se limita entrenador/fisio (null = administrador, sin límite).
   const clubId = clubIdDePerfil(perfil)
   const [sesiones, setSesiones] = useState([])
@@ -177,6 +177,29 @@ export default function SesionesPizarra({ perfil }) {
 
   useEffect(() => { cargarSesiones(); cargarBiblioteca(); cargarEquipos(); cargarLogoEntrenador() }, [])
 
+  // Se filtra por el equipo/club elegido en el selector de arriba (el mismo
+  // que se usa en Resumen, Jugadores, etc.), para que el "diario" de
+  // sesiones muestre solo las de ese club y no las de todos mezcladas.
+  // Dentro de ese filtro, se ordena por la fecha de la sesión (no por
+  // cuándo se creó el registro), de más reciente a más antigua.
+  const sesionesVisibles = useMemo(() => {
+    let lista = sesiones
+    if (equipoActivo === 'sin_asignar') lista = lista.filter((s) => !s.equipo_id)
+    else if (equipoActivo !== 'todos') lista = lista.filter((s) => s.equipo_id === equipoActivo)
+
+    return [...lista].sort((a, b) => {
+      if (a.fecha && b.fecha) return b.fecha.localeCompare(a.fecha)
+      if (a.fecha) return -1
+      if (b.fecha) return 1
+      return (b.creado_en || '').localeCompare(a.creado_en || '')
+    })
+  }, [sesiones, equipoActivo])
+
+  function nombreEquipoDe(equipoId) {
+    if (!equipoId) return 'General (sin equipo)'
+    return equipos.find((eq) => eq.id === equipoId)?.nombre || '…'
+  }
+
   async function cargarSesiones() {
     setCargando(true)
     let consulta = supabase.from('sesiones_pizarra').select('*, sesiones_pizarra_ejercicios(id)').order('creado_en', { ascending: false })
@@ -239,6 +262,23 @@ export default function SesionesPizarra({ perfil }) {
   function volverALista() {
     setSesionActivaId(null)
     setItems([])
+  }
+
+  // Duplicar: deja en el editor una COPIA sin guardar (mismos ejercicios y
+  // variables) para cambiar lo que haga falta y guardarla como sesión nueva.
+  // La fecha se vacía, porque una copia suele ser para otro día. Hasta pulsar
+  // "Guardar sesión" no se crea nada.
+  function convertirEnCopia(tituloBase) {
+    setSesionActivaId('nueva')
+    setTitulo(`${tituloBase} (copia)`)
+    setFecha('')
+    setItems((prev) => prev.map((it) => ({ ...it })))
+    setMensaje({ tipo: 'ok', texto: 'Copia creada. Cambia los ejercicios que quieras y pulsa "Guardar sesión" — hasta entonces no se ha guardado.' })
+  }
+
+  async function duplicarSesion(sesion) {
+    await abrirSesion(sesion)
+    convertirEnCopia(sesion.titulo)
   }
 
   function anadirEjercicio(ej) {
@@ -349,18 +389,26 @@ export default function SesionesPizarra({ perfil }) {
 
         {sesiones.length === 0 ? (
           <p className="texto-dim">Todavía no has creado ninguna sesión.</p>
+        ) : sesionesVisibles.length === 0 ? (
+          <p className="texto-dim">
+            No hay sesiones registradas para {equipoActivo === 'sin_asignar' ? 'general (sin equipo)' : nombreEquipoDe(equipoActivo)}.
+          </p>
         ) : (
           <div className="sesiones-lista">
-            {sesiones.map((s) => (
+            {sesionesVisibles.map((s) => (
               <button key={s.id} className="sesiones-tarjeta" onClick={() => abrirSesion(s)}>
                 <div>
                   <strong>{s.titulo}</strong>
                   <span className="texto-dim">
                     {s.fecha ? new Date(s.fecha + 'T00:00:00').toLocaleDateString('es-ES') : 'Sin fecha'}
+                    {' · '}{nombreEquipoDe(s.equipo_id)}
                     {' · '}{s.sesiones_pizarra_ejercicios?.length || 0} ejercicio(s)
                   </span>
                 </div>
-                <span className="btn-eliminar-fila" onClick={(e) => { e.stopPropagation(); eliminarSesion(s.id) }} title="Eliminar sesión">✕</span>
+                <span className="tarjeta-acciones">
+                  <span className="btn-duplicar-fila" onClick={(e) => { e.stopPropagation(); duplicarSesion(s) }} title="Duplicar sesión">⧉ Duplicar</span>
+                  <span className="btn-eliminar-fila" onClick={(e) => { e.stopPropagation(); eliminarSesion(s.id) }} title="Eliminar sesión">✕</span>
+                </span>
               </button>
             ))}
           </div>
@@ -482,6 +530,9 @@ export default function SesionesPizarra({ perfil }) {
       <div className="sesiones-cabecera no-imprimir">
         <button className="pizarra-boton" onClick={volverALista}>← Volver a sesiones</button>
         <div className="sesiones-cabecera-botones">
+          {sesionActivaId !== 'nueva' && (
+            <button className="pizarra-boton" onClick={() => convertirEnCopia(titulo)}>⧉ Duplicar sesión</button>
+          )}
           <button className="pizarra-boton" onClick={() => setDiapositivaIdx(0)} disabled={items.length === 0}>▶ Ver diapositivas</button>
           <button className="pizarra-boton" onClick={() => window.print()} disabled={items.length === 0}>⬇ Exportar PDF</button>
         </div>

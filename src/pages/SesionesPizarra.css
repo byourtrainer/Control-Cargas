@@ -491,3 +491,13 @@
   font-weight: 600;
   padding: 6px 12px 12px;
 }
+
+/* Acciones de cada tarjeta de sesión (duplicar / eliminar) */
+.tarjeta-acciones { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.btn-duplicar-fila {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.btn-duplicar-fila:hover { color: var(--accent); }

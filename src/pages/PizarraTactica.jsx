@@ -944,6 +944,59 @@ export default function PizarraTactica() {
     setSeleccionId(null)
   }
 
+  // Clona el elemento o la línea seleccionados (desplazado un poco para que
+  // se vea la copia) y deja la copia seleccionada, para poder moverla o
+  // volver a duplicarla sin ir al panel de botones. Los jugadores
+  // duplicados reciben el siguiente número libre.
+  function duplicarSeleccionado() {
+    if (!seleccionId) return
+    const DESPLAZAMIENTO = 30
+    const elemento = elementos.find((e) => e.id === seleccionId)
+    if (elemento) {
+      const copia = {
+        ...elemento,
+        id: idNuevo(),
+        x: clamp(elemento.x + DESPLAZAMIENTO, 20, ANCHO - 20),
+        y: clamp(elemento.y + DESPLAZAMIENTO, 20, ALTO - 20),
+      }
+      if (elemento.tipo === 'jugador') {
+        const mayor = elementos.filter((e) => e.tipo === 'jugador').reduce((m, e) => Math.max(m, Number(e.numero) || 0), 0)
+        copia.numero = mayor + 1
+      }
+      setElementos((prev) => [...prev, copia])
+      setSeleccionId(copia.id)
+      return
+    }
+    const linea = lineas.find((l) => l.id === seleccionId)
+    if (linea) {
+      const copia = { ...linea, id: idNuevo() }
+      if (linea.tipo === 'libre') {
+        copia.puntos = linea.puntos.map((p) => ({ x: p.x + DESPLAZAMIENTO, y: p.y + DESPLAZAMIENTO }))
+      } else {
+        copia.x1 = linea.x1 + DESPLAZAMIENTO; copia.y1 = linea.y1 + DESPLAZAMIENTO
+        copia.x2 = linea.x2 + DESPLAZAMIENTO; copia.y2 = linea.y2 + DESPLAZAMIENTO
+        if (linea.tipo === 'curva') { copia.cx = linea.cx + DESPLAZAMIENTO; copia.cy = linea.cy + DESPLAZAMIENTO }
+      }
+      setLineas((prev) => [...prev, copia])
+      setSeleccionId(copia.id)
+    }
+  }
+
+  // Atajo de teclado: Ctrl/Cmd + D duplica la selección (si no se está
+  // escribiendo en un campo de texto).
+  useEffect(() => {
+    function alPulsarTecla(e) {
+      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 'd') return
+      const tag = document.activeElement?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+      if (!seleccionId) return
+      e.preventDefault()
+      duplicarSeleccionado()
+    }
+    window.addEventListener('keydown', alPulsarTecla)
+    return () => window.removeEventListener('keydown', alPulsarTecla)
+  })
+
   function vaciarPizarra() {
     if (!window.confirm('¿Vaciar toda la pizarra?')) return
     setElementos([])
@@ -1179,6 +1232,13 @@ export default function PizarraTactica() {
     enlace.click()
   }
 
+  const botonesAccionSeleccion = (
+    <div className="pizarra-panel-acciones">
+      <button type="button" className="pizarra-boton" onClick={duplicarSeleccionado}>⧉ Duplicar</button>
+      <button type="button" className="btn-eliminar-sesion" onClick={eliminarSeleccionado}>Eliminar</button>
+    </div>
+  )
+
   function pathDeLinea(l) {
     if (l.tipo === 'recta') return null
     if (l.tipo === 'curva') return `M ${l.x1} ${l.y1} Q ${l.cx} ${l.cy} ${l.x2} ${l.y2}`
@@ -1257,6 +1317,7 @@ export default function PizarraTactica() {
 
         <div className="pizarra-separador" />
 
+        <button className="pizarra-boton" onClick={duplicarSeleccionado} disabled={!seleccionId} title="Clonar el elemento seleccionado (Ctrl/Cmd + D)">⧉ Duplicar selección</button>
         <button className="pizarra-boton" onClick={eliminarSeleccionado} disabled={!seleccionId}>Eliminar selección</button>
         <button className="pizarra-boton" onClick={vaciarPizarra}>Vaciar pizarra</button>
         <button className="btn-principal pizarra-boton-exportar" onClick={exportarImagen}>⬇ Guardar como imagen</button>
@@ -1506,7 +1567,7 @@ export default function PizarraTactica() {
               {lineaSeleccionada.tipo === 'curva' && (
                 <p className="texto-faint">Arrastra el punto verde para curvarla.</p>
               )}
-              <button className="btn-eliminar-sesion" onClick={eliminarSeleccionado}>Eliminar</button>
+              {botonesAccionSeleccion}
             </>
           ) : seleccionado.tipo === 'jugador' || seleccionado.tipo === 'portero' ? (
             <>
@@ -1531,7 +1592,7 @@ export default function PizarraTactica() {
                   ))}
                 </div>
               </label>
-              <button className="btn-eliminar-sesion" onClick={eliminarSeleccionado}>Eliminar</button>
+              {botonesAccionSeleccion}
             </>
           ) : tiposObstaculo.includes(seleccionado.tipo) ? (
             <>
@@ -1565,7 +1626,7 @@ export default function PizarraTactica() {
                   onChange={(e) => actualizarSeleccionado({ rotacion: Number(e.target.value) })}
                 />
               </label>
-              <button className="btn-eliminar-sesion" onClick={eliminarSeleccionado}>Eliminar</button>
+              {botonesAccionSeleccion}
             </>
           ) : seleccionado.tipo === 'forma' ? (
             <>
@@ -1632,7 +1693,7 @@ export default function PizarraTactica() {
                   onChange={(e) => actualizarSeleccionado({ rotacion: Number(e.target.value) })}
                 />
               </label>
-              <button className="btn-eliminar-sesion" onClick={eliminarSeleccionado}>Eliminar</button>
+              {botonesAccionSeleccion}
             </>
           ) : seleccionado.tipo === 'texto' ? (
             <>
@@ -1672,7 +1733,7 @@ export default function PizarraTactica() {
                   onChange={(e) => actualizarSeleccionado({ rotacion: Number(e.target.value) })}
                 />
               </label>
-              <button className="btn-eliminar-sesion" onClick={eliminarSeleccionado}>Eliminar</button>
+              {botonesAccionSeleccion}
             </>
           ) : (
             <>
@@ -1683,7 +1744,7 @@ export default function PizarraTactica() {
                   {tiposBalon.map((t) => <option key={t.valor} value={t.valor}>{t.etiqueta}</option>)}
                 </select>
               </label>
-              <button className="btn-eliminar-sesion" onClick={eliminarSeleccionado}>Eliminar</button>
+              {botonesAccionSeleccion}
             </>
           )}
         </div>

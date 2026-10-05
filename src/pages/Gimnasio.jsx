@@ -130,6 +130,22 @@ function SeccionSesiones({ perfil }) {
     setBloques([])
   }
 
+  // Duplicar: deja en el editor una COPIA sin guardar (bloques y ejercicios
+  // incluidos, con sus series/reps/etc.) para cambiar lo que haga falta y
+  // guardarla como sesión nueva. Hasta pulsar "Guardar sesión" no se crea
+  // nada, así que no quedan copias sueltas si te arrepientes.
+  function convertirEnCopia(nombreBase) {
+    setPlantillaActivaId('nueva')
+    setNombre(`${nombreBase} (copia)`)
+    setBloques((prev) => prev.map((b) => ({ ...bloqueVacio(b.nombre), items: b.items.map((it) => ({ ...it })) })))
+    setMensaje({ tipo: 'ok', texto: 'Copia creada. Cambia los bloques o ejercicios que quieras y pulsa "Guardar sesión" — hasta entonces no se ha guardado.' })
+  }
+
+  async function duplicarPlantilla(p) {
+    await abrirPlantilla(p)
+    convertirEnCopia(p.nombre)
+  }
+
   function nuevoBloque() {
     setBloques((prev) => [...prev, bloqueVacio()])
   }
@@ -312,7 +328,10 @@ function SeccionSesiones({ perfil }) {
                       {(p.gimnasio_plantilla_bloques || []).length} bloque(s) · {totalEjercicios} ejercicio(s)
                     </span>
                   </div>
-                  <span className="btn-eliminar-fila" onClick={(e) => { e.stopPropagation(); eliminarPlantilla(p.id) }} title="Eliminar sesión">✕</span>
+                  <span className="tarjeta-acciones">
+                    <span className="btn-duplicar-fila" onClick={(e) => { e.stopPropagation(); duplicarPlantilla(p) }} title="Duplicar sesión">⧉ Duplicar</span>
+                    <span className="btn-eliminar-fila" onClick={(e) => { e.stopPropagation(); eliminarPlantilla(p.id) }} title="Eliminar sesión">✕</span>
+                  </span>
                 </button>
               )
             })}
@@ -326,6 +345,9 @@ function SeccionSesiones({ perfil }) {
     <div className="gimnasio-seccion">
       <div className="gimnasio-seccion-cabecera">
         <button className="pizarra-boton" onClick={volverALista}>← Volver a sesiones</button>
+        {plantillaActivaId !== 'nueva' && (
+          <button className="pizarra-boton" onClick={() => convertirEnCopia(nombre)}>⧉ Duplicar sesión</button>
+        )}
       </div>
 
       <section className="sesiones-form-card">
