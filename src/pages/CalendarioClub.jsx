@@ -558,6 +558,16 @@ export default function CalendarioClub({ perfil, equipoActivo = 'todos', equipos
 
   async function eliminarEvento(id) {
     setBorrandoId(id)
+    // Primero se borran las sesiones vinculadas al evento (una por jugador):
+    // son las que generan el cuestionario RPE del jugador. Si quedaran,
+    // aparecerían como RPE sin contestar (y en las multas) de un día que
+    // en realidad ya no tiene entrenamiento ni partido.
+    const { error: errSesiones } = await supabase.from('sesiones').delete().eq('evento_id', id)
+    if (errSesiones) {
+      alert('No se pudieron eliminar los cuestionarios RPE del evento: ' + errSesiones.message)
+      setBorrandoId(null)
+      return
+    }
     const { error } = await supabase.from('eventos_calendario').delete().eq('id', id)
     if (!error) setEventos((prev) => prev.filter((ev) => ev.id !== id))
     setBorrandoId(null)
