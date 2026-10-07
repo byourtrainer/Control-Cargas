@@ -1,0 +1,10 @@
+.multas-card { background: var(--bg-card); border: 1px solid var(--line); border-radius: 14px; padding: 24px; }
+.multas-cabecera { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 14px; }
+.multas-switch { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.multas-semana { display: flex; align-items: center; gap: 10px; margin: 14px 0; flex-wrap: wrap; }
+.multas-semana button { cursor: pointer; }
+.multas-nota { font-size: 12px; opacity: .7; margin: 8px 0 14px; }
+.multas-tabla { width: 100%; border-collapse: collapse; }
+.multas-tabla th, .multas-tabla td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left; }
+.multas-tabla td.num, .multas-tabla th.num { text-align: center; }
+.multas-tabla .multas-alerta { color: #ff6b6b; font-weight: 600; }
