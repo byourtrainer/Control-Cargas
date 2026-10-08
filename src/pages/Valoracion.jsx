@@ -21,8 +21,10 @@ const fmt = (v, d = 2) => (v === null || v === undefined ? '—' : Number(v).toF
 
 export default function Valoracion({ perfil, equipoActivo = 'todos' }) {
   const clubId = clubIdDePerfil(perfil)
+  const esAdmin = perfil?.rol === 'administrador'
   const [jugadores, setJugadores] = useState([])
-  const [jugadorId, setJugadorId] = useState('')
+  const [clientes, setClientes] = useState([])
+  const [seleccion, setSeleccion] = useState('') // 'j:<id>' | 'c:<id>'
   const [seccion, setSeccion] = useState('anamnesis')
   const [cargandoLista, setCargandoLista] = useState(true)
 
@@ -33,13 +35,18 @@ export default function Valoracion({ perfil, equipoActivo = 'todos' }) {
       let q = supabase.from('perfiles').select('*, equipos(id, nombre, color)').eq('rol', 'jugador').order('nombre')
       if (clubId) q = supabase.from('perfiles').select('*, equipos!inner(id, nombre, color, club_id)')
         .eq('rol', 'jugador').eq('equipos.club_id', clubId).order('nombre')
-      const { data } = await q
+      const [{ data: js }, { data: cs }] = await Promise.all([
+        q,
+        // Los clientes personales (sin club) los gestiona el administrador.
+        esAdmin ? supabase.from('clientes').select('id, nombre, telefono, programa, activo').order('nombre') : Promise.resolve({ data: [] }),
+      ])
       if (!activo) return
-      setJugadores(data || [])
+      setJugadores(js || [])
+      setClientes(cs || [])
       setCargandoLista(false)
     })()
     return () => { activo = false }
-  }, [clubId])
+  }, [clubId, esAdmin])
 
   const visibles = useMemo(() => jugadores.filter((j) => {
     if (equipoActivo === 'todos') return true
@@ -47,21 +54,43 @@ export default function Valoracion({ perfil, equipoActivo = 'todos' }) {
     return j.equipo_id === equipoActivo
   }), [jugadores, equipoActivo])
 
-  useEffect(() => {
-    if (!visibles.find((j) => j.id === jugadorId)) setJugadorId(visibles[0]?.id || '')
-  }, [visibles])
+  const todasLasClaves = useMemo(
+    () => [...clientes.map((c) => 'c:' + c.id), ...visibles.map((j) => 'j:' + j.id)],
+    [clientes, visibles]
+  )
 
-  const jugador = jugadores.find((j) => j.id === jugadorId)
+  useEffect(() => {
+    if (!todasLasClaves.includes(seleccion)) setSeleccion(todasLasClaves[0] || '')
+  }, [todasLasClaves])
+
+  // "sujeto" unifica jugador de club y cliente personal para el resto de la ficha.
+  const sujeto = useMemo(() => {
+    if (seleccion.startsWith('c:')) {
+      const c = clientes.find((x) => 'c:' + x.id === seleccion)
+      return c ? { tipo: 'cliente', id: c.id, nombre: c.nombre, cliente: c } : null
+    }
+    const j = jugadores.find((x) => 'j:' + x.id === seleccion)
+    return j ? { tipo: 'jugador', id: j.id, nombre: j.nombre, jugador: j } : null
+  }, [seleccion, clientes, jugadores])
 
   return (
     <div className="valoracion-card">
       <div className="valoracion-cabecera">
         <h2>Ficha de valoración</h2>
-        <select value={jugadorId} onChange={(e) => setJugadorId(e.target.value)} disabled={cargandoLista}>
-          {visibles.map((j) => <option key={j.id} value={j.id}>{j.nombre}</option>)}
+        <select value={seleccion} onChange={(e) => setSeleccion(e.target.value)} disabled={cargandoLista}>
+          {clientes.length > 0 && (
+            <optgroup label="Clientes personales">
+              {clientes.map((c) => <option key={c.id} value={'c:' + c.id}>{c.nombre}</option>)}
+            </optgroup>
+          )}
+          {visibles.length > 0 && (
+            <optgroup label="Jugadores de club">
+              {visibles.map((j) => <option key={j.id} value={'j:' + j.id}>{j.nombre}</option>)}
+            </optgroup>
+          )}
         </select>
       </div>
-      {!jugador ? <p className="texto-dim">{cargandoLista ? 'Cargando…' : 'No hay clientes en esta selección.'}</p> : (
+      {!sujeto ? <p className="texto-dim">{cargandoLista ? 'Cargando…' : 'No hay clientes en esta selección.'}</p> : (
         <>
           <div className="valoracion-seccion-tabs">
             {SECCIONES.map((s) => (
@@ -70,15 +99,20 @@ export default function Valoracion({ perfil, equipoActivo = 'todos' }) {
               </button>
             ))}
           </div>
-          {seccion === 'anamnesis' && <Anamnesis key={jugador.id} jugador={jugador} />}
-          {seccion === 'neuro' && <HistorialValoracion key={jugador.id + 'n'} jugador={jugador} tipo="neuromuscular" />}
-          {seccion === 'iso' && <HistorialValoracion key={jugador.id + 'i'} jugador={jugador} tipo="isometrica" />}
-          {seccion === 'tests' && <TestsCuadrantes key={jugador.id + 't'} jugador={jugador} />}
+          {seccion === 'anamnesis' && <Anamnesis key={seleccion} sujeto={sujeto} />}
+          {seccion === 'neuro' && <HistorialValoracion key={seleccion + 'n'} sujeto={sujeto} tipo="neuromuscular" />}
+          {seccion === 'iso' && <HistorialValoracion key={seleccion + 'i'} sujeto={sujeto} tipo="isometrica" />}
+          {seccion === 'tests' && (sujeto.tipo === 'jugador'
+            ? <TestsCuadrantes key={seleccion + 't'} jugador={sujeto.jugador} />
+            : <p className="texto-dim">Los tests de cuadrantes (CMJ, sentadilla, Wingate) están ahora disponibles solo para jugadores. Para clientes personales hay que extender la pestaña Tests.</p>)}
         </>
       )}
     </div>
   )
 }
+
+// Columna de la BD según el tipo de sujeto.
+const columnaSujeto = (sujeto) => (sujeto.tipo === 'cliente' ? 'cliente_id' : 'jugador_id')
 
 // ---------- Utilidades de campos ----------
 function Campo({ etiqueta, children, ancho }) {
@@ -86,7 +120,9 @@ function Campo({ etiqueta, children, ancho }) {
 }
 
 // ---------- 1 · Anamnesis ----------
-function Anamnesis({ jugador }) {
+function Anamnesis({ sujeto }) {
+  const jugador = sujeto.jugador || null
+  const col = columnaSujeto(sujeto)
   const [ficha, setFicha] = useState(null)
   const [lesionesApp, setLesionesApp] = useState([])
   const [guardando, setGuardando] = useState(false)
@@ -96,8 +132,10 @@ function Anamnesis({ jugador }) {
     let activo = true
     ;(async () => {
       const [f, l] = await Promise.all([
-        supabase.from('fichas_valoracion').select('datos').eq('jugador_id', jugador.id).maybeSingle(),
-        supabase.from('lesiones').select('fecha_lesion, parte_cuerpo, lado, tipologia, severidad, dias_baja').eq('jugador_id', jugador.id).order('fecha_lesion', { ascending: false }),
+        supabase.from('fichas_valoracion').select('datos').eq(col, sujeto.id).maybeSingle(),
+        jugador
+          ? supabase.from('lesiones').select('fecha_lesion, parte_cuerpo, lado, tipologia, severidad, dias_baja').eq('jugador_id', jugador.id).order('fecha_lesion', { ascending: false })
+          : Promise.resolve({ data: [] }),
       ])
       if (!activo) return
       if (f.error) setMensaje({ tipo: 'error', texto: 'No se pudo cargar la ficha. ¿Has ejecutado migracion_valoracion.sql? ' + f.error.message })
@@ -105,7 +143,7 @@ function Anamnesis({ jugador }) {
       setLesionesApp(l.data || [])
     })()
     return () => { activo = false }
-  }, [jugador.id])
+  }, [sujeto.id])
 
   if (!ficha) return <p className="texto-dim">Cargando…</p>
 
@@ -116,28 +154,51 @@ function Anamnesis({ jugador }) {
 
   async function guardar() {
     setGuardando(true); setMensaje(null)
-    const { error } = await supabase.from('fichas_valoracion').upsert(
-      { jugador_id: jugador.id, datos: ficha, actualizado_en: new Date().toISOString() }, { onConflict: 'jugador_id' })
+    const fila = { datos: ficha, actualizado_en: new Date().toISOString() }
+    const { data: existente } = await supabase.from('fichas_valoracion').select('id').eq(col, sujeto.id).maybeSingle()
+    const { error } = existente
+      ? await supabase.from('fichas_valoracion').update(fila).eq('id', existente.id)
+      : await supabase.from('fichas_valoracion').insert({ ...fila, [col]: sujeto.id })
     setGuardando(false)
     setMensaje(error ? { tipo: 'error', texto: error.message } : { tipo: 'ok', texto: 'Ficha guardada.' })
   }
 
-  const edad = jugador.fecha_nacimiento
-    ? Math.floor((Date.now() - new Date(jugador.fecha_nacimiento).getTime()) / 31557600000) : null
+  // Jugadores: edad/peso/altura vienen del perfil. Clientes personales: se anotan en la propia ficha.
+  const nacimiento = jugador ? jugador.fecha_nacimiento : ficha.datos.fecha_nacimiento
+  const edad = nacimiento ? Math.floor((Date.now() - new Date(nacimiento).getTime()) / 31557600000) : null
 
   return (
     <div className="val-form">
       <section>
         <h3>Datos personales</h3>
-        <div className="val-resumen-datos">
-          <span><strong>{jugador.nombre}</strong></span>
-          <span>Edad: {edad ?? '—'}</span>
-          <span>Sexo: {jugador.sexo || '—'}</span>
-          <span>Peso: {jugador.peso_corporal_kg ?? '—'} kg</span>
-          <span>Altura: {jugador.altura_m ?? '—'} m</span>
-          <span>Equipo: {jugador.equipos?.nombre || 'Sin asignar'}</span>
-        </div>
-        <p className="texto-dim val-nota">Edad, peso y altura se editan en la pestaña Jugadores.</p>
+        {jugador ? (
+          <>
+            <div className="val-resumen-datos">
+              <span><strong>{jugador.nombre}</strong></span>
+              <span>Edad: {edad ?? '—'}</span>
+              <span>Sexo: {jugador.sexo || '—'}</span>
+              <span>Peso: {jugador.peso_corporal_kg ?? '—'} kg</span>
+              <span>Altura: {jugador.altura_m ?? '—'} m</span>
+              <span>Equipo: {jugador.equipos?.nombre || 'Sin asignar'}</span>
+            </div>
+            <p className="texto-dim val-nota">Edad, peso y altura se editan en la pestaña Jugadores.</p>
+          </>
+        ) : (
+          <>
+            <div className="val-resumen-datos">
+              <span><strong>{sujeto.nombre}</strong> (cliente personal)</span>
+              <span>Teléfono: {sujeto.cliente.telefono || '—'}</span>
+              <span>Programa: {sujeto.cliente.programa || '—'}</span>
+              <span>Edad: {edad ?? '—'}</span>
+            </div>
+            <div className="val-grid">
+              <Campo etiqueta="Fecha de nacimiento"><input type="date" {...campo('datos', 'fecha_nacimiento')} /></Campo>
+              <Campo etiqueta="Sexo"><select {...campo('datos', 'sexo')}><option value="">—</option><option>Masculino</option><option>Femenino</option></select></Campo>
+              <Campo etiqueta="Peso (kg)"><input type="number" step="0.1" {...campo('datos', 'peso_kg')} /></Campo>
+              <Campo etiqueta="Altura (m)"><input type="number" step="0.01" {...campo('datos', 'altura_m')} /></Campo>
+            </div>
+          </>
+        )}
         <div className="val-grid">
           <Campo etiqueta="Pierna dominante"><select {...campo('datos', 'dominancia_pierna')}><option value="">—</option><option>Derecha</option><option>Izquierda</option></select></Campo>
           <Campo etiqueta="Mano dominante"><select {...campo('datos', 'dominancia_mano')}><option value="">—</option><option>Derecha</option><option>Izquierda</option><option>Ambidiestro</option></select></Campo>
@@ -245,7 +306,9 @@ function Anamnesis({ jugador }) {
 }
 
 // ---------- 2 y 3 · Valoraciones con fecha (neuromuscular / isometría) ----------
-function HistorialValoracion({ jugador, tipo }) {
+function HistorialValoracion({ sujeto, tipo }) {
+  const col = columnaSujeto(sujeto)
+  const pesoRef = sujeto.jugador?.peso_corporal_kg ?? null
   const [registros, setRegistros] = useState([])
   const [cargando, setCargando] = useState(true)
   const [datos, setDatos] = useState({})
@@ -258,18 +321,18 @@ function HistorialValoracion({ jugador, tipo }) {
   async function cargar() {
     setCargando(true)
     const { data, error } = await supabase.from('valoraciones_cliente').select('*')
-      .eq('jugador_id', jugador.id).eq('tipo', tipo).order('fecha', { ascending: false })
+      .eq(col, sujeto.id).eq('tipo', tipo).order('fecha', { ascending: false })
     if (error) setMensaje({ tipo: 'error', texto: error.message })
     setRegistros(data || [])
     setCargando(false)
   }
-  useEffect(() => { cargar() }, [jugador.id, tipo])
+  useEffect(() => { cargar() }, [sujeto.id, tipo])
 
   async function guardar() {
     setGuardando(true); setMensaje(null)
     const payload = tipo === 'isometrica' ? { ...datos, unidad } : datos
     const { error } = await supabase.from('valoraciones_cliente').insert({
-      jugador_id: jugador.id, tipo, fecha, datos: payload, notas: notas || null })
+      [col]: sujeto.id, tipo, fecha, datos: payload, notas: notas || null })
     setGuardando(false)
     if (error) { setMensaje({ tipo: 'error', texto: error.message }); return }
     setMensaje({ tipo: 'ok', texto: 'Valoración guardada.' })
@@ -322,7 +385,7 @@ function HistorialValoracion({ jugador, tipo }) {
             </div>
           ))
         ) : (
-          <IsometriaEntrada datos={datos} set={set} unidad={unidad} peso={jugador.peso_corporal_kg} />
+          <IsometriaEntrada datos={datos} set={set} unidad={unidad} peso={pesoRef} />
         )}
 
         <Campo etiqueta="Notas (posición/ángulo de test, dolor, observaciones)" ancho="2">
@@ -338,7 +401,7 @@ function HistorialValoracion({ jugador, tipo }) {
         <h3>Historial</h3>
         {cargando ? <p className="texto-dim">Cargando…</p> : registros.length === 0 ? <p className="texto-dim">Aún no hay valoraciones.</p> : (
           tipo === 'isometrica'
-            ? <HistorialIso registros={registros} onBorrar={borrar} peso={jugador.peso_corporal_kg} />
+            ? <HistorialIso registros={registros} onBorrar={borrar} peso={pesoRef} />
             : <HistorialNeuro registros={registros} onBorrar={borrar} />
         )}
       </section>
