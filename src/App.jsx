@@ -17,6 +17,7 @@ import SesionesPizarra from './pages/SesionesPizarra'
 import PanelAdmin from './pages/PanelAdmin'
 import Multas from './pages/Multas'
 import Valoracion from './pages/Valoracion'
+import Cargas from './pages/Cargas'
 import SeleccionarClub from './pages/SeleccionarClub'
 import { clubIdDePerfil } from './lib/alcance'
 import './App.css'
@@ -34,6 +35,7 @@ const pestanasEntrenador = [
   { clave: 'referencias', etiqueta: 'Referencias' },
   { clave: 'entrenamiento', etiqueta: '📚 Biblioteca Gimnasio' },
   { clave: 'gimnasio', etiqueta: '🏋 Sesiones Gimnasio' },
+  { clave: 'cargas', etiqueta: '📈 Cargas' },
   { clave: 'pizarra', etiqueta: '🎯 Pizarra Táctica' },
   { clave: 'sesiones_pizarra', etiqueta: '📋 Sesiones Pista' },
 ]
@@ -299,6 +301,7 @@ export default function App() {
               jugadorActivo={jugadorActivo} fechaDesde={fechaDesde} fechaHasta={fechaHasta}
             />
           )
+          : pestana === 'cargas' ? <Cargas perfil={perfil} />
           : pestana === 'valoracion' ? <Valoracion perfil={perfil} equipoActivo={equipoActivo} />
           : pestana === 'multas' ? <Multas perfil={perfil} />
           : pestana === 'referencias' ? <Referencias />
