@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { clubIdDePerfil, idsOimposible } from '../lib/alcance'
+import HistorialEjercicio, { SelectorDestinatario, useDestinatarios } from './HistorialEjercicio'
 import './Gimnasio.css'
+import './HistorialEjercicio.css'
 
 const itemVacio = {
   ejercicio_id: null, ejercicio: null,
@@ -72,6 +74,11 @@ function SeccionSesiones({ perfil }) {
   const [etiquetasFiltroBiblioteca, setEtiquetasFiltroBiblioteca] = useState([])
   const [guardando, setGuardando] = useState(false)
   const [mensaje, setMensaje] = useState(null)
+  // Historial de cargas: a quién se consulta y de qué ejercicio (modal).
+  const destinatariosHistorial = useDestinatarios(perfil)
+  const [claveHistorial, setClaveHistorial] = useState('')
+  const [ejercicioHistorial, setEjercicioHistorial] = useState(null)
+  const destinatarioHistorial = destinatariosHistorial.find((d) => d.clave === claveHistorial) || null
 
   useEffect(() => { cargarPlantillas(); cargarEjercicios() }, [])
 
@@ -361,6 +368,14 @@ function SeccionSesiones({ perfil }) {
         </label>
       </section>
 
+      <section className="sesiones-form-card">
+        <label className="campo-sesion">
+          <span>Ver historial de cargas de (opcional)</span>
+          <SelectorDestinatario lista={destinatariosHistorial} valor={claveHistorial} onChange={setClaveHistorial} />
+        </label>
+        <p className="texto-dim" style={{ fontSize: 12 }}>Si eliges a alguien, cada ejercicio tendrá un botón 📈 con sus kg y velocidades anteriores.</p>
+      </section>
+
       <div className="gimnasio-bloques-lista">
         {bloques.map((b, bi) => (
           <section className="gimnasio-bloque-card" key={b.id}>
@@ -392,6 +407,9 @@ function SeccionSesiones({ perfil }) {
                       <div className="sesiones-item-cabecera">
                         <strong>{ii + 1}. {it.ejercicio.nombre}</strong>
                         <div className="sesiones-item-mover">
+                          {destinatarioHistorial && (
+                            <button type="button" className="hist-ej-boton" onClick={() => setEjercicioHistorial(it.ejercicio)}>📈 Historial</button>
+                          )}
                           <button type="button" onClick={() => moverItem(bi, ii, -1)} disabled={ii === 0}>↑</button>
                           <button type="button" onClick={() => moverItem(bi, ii, 1)} disabled={ii === b.items.length - 1}>↓</button>
                           <button type="button" className="btn-eliminar-fila" onClick={() => quitarItem(bi, ii)}>✕</button>
@@ -436,6 +454,18 @@ function SeccionSesiones({ perfil }) {
       <button className="btn-principal" onClick={guardarPlantilla} disabled={guardando}>
         {guardando ? 'Guardando…' : '+ Guardar sesión'}
       </button>
+
+      {ejercicioHistorial && destinatarioHistorial && (
+        <div className="hist-ej-modal-fondo" onClick={() => setEjercicioHistorial(null)}>
+          <div className="hist-ej-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="hist-ej-modal-cabecera">
+              <h3>{ejercicioHistorial.nombre} · {destinatarioHistorial.nombre}</h3>
+              <button className="pizarra-boton" onClick={() => setEjercicioHistorial(null)}>✕ Cerrar</button>
+            </div>
+            <HistorialEjercicio destinatario={destinatarioHistorial} ejercicio={ejercicioHistorial} />
+          </div>
+        </div>
+      )}
 
       {modalAbierto && (
         <div className="sesiones-modal-fondo" onClick={() => setModalAbierto(false)}>

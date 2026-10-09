@@ -1,0 +1,11 @@
+.hist-ej-resumen { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 12px; }
+.hist-ej-resumen > div { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; gap: 2px; }
+.hist-ej-resumen span { font-size: 11px; color: var(--text-dim); }
+.hist-ej-resumen strong { font-size: 16px; }
+.hist-ej-resumen small { font-size: 11px; color: var(--text-dim); }
+.hist-ej-tabla { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+.hist-ej-tabla th, .hist-ej-tabla td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: left; }
+.hist-ej-modal-fondo { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 16px; }
+.hist-ej-modal { background: var(--bg-card); border: 1px solid var(--line); border-radius: 14px; padding: 20px; width: min(760px, 100%); max-height: 90vh; overflow-y: auto; }
+.hist-ej-modal-cabecera { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; }
+.hist-ej-boton { cursor: pointer; background: transparent; border: 1px solid var(--line-strong); color: var(--accent); border-radius: 8px; padding: 4px 10px; font-size: 12px; }
